@@ -11,6 +11,7 @@ _pod_selector()
 {
 	res=$(awk '{print $1 " " $2 " " $4 " " $5 " " $6 }' ${KUBECTL_FZF_CACHE}/pods \
 		| column -t \
+		| sort \
 		| fzf -m --header="Namespace Name IP Node Status" --layout reverse -q "$2" \
 		| awk '{print $2}')
 	echo $res
@@ -20,6 +21,7 @@ _deployment_selector()
 {
 	res=$(cat ${KUBECTL_FZF_CACHE}/deployments \
 		| column -t \
+		| sort \
 		| fzf -m --header="Deployment" --layout reverse -q "$2" \
 		| awk '{print $1}')
 	echo $res
@@ -29,6 +31,7 @@ _node_selector()
 {
 	res=$(awk '{print $5 }' ${KUBECTL_FZF_CACHE}/pods \
 		| column -t \
+		| sort \
 		| fzf -m --header="Node" --layout reverse -q "$2" \
 		| awk '{print $1}')
 	echo $res
