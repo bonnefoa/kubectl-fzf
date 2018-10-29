@@ -86,8 +86,10 @@ class ResourceWatcher(object):
         self.namespace = args.namespace
         self.v1 = v1
         self.extensions_v1beta1 = extensions_v1beta1
-        self.pod_file = open(os.path.join(args.dir, 'pods'), 'w')
-        self.deployment_file = open(os.path.join(args.dir, 'deployments'), 'w')
+        self.pod_file_path = os.path.join(args.dir, 'pods')
+        self.deployment_file_path = os.path.join(args.dir, 'deployments')
+        self.pod_file = open(self.pod_file_path, 'w')
+        self.deployment_file = open(self.deployment_file_path, 'w')
 
         self.kube_kwargs = {'_request_timeout': 600}
         if args.selector:
@@ -111,6 +113,8 @@ class ResourceWatcher(object):
         func = self.v1.list_namespaced_pod
         if self.namespace == 'all':
             func = self.v1.list_pod_for_all_namespaces
+        log.info('Watching pods on namespace {}, writing results in {}'.format(
+            self.namespace, self.pod_file_path))
         for p in w.stream(func, **self.kube_kwargs):
             pod = Pod(p['object'])
             pod_was_present = False
@@ -126,6 +130,8 @@ class ResourceWatcher(object):
         func = self.extensions_v1beta1.list_namespaced_deployment
         if self.namespace == 'all':
             func = self.extensions_v1beta1.list_deployment_for_all_namespaces
+        log.info('Watching deployments on namespace {}, writing results in {}'.format(
+            self.namespace, self.deployment_file_path))
         for p in w.stream(func, **self.kube_kwargs):
             deployment = Deployment(p['object'])
             deployment_was_present = False
@@ -140,7 +146,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Watch kube resources and keep a local cache up to date.')
     parser.add_argument('--dir', '-d', dest='dir', type=str, help='cache dir location', default=os.environ.get('KUBECTL_FZF_CACHE', None))
     parser.add_argument("--selector", "-l", dest='selector', type=str, help='Resource selector to use', default=None)
-    parser.add_argument("--namespace", "-n", dest='namespace', type=str, help='Namespace to filter', default='all')
+    parser.add_argument("--namespace", "-n", dest='namespace', type=str, help='Namespace to filter. Default to current namespace. all for no filter', default=None)
     parser.add_argument("--verbose", "-v", dest='verbose', action='store_true')
     return parser.parse_args()
 
@@ -155,6 +161,9 @@ def main():
     logging.basicConfig(level=log_level, format='%(message)s')
 
     config.load_kube_config()
+    current_namespace = config.list_kube_config_contexts()[1]['context']['namespace']
+    if args.namespace is None:
+        args.namespace = current_namespace
     v1 = client.CoreV1Api()
     extensions_v1beta1 = client.ExtensionsV1beta1Api()
     if not os.path.exists(args.dir):
