@@ -3,7 +3,7 @@ import argparse
 from kubernetes import client, config, watch
 import logging
 import os.path
-import threading
+import multiprocessing
 import signal
 
 
@@ -42,7 +42,10 @@ class Pod(object):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(','.join(['{}={}'.format(k, v) for k, v in self.labels.items()]))
+        if self.labels:
+            content.append(','.join(['{}={}'.format(k, v) for k, v in self.labels.items()]))
+        else:
+            content.append('None')
         content.append(str(self.host_ip))
         content.append(str(self.node_name))
         content.append(self.phase)
@@ -80,26 +83,23 @@ class Deployment(object):
 
 class ResourceWatcher(object):
 
-    def __init__(self, v1, extensions_v1beta1, args):
-        self.pods = set()
-        self.deployments = set()
-        self.namespace = args.namespace
-        self.v1 = v1
-        self.extensions_v1beta1 = extensions_v1beta1
+    def __init__(self, cluster, namespace, args):
+        self.cluster = cluster
+        self.namespace = namespace
+        self.v1 = client.CoreV1Api()
+        self.extensions_v1beta1 = client.ExtensionsV1beta1Api()
         self.pod_file_path = os.path.join(args.dir, 'pods')
         self.deployment_file_path = os.path.join(args.dir, 'deployments')
-        self.pod_file = open(self.pod_file_path, 'w')
-        self.deployment_file = open(self.deployment_file_path, 'w')
 
         self.kube_kwargs = {'_request_timeout': 600}
         if args.selector:
             self.kube_kwargs['label_selector'] = args.selector
-        if args.namespace != 'all':
-            self.kube_kwargs['namespace'] = args.namespace
+        if self.namespace != 'all':
+            self.kube_kwargs['namespace'] = self.namespace
 
     def write_resource_to_file(self, resource, resources, resource_was_present, f):
         if resource_was_present:
-            log.debug('Truncating as resourse {} is already present'.format(resource))
+            log.debug('Truncating file since resource {} is already present'.format(resource))
             f.seek(0)
             f.truncate()
             f.writelines(['{}\n'.format(p) for p in resources])
@@ -107,39 +107,33 @@ class ResourceWatcher(object):
             f.write('{}\n'.format(str(resource)))
         f.flush()
 
-    def watch_pods(self):
+    def watch_resource(self, func, Resource, dest_file):
+        log.info('Watching {} on namespace {}, writing results in {}'.format(
+            Resource.__name__, self.namespace, dest_file))
         w = watch.Watch()
         watches.append(w)
+        resources = set()
+        with open(dest_file, 'w') as dest:
+            for p in w.stream(func, **self.kube_kwargs):
+                resource = Resource(p['object'])
+                resource_was_present = False
+                if resource in resources:
+                    resource_was_present = True
+                resources.add(resource)
+                self.write_resource_to_file(resource, resources, resource_was_present, dest)
+        log.info('{} watcher exiting'.format(Resource.__name__))
+
+    def watch_pods(self):
         func = self.v1.list_namespaced_pod
         if self.namespace == 'all':
             func = self.v1.list_pod_for_all_namespaces
-        log.info('Watching pods on namespace {}, writing results in {}'.format(
-            self.namespace, self.pod_file_path))
-        for p in w.stream(func, **self.kube_kwargs):
-            pod = Pod(p['object'])
-            pod_was_present = False
-            if pod in self.pods:
-                pod_was_present = True
-            self.pods.add(pod)
-            self.write_resource_to_file(pod, self.pods, pod_was_present, self.pod_file)
-        self.pod_file.close()
+        self.watch_resource(func, Pod, self.pod_file_path)
 
     def watch_deployments(self):
-        w = watch.Watch()
-        watches.append(w)
         func = self.extensions_v1beta1.list_namespaced_deployment
         if self.namespace == 'all':
             func = self.extensions_v1beta1.list_deployment_for_all_namespaces
-        log.info('Watching deployments on namespace {}, writing results in {}'.format(
-            self.namespace, self.deployment_file_path))
-        for p in w.stream(func, **self.kube_kwargs):
-            deployment = Deployment(p['object'])
-            deployment_was_present = False
-            if deployment in self.deployments:
-                deployment_was_present = True
-            self.deployments.add(deployment)
-            self.write_resource_to_file(deployment, self.deployments, deployment_was_present, self.deployment_file)
-        self.deployment_file.close()
+        self.watch_resource(func, Deployment, self.deployment_file_path)
 
 
 def parse_args():
@@ -151,6 +145,22 @@ def parse_args():
     return parser.parse_args()
 
 
+def start_watches(cluster, namespace, args):
+    processes = []
+    resource_watcher = ResourceWatcher(cluster, namespace, args)
+    t_pods = multiprocessing.Process(target=resource_watcher.watch_pods)
+    t_pods.daemon = True
+    t_pods.start()
+    processes.append(t_pods)
+
+    t_deployments = multiprocessing.Process(target=resource_watcher.watch_deployments)
+    t_deployments.daemon = True
+    t_deployments.start()
+    processes.append(t_deployments)
+
+    return processes
+
+
 def main():
     args = parse_args()
 
@@ -160,35 +170,34 @@ def main():
         log_level = logging.DEBUG
     logging.basicConfig(level=log_level, format='%(message)s')
 
-    config.load_kube_config()
-    current_namespace = config.list_kube_config_contexts()[1]['context']['namespace']
-    if args.namespace is None:
-        args.namespace = current_namespace
-    v1 = client.CoreV1Api()
-    extensions_v1beta1 = client.ExtensionsV1beta1Api()
     if not os.path.exists(args.dir):
         os.makedirs(args.dir)
-    resource_watcher = ResourceWatcher(v1, extensions_v1beta1, args)
-    t_pods = threading.Thread(target=resource_watcher.watch_pods)
-    t_pods.daemon = True
-    t_pods.start()
 
-    t_deployments = threading.Thread(target=resource_watcher.watch_deployments)
-    t_deployments.daemon = True
-    t_deployments.start()
+    config.load_kube_config()
+    context = config.list_kube_config_contexts()[1]['context']
+    cluster = context['cluster']
+    namespace = context['namespace']
+    if args.namespace is not None:
+        namespace = args.namespace
 
-    while True:
-        t_deployments.join(1000)
-        if not t_pods.isAlive():
-            break
-        if not t_deployments.isAlive():
-            break
+    processes = start_watches(cluster, namespace, args)
+    for p in processes:
+        res = p.join(1000)
+        if res is None:
+            return
+
+    log.warn('Exiting')
+
+
+def stop_watches():
+    for w in watches:
+        w.stop()
+    del watches[:]
 
 
 def signal_handler(signal, frame):
-    log.warn('Signal received, existing')
-    for w in watches:
-        w.stop()
+    log.warn('Signal received, closing watches')
+    stop_watches()
 
 
 if __name__ == "__main__":
