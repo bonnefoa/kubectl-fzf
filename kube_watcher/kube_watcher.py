@@ -13,6 +13,7 @@ EXCLUDED_LABELS=['pod-template-generation', 'app.kubernetes.io/name', 'controlle
                  'controler-uid']
 
 watches = []
+retry = True
 
 
 class Pod(object):
@@ -161,6 +162,29 @@ def start_watches(cluster, namespace, args):
     return processes
 
 
+def wait_loop(processes, cluster, namespace):
+    while True:
+        for p in processes:
+            p.join(1)
+            if not p.is_alive():
+                log.info('A process has joined, exiting wait loop')
+                return
+        new_cluster, new_namespace = get_current_context()
+        if cluster != new_cluster:
+            log.info('Watched cluster {} != {}'.format(cluster, new_cluster))
+            return
+        if namespace != new_namespace:
+            log.info('Watched namespace {} != {}'.format(namespace, new_namespace))
+            return
+
+
+def get_current_context():
+    context = config.list_kube_config_contexts()[1]['context']
+    cluster = context['cluster']
+    namespace = context['namespace']
+    return cluster, namespace
+
+
 def main():
     args = parse_args()
 
@@ -174,22 +198,23 @@ def main():
         os.makedirs(args.dir)
 
     config.load_kube_config()
-    context = config.list_kube_config_contexts()[1]['context']
-    cluster = context['cluster']
-    namespace = context['namespace']
-    if args.namespace is not None:
-        namespace = args.namespace
 
-    processes = start_watches(cluster, namespace, args)
-    for p in processes:
-        res = p.join(1000)
-        if res is None:
-            return
+    while retry:
+        cluster, namespace = get_current_context()
+        if args.namespace is not None:
+            namespace = args.namespace
+        processes = start_watches(cluster, namespace, args)
+        wait_loop(processes, cluster, namespace)
+        for p in processes:
+            log.warn('Terminating {}'.format(p))
+            p.terminate()
+            p.join(1)
 
     log.warn('Exiting')
 
 
 def stop_watches():
+    log.warn('Stopping {} watches'.format(len(watches)))
     for w in watches:
         w.stop()
     del watches[:]
@@ -198,6 +223,8 @@ def stop_watches():
 def signal_handler(signal, frame):
     log.warn('Signal received, closing watches')
     stop_watches()
+    global retry
+    retry = False
 
 
 if __name__ == "__main__":
