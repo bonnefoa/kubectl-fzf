@@ -31,9 +31,7 @@ class Pod(object):
         self.start_time = pod.status.start_time
         if self._is_clb(pod):
             self.phase = 'CrashLoopBackoff'
-        self.is_deleted = False
-        if pod.status.container_statuses is not None:
-            self.is_deleted = all([s.state.terminated for s in pod.status.container_statuses])
+        self.is_deleted = pod.metadata.deletion_timestamp is not None
 
     def _is_clb(self, pod):
         if pod.status.container_statuses is None:
@@ -171,15 +169,19 @@ class ResourceWatcher(object):
         with open(dest_file, 'w') as dest:
             for p in w.stream(func, **self.kube_kwargs):
                 resource = Resource(p['object'])
-                resource_was_present = False
-                if resource in resources:
-                    resource_was_present = True
-                    resources.remove(resource)
+                do_truncate = False
+
                 if resource.is_deleted and resource in resources:
+                    log.debug('Removing resource {}'.format(resource))
+                    resources.remove(resource)
+                    do_truncate = True
+
+                if resource in resources:
+                    do_truncate = True
                     resources.remove(resource)
                 else:
                     resources.add(resource)
-                self.write_resource_to_file(resource, resources, resource_was_present, dest)
+                self.write_resource_to_file(resource, resources, do_truncate, dest)
         log.info('{} watcher exiting'.format(Resource.__name__))
 
     def watch_pods(self):

@@ -9,10 +9,10 @@ eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 
 _pod_selector()
 {
-	res=$(awk '{print $1 " " $2 " " $4 " " $5 " " $6 }' ${KUBECTL_FZF_CACHE}/pods \
+	res=$(awk '{print $1 " " $2 " " $4 " " $5 " " $6 " " $7 }' ${KUBECTL_FZF_CACHE}/pods \
 		| column -t \
 		| sort \
-		| fzf -m --header="Namespace Name IP Node Status" --layout reverse -q "$2" \
+		| fzf --sync -m --header="Namespace Name IP Node Status Age" --layout reverse -q "$2" \
 		| awk '{print $2}')
 	echo $res
 }
