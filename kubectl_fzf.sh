@@ -27,6 +27,16 @@ _deployment_selector()
 	echo $res
 }
 
+_service_selector()
+{
+	res=$(awk '{print $2 " " $3 " " $4 " " $5}' ${KUBECTL_FZF_CACHE}/services \
+		| column -t \
+		| sort \
+		| fzf -m --header="Service Type Ip Ports" --layout reverse -q "$2" \
+		| awk '{print $1}')
+	echo $res
+}
+
 _node_selector()
 {
 	res=$(awk '{print $5 }' ${KUBECTL_FZF_CACHE}/pods \
@@ -46,9 +56,8 @@ _flag_selector()
 		| grep -v None \
 		| sort \
 		| uniq \
-		| column -t -s'=' \
 		| fzf -m --header="Label Value" --layout reverse -q "$2" \
-		| awk '{print $1 "=" $2}')
+		| awk '{print $1}')
 	echo $res
 }
 
@@ -58,21 +67,30 @@ __kubectl_parse_get()
 	local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
 
 	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
-		local query=""
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
 		flags=$(_flag_selector $1 $query)
 		COMPREPLY=( "$flags" )
-	elif [[ $1 == "pod" ]]; then
-		pods=$(_pod_selector $1 $2)
+		return
+	fi
+
+	local query=""
+	if [[ $1 != $last_part ]]; then
+		query=$last_part
+	fi
+	if [[ $1 == "pod" || $1 == "pods" ]]; then
+		pods=$(_pod_selector $1 $query)
 		COMPREPLY=( "$pods" )
 	elif [[ $1 == "node" ]]; then
-		nodes=$(_node_selector $1 $2)
+		nodes=$(_node_selector $1 $query)
 		COMPREPLY=( "$nodes" )
 	elif [[ $1 == "deployment" ]]; then
-		nodes=$(_deployment_selector $1 $2)
+		nodes=$(_deployment_selector $1 $query)
 		COMPREPLY=( "$nodes" )
+	elif [[ $1 == "svc" ]]; then
+		services=$(_service_selector $1 $query)
+		COMPREPLY=( "$services" )
 	else
 		___kubectl_parse_get $*
 	fi
