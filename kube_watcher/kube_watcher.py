@@ -87,8 +87,10 @@ class ResourceWatcher(object):
     def __init__(self, cluster, namespace, args):
         self.cluster = cluster
         self.namespace = namespace
-        self.v1 = client.CoreV1Api()
-        self.extensions_v1beta1 = client.ExtensionsV1beta1Api()
+        self.v1 = client.CoreV1Api(
+            api_client=config.new_client_from_config(context=cluster))
+        self.extensions_v1beta1 = client.ExtensionsV1beta1Api(
+            api_client=config.new_client_from_config(context=cluster))
         self.pod_file_path = os.path.join(args.dir, 'pods')
         self.deployment_file_path = os.path.join(args.dir, 'deployments')
 
@@ -167,7 +169,7 @@ def wait_loop(processes, cluster, namespace):
         for p in processes:
             p.join(1)
             if not p.is_alive():
-                log.info('A process has joined, exiting wait loop')
+                log.info('A process is dead, exiting wait loop')
                 return
         new_cluster, new_namespace = get_current_context()
         if cluster != new_cluster:
