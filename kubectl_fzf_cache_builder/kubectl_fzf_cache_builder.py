@@ -5,6 +5,7 @@ import logging
 import os.path
 import multiprocessing
 import signal
+from datetime import datetime
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -27,8 +28,12 @@ class Pod(object):
         self.host_ip = pod.status.host_ip
         self.node_name = pod.spec.node_name
         self.phase = pod.status.phase
+        self.start_time = pod.status.start_time
         if self._is_clb(pod):
             self.phase = 'CrashLoopBackoff'
+        self.is_deleted = False
+        if pod.status.container_statuses is not None:
+            self.is_deleted = all([s.state.terminated for s in pod.status.container_statuses])
 
     def _is_clb(self, pod):
         if pod.status.container_statuses is None:
@@ -50,6 +55,20 @@ class Pod(object):
         content.append(str(self.host_ip))
         content.append(str(self.node_name))
         content.append(self.phase)
+
+        if self.start_time:
+            s = (datetime.now(self.start_time.tzinfo) - self.start_time).total_seconds()
+            days, remainder = divmod(s, 86400)
+            hours, remainder = divmod(s, 3600)
+            minutes, _ = divmod(remainder, 60)
+            if days:
+                content.append('{}d'.format(int(days)))
+            elif hours:
+                content.append('{}h'.format(int(hours)))
+            else:
+                content.append('{}m'.format(int(minutes)))
+        else:
+            content.append('None')
         return ' '.join(content)
 
     def __hash__(self):
@@ -65,6 +84,7 @@ class Deployment(object):
         self.name = deployment.metadata.name
         self.namespace = deployment.metadata.namespace
         self.labels = deployment.metadata.labels or {}
+        self.is_deleted = False
         for l in EXCLUDED_LABELS:
             self.labels.pop(l, None)
 
@@ -73,6 +93,37 @@ class Deployment(object):
         content.append(self.namespace)
         content.append(self.name)
         content.append(','.join(['{}={}'.format(k, v) for k, v in self.labels.items()]))
+        return ' '.join(content)
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+
+class Service(object):
+
+    def __init__(self, deployment):
+        self.name = deployment.metadata.name
+        self.namespace = deployment.metadata.namespace
+        self.labels = deployment.metadata.labels or {}
+        self.type = deployment.spec.type
+        self.cluster_ip = deployment.spec.cluster_ip
+        self.ports = []
+        if deployment.spec.ports:
+            self.ports = ['{}:{}'.format(p.name, p.port) for p in deployment.spec.ports]
+        self.is_deleted = False
+        for l in EXCLUDED_LABELS:
+            self.labels.pop(l, None)
+
+    def __str__(self):
+        content = []
+        content.append(self.namespace)
+        content.append(self.name)
+        content.append(self.type)
+        content.append(self.cluster_ip)
+        content.append(','.join(self.ports))
         return ' '.join(content)
 
     def __hash__(self):
@@ -92,6 +143,7 @@ class ResourceWatcher(object):
         self.extensions_v1beta1 = client.ExtensionsV1beta1Api(
             api_client=config.new_client_from_config(context=cluster))
         self.pod_file_path = os.path.join(args.dir, 'pods')
+        self.service_file_path = os.path.join(args.dir, 'services')
         self.deployment_file_path = os.path.join(args.dir, 'deployments')
 
         self.kube_kwargs = {'_request_timeout': 600}
@@ -100,9 +152,9 @@ class ResourceWatcher(object):
         if self.namespace != 'all':
             self.kube_kwargs['namespace'] = self.namespace
 
-    def write_resource_to_file(self, resource, resources, resource_was_present, f):
-        if resource_was_present:
-            log.debug('Truncating file since resource {} is already present'.format(resource))
+    def write_resource_to_file(self, resource, resources, truncate_file, f):
+        if truncate_file:
+            log.debug('Truncating file {}'.format(resource))
             f.seek(0)
             f.truncate()
             f.writelines(['{}\n'.format(p) for p in resources])
@@ -122,7 +174,11 @@ class ResourceWatcher(object):
                 resource_was_present = False
                 if resource in resources:
                     resource_was_present = True
-                resources.add(resource)
+                    resources.remove(resource)
+                if resource.is_deleted and resource in resources:
+                    resources.remove(resource)
+                else:
+                    resources.add(resource)
                 self.write_resource_to_file(resource, resources, resource_was_present, dest)
         log.info('{} watcher exiting'.format(Resource.__name__))
 
@@ -131,6 +187,12 @@ class ResourceWatcher(object):
         if self.namespace == 'all':
             func = self.v1.list_pod_for_all_namespaces
         self.watch_resource(func, Pod, self.pod_file_path)
+
+    def watch_services(self):
+        func = self.v1.list_namespaced_service
+        if self.namespace == 'all':
+            func = self.v1.list_service_for_all_namespaces
+        self.watch_resource(func, Service, self.service_file_path)
 
     def watch_deployments(self):
         func = self.extensions_v1beta1.list_namespaced_deployment
@@ -151,21 +213,16 @@ def parse_args():
 def start_watches(cluster, namespace, args):
     processes = []
     resource_watcher = ResourceWatcher(cluster, namespace, args)
-    t_pods = multiprocessing.Process(target=resource_watcher.watch_pods)
-    t_pods.daemon = True
-    t_pods.start()
-    processes.append(t_pods)
-
-    t_deployments = multiprocessing.Process(target=resource_watcher.watch_deployments)
-    t_deployments.daemon = True
-    t_deployments.start()
-    processes.append(t_deployments)
-
+    for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments, resource_watcher.watch_services]:
+        p = multiprocessing.Process(target=f)
+        p.daemon = True
+        p.start()
+        processes.append(p)
     return processes
 
 
 def wait_loop(processes, cluster, namespace):
-    while True:
+    while retry:
         for p in processes:
             p.join(1)
             if not p.is_alive():
@@ -198,8 +255,6 @@ def main():
 
     if not os.path.exists(args.dir):
         os.makedirs(args.dir)
-
-    config.load_kube_config()
 
     while retry:
         cluster, namespace = get_current_context()

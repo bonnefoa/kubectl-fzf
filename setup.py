@@ -5,7 +5,7 @@ from setuptools import find_packages
 
 
 setup(
-    name='kube_watcher',
+    name='kubectl_fzf_cache_builder',
     description='fzf',
     version='0.1.0',
     url='https://github.com/bonnefoa/kubectl-fzf',
@@ -15,7 +15,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'kube_watcher=kube_watcher.kube_watcher:main'
+            'kubectl_fzf_cache_builder=kubectl_fzf_cache_builder.kubectl_fzf_cache_builder:main'
         ]
     },
 )

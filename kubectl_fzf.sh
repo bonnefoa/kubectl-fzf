@@ -31,6 +31,7 @@ _node_selector()
 {
 	res=$(awk '{print $5 }' ${KUBECTL_FZF_CACHE}/pods \
 		| column -t \
+		| grep -v None \
 		| sort \
 		| fzf -m --header="Node" --layout reverse -q "$2" \
 		| awk '{print $1}')
@@ -63,7 +64,7 @@ __kubectl_parse_get()
 		fi
 		flags=$(_flag_selector $1 $query)
 		COMPREPLY=( "$flags" )
-	elif [[ $1 == "pod" || $1 == "logs" ]]; then
+	elif [[ $1 == "pod" ]]; then
 		pods=$(_pod_selector $1 $2)
 		COMPREPLY=( "$pods" )
 	elif [[ $1 == "node" ]]; then
