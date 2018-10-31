@@ -17,21 +17,51 @@ watches = []
 retry = True
 
 
-class Pod(object):
+class Resource(object):
 
-    def __init__(self, pod):
-        self.name = pod.metadata.name
-        self.namespace = pod.metadata.namespace
-        self.labels = pod.metadata.labels or {}
+    def __init__(self, resource):
+        self.name = resource.metadata.name
+        self.namespace = resource.metadata.namespace
+        self.labels = resource.metadata.labels or {}
         for l in EXCLUDED_LABELS:
             self.labels.pop(l, None)
+        if hasattr(resource.status, 'start_time'):
+            self.start_time = resource.status.start_time
+        else:
+            self.start_time = resource.metadata.creation_timestamp
+        self.is_deleted = resource.metadata.deletion_timestamp is not None
+
+    def _resource_age(self):
+        if self.start_time:
+            s = (datetime.now(self.start_time.tzinfo) - self.start_time).total_seconds()
+            days, remainder = divmod(s, 86400)
+            hours, remainder = divmod(s, 3600)
+            minutes, _ = divmod(remainder, 60)
+            if days:
+                return '{}d'.format(int(days))
+            elif hours:
+                return '{}h'.format(int(hours))
+            else:
+                return '{}m'.format(int(minutes))
+        else:
+            return 'None'
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+
+class Pod(Resource):
+
+    def __init__(self, pod):
+        Resource.__init__(self, pod)
         self.host_ip = pod.status.host_ip
         self.node_name = pod.spec.node_name
         self.phase = pod.status.phase
-        self.start_time = pod.status.start_time
         if self._is_clb(pod):
             self.phase = 'CrashLoopBackoff'
-        self.is_deleted = pod.metadata.deletion_timestamp is not None
 
     def _is_clb(self, pod):
         if pod.status.container_statuses is None:
@@ -53,67 +83,36 @@ class Pod(object):
         content.append(str(self.host_ip))
         content.append(str(self.node_name))
         content.append(self.phase)
-
-        if self.start_time:
-            s = (datetime.now(self.start_time.tzinfo) - self.start_time).total_seconds()
-            days, remainder = divmod(s, 86400)
-            hours, remainder = divmod(s, 3600)
-            minutes, _ = divmod(remainder, 60)
-            if days:
-                content.append('{}d'.format(int(days)))
-            elif hours:
-                content.append('{}h'.format(int(hours)))
-            else:
-                content.append('{}m'.format(int(minutes)))
-        else:
-            content.append('None')
+        content.append(self._resource_age())
         return ' '.join(content)
 
-    def __hash__(self):
-        return hash(self.name)
 
-    def __eq__(self, other):
-        return self.name == other.name
-
-
-class Deployment(object):
+class Deployment(Resource):
 
     def __init__(self, deployment):
-        self.name = deployment.metadata.name
-        self.namespace = deployment.metadata.namespace
-        self.labels = deployment.metadata.labels or {}
-        self.is_deleted = False
-        for l in EXCLUDED_LABELS:
-            self.labels.pop(l, None)
+        Resource.__init__(self, deployment)
 
     def __str__(self):
         content = []
         content.append(self.namespace)
         content.append(self.name)
         content.append(','.join(['{}={}'.format(k, v) for k, v in self.labels.items()]))
+        content.append(self._resource_age())
         return ' '.join(content)
 
-    def __hash__(self):
-        return hash(self.name)
 
-    def __eq__(self, other):
-        return self.name == other.name
+class Service(Resource):
 
-
-class Service(object):
-
-    def __init__(self, deployment):
-        self.name = deployment.metadata.name
-        self.namespace = deployment.metadata.namespace
-        self.labels = deployment.metadata.labels or {}
-        self.type = deployment.spec.type
-        self.cluster_ip = deployment.spec.cluster_ip
+    def __init__(self, service):
+        Resource.__init__(self, service)
+        self.type = service.spec.type
+        self.cluster_ip = service.spec.cluster_ip
         self.ports = []
-        if deployment.spec.ports:
-            self.ports = ['{}:{}'.format(p.name, p.port) for p in deployment.spec.ports]
-        self.is_deleted = False
-        for l in EXCLUDED_LABELS:
-            self.labels.pop(l, None)
+        if service.spec.ports:
+            self.ports = ['{}:{}'.format(p.name, p.port)
+                          for p in service.spec.ports]
+        self.selector = ['{}={}'.format(k, v)
+                         for k, v in service.spec.selector.items()]
 
     def __str__(self):
         content = []
@@ -121,14 +120,16 @@ class Service(object):
         content.append(self.name)
         content.append(self.type)
         content.append(self.cluster_ip)
-        content.append(','.join(self.ports))
+        if self.ports:
+            content.append(','.join(self.ports))
+        else:
+            content.append('None')
+        if self.selector:
+            content.append(','.join(self.selector))
+        else:
+            content.append('None')
+        content.append(self._resource_age())
         return ' '.join(content)
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __eq__(self, other):
-        return self.name == other.name
 
 
 class ResourceWatcher(object):

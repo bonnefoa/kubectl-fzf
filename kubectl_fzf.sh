@@ -23,27 +23,27 @@ _deployment_selector()
 		| column -t \
 		| sort \
 		| fzf -m --header="Deployment" --layout reverse -q "$2" \
-		| awk '{print $1}')
+		| awk '{print $1 " " $3}')
 	echo $res
 }
 
 _service_selector()
 {
-	res=$(awk '{print $2 " " $3 " " $4 " " $5}' ${KUBECTL_FZF_CACHE}/services \
+	res=$(awk '{print $2 " " $3 " " $4 " " $5 " " $6}' ${KUBECTL_FZF_CACHE}/services \
 		| column -t \
 		| sort \
-		| fzf -m --header="Service Type Ip Ports" --layout reverse -q "$2" \
+		| fzf -m --header="Service Type Ip Ports Selector" --layout reverse -q "$2" \
 		| awk '{print $1}')
 	echo $res
 }
 
 _node_selector()
 {
-	res=$(awk '{print $5 }' ${KUBECTL_FZF_CACHE}/pods \
+	res=$(awk '{print $5 " " $7 }' ${KUBECTL_FZF_CACHE}/pods \
 		| column -t \
 		| grep -v None \
 		| sort \
-		| fzf -m --header="Node" --layout reverse -q "$2" \
+		| fzf -m --header="Node Age" --layout reverse -q "$2" \
 		| awk '{print $1}')
 	echo $res
 }
@@ -71,7 +71,9 @@ __kubectl_parse_get()
 			query=$last_part
 		fi
 		flags=$(_flag_selector $1 $query)
-		COMPREPLY=( "$flags" )
+		if [[ -n $flags ]]; then
+			COMPREPLY=( "$flags" )
+		fi
 		return
 	fi
 
@@ -79,19 +81,20 @@ __kubectl_parse_get()
 	if [[ $1 != $last_part ]]; then
 		query=$last_part
 	fi
-	if [[ $1 == "pod" || $1 == "pods" ]]; then
-		pods=$(_pod_selector $1 $query)
-		COMPREPLY=( "$pods" )
-	elif [[ $1 == "node" ]]; then
-		nodes=$(_node_selector $1 $query)
-		COMPREPLY=( "$nodes" )
-	elif [[ $1 == "deployment" ]]; then
-		nodes=$(_deployment_selector $1 $query)
-		COMPREPLY=( "$nodes" )
-	elif [[ $1 == "svc" ]]; then
-		services=$(_service_selector $1 $query)
-		COMPREPLY=( "$services" )
+
+	if [[ $1 =~ pods? ]]; then
+		results=$(_pod_selector $1 $query)
+	elif [[ $1 =~ nodes? ]]; then
+		results=$(_node_selector $1 $query)
+	elif [[ $1 == deployment ]]; then
+		results=$(_deployment_selector $1 $query)
+	elif [[ $1 == svc || $1 == service ]]; then
+		results=$(_service_selector $1 $query)
 	else
 		___kubectl_parse_get $*
+	fi
+
+	if [[ -n "$results" ]]; then
+		COMPREPLY=( $results )
 	fi
 }
