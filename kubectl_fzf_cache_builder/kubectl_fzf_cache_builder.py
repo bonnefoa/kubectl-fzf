@@ -6,6 +6,7 @@ import os.path
 import multiprocessing
 import signal
 from datetime import datetime
+import subprocess
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -15,6 +16,17 @@ EXCLUDED_LABELS=['pod-template-generation', 'app.kubernetes.io/name', 'controlle
 
 watches = []
 retry = True
+
+
+def get_kubernetes_config(cluster, refresh_command):
+    res = None
+    try:
+        res = config.new_client_from_config(context=cluster)
+    except config.config_exception.ConfigException:
+        if refresh_command:
+            subprocess.call([refresh_command, cluster])
+            res = config.new_client_from_config(context=cluster)
+    return res
 
 
 class Resource(object):
@@ -137,10 +149,9 @@ class ResourceWatcher(object):
     def __init__(self, cluster, namespace, args):
         self.cluster = cluster
         self.namespace = namespace
-        self.v1 = client.CoreV1Api(
-            api_client=config.new_client_from_config(context=cluster))
-        self.extensions_v1beta1 = client.ExtensionsV1beta1Api(
-            api_client=config.new_client_from_config(context=cluster))
+        kubernetes_config = get_kubernetes_config(cluster, args.refresh_command)
+        self.v1 = client.CoreV1Api(api_client=kubernetes_config)
+        self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
         self.pod_file_path = os.path.join(args.dir, 'pods')
         self.service_file_path = os.path.join(args.dir, 'services')
         self.deployment_file_path = os.path.join(args.dir, 'deployments')
@@ -209,6 +220,7 @@ def parse_args():
     parser.add_argument('--dir', '-d', dest='dir', type=str, help='cache dir location', default=os.environ.get('KUBECTL_FZF_CACHE', None))
     parser.add_argument("--selector", "-l", dest='selector', type=str, help='Resource selector to use', default=None)
     parser.add_argument("--namespace", "-n", dest='namespace', type=str, help='Namespace to filter. Default to current namespace. all for no filter', default=None)
+    parser.add_argument("--refresh-command", dest='refresh_command', type=str, help='Command to launch when token is expired', default=None)
     parser.add_argument("--verbose", "-v", dest='verbose', action='store_true')
     return parser.parse_args()
 
