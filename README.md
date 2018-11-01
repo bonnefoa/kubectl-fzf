@@ -1,32 +1,47 @@
-# kubectl-fzf
+kubectl-fzf overrides kubectl autocompletion functions with fzf using local cache for speed.
 
-kubectl-fzf overrides completion functions of kubectl with fzf to search for kubernetes resources using a local cache for speed.
-
-## Requirements
+# Requirements
 
 - [fzf](https://github.com/junegunn/fzf)
 - [kubectl shell autocompletion](https://kubernetes.io/docs/tasks/tools/install-kubectl/#enabling-shell-autocompletion)
 
-## Installation
+# Installation
 
-### Sourcing
+## kubectl_fzf_cache_builder
 
-Just source
+```
+pip2 install
+```
+
+## kubectl_fzf
+
+Add in your `.bashrc` or `.zshrc`
 
 ```
 source <repository>/kubectl_fzf.sh
 ```
 
-### Zsh via zplug
-
-To install kubectl-fzf via zplug. Add the following content to ~/.zshrc:
+You can also use zplug
 ```
 zplug "bonnefoa/kubectl-fzf"
 ```
 
-## Usage
+# Usage
 
-### kube_watcher.py
+## kubectl_fzf_cache_builder
 
-`kube_watcher.py` will build and maintain the local resource cache.
+To create cache files necessary for `kubectl_fzf`, just run
 
+```
+kubectl_fzf_cache_builder
+```
+
+It will watch the cluster and namespace in the current context.
+
+## Available autocompletions
+
+- pod
+- nodes
+- deployment
+- service
+- labels
