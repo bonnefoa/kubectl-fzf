@@ -42,8 +42,18 @@ _deployment_selector()
 	res=$(cat ${KUBECTL_FZF_CACHE}/$1 \
 		| column -t \
 		| sort \
-		| fzf -m --header="Deployment" --layout reverse -q "$2" \
-		| awk '{print $1 " " $3}')
+		| fzf -m --header="Namespace Name Age Label" --layout reverse -q "$2" \
+		| awk '{print $2}')
+	echo $res
+}
+
+_configmap_selector()
+{
+	res=$(awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
+		| column -t \
+		| sort \
+		| fzf -m --header="Namespace Name Age Labels" --layout reverse -q "$2" \
+		| awk '{print $2}')
 	echo $res
 }
 
@@ -76,6 +86,7 @@ _flag_selector()
 	resources_to_label[nodes]='2'
 	resources_to_label[statefulsets]='3'
 	resources_to_label[replicasets]='3'
+	resources_to_label[configmaps]='3'
 
 	local file="${KUBECTL_FZF_CACHE}/$1"
 	local column="${resources_to_label[$1]}"
@@ -106,6 +117,10 @@ __kubectl_parse_get()
 		rs | resplicaset?(s) )
 			filename="replicasets"
 			autocomplete_fun=_replicaset_selector
+			;;
+		configmap )
+			filename="configmaps"
+			autocomplete_fun=_configmap_selector
 			;;
 		node?(s) )
 			filename="nodes"

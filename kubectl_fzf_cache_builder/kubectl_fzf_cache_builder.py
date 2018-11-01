@@ -126,6 +126,12 @@ class ResourceWatcher(object):
             func = self.apps_v1.list_replica_set_for_all_namespaces
         self.watch_resource(func, resource.ReplicaSet)
 
+    def watch_configmap(self):
+        func = self.v1.list_namespaced_config_map
+        if self.namespace == 'all':
+            func = self.v1.list_config_map_for_all_namespaces
+        self.watch_resource(func, resource.ConfigMap)
+
     def watch_statefulset(self):
         func = self.apps_v1.list_namespaced_stateful_set
         if self.namespace == 'all':
@@ -155,7 +161,8 @@ def start_watches(cluster, namespace, args):
     resource_watcher = ResourceWatcher(cluster, namespace, args)
     for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
               resource_watcher.watch_services, resource_watcher.watch_nodes,
-              resource_watcher.watch_statefulset, resource_watcher.watch_replicaset]:
+              resource_watcher.watch_statefulset, resource_watcher.watch_replicaset,
+              resource_watcher.watch_configmap]:
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()

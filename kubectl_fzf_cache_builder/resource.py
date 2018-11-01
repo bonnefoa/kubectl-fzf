@@ -16,7 +16,7 @@ class Resource(object):
         self.labels = resource.metadata.labels or {}
         for l in EXCLUDED_LABELS:
             self.labels.pop(l, None)
-        if hasattr(resource.status, 'start_time'):
+        if hasattr(resource, 'status') and hasattr(resource.status, 'start_time'):
             self.start_time = resource.status.start_time
         else:
             self.start_time = resource.metadata.creation_timestamp
@@ -115,6 +115,20 @@ class ReplicaSet(Resource):
         content.append(str(self.available_replicas))
         content.append(str(self.ready_replicas))
         content.append(self._selector_str())
+        content.append(self._resource_age())
+        return ' '.join(content)
+
+
+class ConfigMap(Resource):
+
+    def __init__(self, config_map):
+        Resource.__init__(self, config_map)
+
+    def __str__(self):
+        content = []
+        content.append(self.namespace)
+        content.append(self.name)
+        content.append(self._label_str())
         content.append(self._resource_age())
         return ' '.join(content)
 
