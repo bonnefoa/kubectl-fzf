@@ -5,15 +5,12 @@ import logging
 import os.path
 import multiprocessing
 import signal
-from datetime import datetime
 import subprocess
 import time
+from . import resource
 
 
 log = logging.getLogger('dd.' + __name__)
-EXCLUDED_LABELS=['pod-template-generation', 'app.kubernetes.io/name', 'controller-revision-hash',
-                 'app.kubernetes.io/managed-by', 'pod-template-hash', 'statefulset.kubernetes.io/pod-name',
-                 'controler-uid']
 
 watches = []
 exiting = False
@@ -28,189 +25,6 @@ def get_kubernetes_config(cluster, refresh_command):
             subprocess.call([refresh_command, cluster])
             res = config.new_client_from_config(context=cluster)
     return res
-
-
-class Resource(object):
-
-    def __init__(self, resource):
-        self.name = resource.metadata.name
-        self.namespace = resource.metadata.namespace
-        self.labels = resource.metadata.labels or {}
-        for l in EXCLUDED_LABELS:
-            self.labels.pop(l, None)
-        if hasattr(resource.status, 'start_time'):
-            self.start_time = resource.status.start_time
-        else:
-            self.start_time = resource.metadata.creation_timestamp
-        self.is_deleted = resource.metadata.deletion_timestamp is not None
-
-    def _resource_age(self):
-        if self.start_time:
-            s = (datetime.now(self.start_time.tzinfo) - self.start_time).total_seconds()
-            days, remainder = divmod(s, 86400)
-            hours, remainder = divmod(s, 3600)
-            minutes, _ = divmod(remainder, 60)
-            if days:
-                return '{}d'.format(int(days))
-            elif hours:
-                return '{}h'.format(int(hours))
-            else:
-                return '{}m'.format(int(minutes))
-        else:
-            return 'None'
-
-    def _label_str(self):
-        if self.labels:
-            return ','.join(['{}={}'.format(k, v) for k, v in self.labels.items()])
-        else:
-            return 'None'
-
-    def _selector_str(self):
-        if self.selector:
-            return ','.join(self.selector)
-        else:
-            return 'None'
-
-    @classmethod
-    def _dest_file(cls):
-        return '{}s'.format(cls.__name__).lower()
-
-    @staticmethod
-    def _has_namespace():
-        return True
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-
-class Pod(Resource):
-
-    def __init__(self, pod):
-        Resource.__init__(self, pod)
-        self.host_ip = pod.status.host_ip
-        self.node_name = pod.spec.node_name
-        self.phase = pod.status.phase
-        if self._is_clb(pod):
-            self.phase = 'CrashLoopBackoff'
-
-    def _is_clb(self, pod):
-        if pod.status.container_statuses is None:
-            return False
-        for s in pod.status.container_statuses:
-            if s.state.waiting:
-                if 'CrashLoopBackOff' == s.state.waiting.reason:
-                    return True
-        return False
-
-    def __str__(self):
-        content = []
-        content.append(self.namespace)
-        content.append(self.name)
-        content.append(self._label_str())
-        content.append(str(self.host_ip))
-        content.append(str(self.node_name))
-        content.append(self.phase)
-        content.append(self._resource_age())
-        return ' '.join(content)
-
-
-class StatefulSet(Resource):
-
-    def __init__(self, sts):
-        Resource.__init__(self, sts)
-        self.selector = ['{}={}'.format(k, v)
-                         for k, v in sts.spec.selector.match_labels.items()]
-        self.current_replicas = sts.status.current_replicas or sts.status.ready_replicas
-        self.replicas = sts.status.replicas
-
-    def __str__(self):
-        content = []
-        content.append(self.namespace)
-        content.append(self.name)
-        content.append(self._label_str())
-        content.append('{}/{}'.format(self.current_replicas, self.replicas))
-        content.append(self._selector_str())
-        content.append(self._resource_age())
-        return ' '.join(content)
-
-
-class Deployment(Resource):
-
-    def __init__(self, deployment):
-        Resource.__init__(self, deployment)
-
-    def __str__(self):
-        content = []
-        content.append(self.namespace)
-        content.append(self.name)
-        content.append(self._label_str())
-        content.append(self._resource_age())
-        return ' '.join(content)
-
-
-class Node(Resource):
-
-    def __init__(self, node):
-        Resource.__init__(self, node)
-        self.roles = []
-        for k in self.labels:
-            if k.startswith('node-role.kubernetes.io/'):
-                self.roles.append(k.split('/')[1])
-        self.instance_type = self.labels.get('beta.kubernetes.io/instance-type',
-                                             'None')
-        self.zone = self.labels.get('failure-domain.beta.kubernetes.io/zone',
-                                    'None')
-        self.internal_ip = 'None'
-        for address in node.status.addresses:
-            if address.type == 'InternalIP':
-                self.internal_ip = address.address
-
-    def __str__(self):
-        content = []
-        content.append(self.name)
-        content.append(self._label_str())
-        content.append(','.join(self.roles))
-        content.append(self.instance_type)
-        content.append(self.zone)
-        content.append(self.internal_ip)
-        content.append(self._resource_age())
-        return ' '.join(content)
-
-    @staticmethod
-    def _has_namespace():
-        return False
-
-
-class Service(Resource):
-
-    def __init__(self, service):
-        Resource.__init__(self, service)
-        self.type = service.spec.type
-        self.cluster_ip = service.spec.cluster_ip
-        self.ports = []
-        if service.spec.ports:
-            self.ports = ['{}:{}'.format(p.name, p.port)
-                          for p in service.spec.ports]
-        self.selector = ['{}={}'.format(k, v)
-                         for k, v in service.spec.selector.items()]
-
-    def __str__(self):
-        content = []
-        content.append(self.namespace)
-        content.append(self.name)
-        content.append(self._label_str())
-        content.append(self.type)
-        content.append(self.cluster_ip)
-        if self.ports:
-            content.append(','.join(self.ports))
-        else:
-            content.append('None')
-        content.append(self._selector_str())
-        content.append(self._resource_age())
-        return ' '.join(content)
 
 
 class ResourceWatcher(object):
@@ -295,28 +109,34 @@ class ResourceWatcher(object):
         func = self.v1.list_namespaced_pod
         if self.namespace == 'all':
             func = self.v1.list_pod_for_all_namespaces
-        self.watch_resource(func, Pod)
+        self.watch_resource(func, resource.Pod)
 
     def watch_services(self):
         func = self.v1.list_namespaced_service
         if self.namespace == 'all':
             func = self.v1.list_service_for_all_namespaces
-        self.watch_resource(func, Service)
+        self.watch_resource(func, resource.Service)
 
     def watch_nodes(self):
-        self.poll_resource(self.v1.list_node, Node)
+        self.poll_resource(self.v1.list_node, resource.Node)
+
+    def watch_replicaset(self):
+        func = self.apps_v1.list_namespaced_replica_set
+        if self.namespace == 'all':
+            func = self.apps_v1.list_replica_set_for_all_namespaces
+        self.watch_resource(func, resource.ReplicaSet)
 
     def watch_statefulset(self):
         func = self.apps_v1.list_namespaced_stateful_set
         if self.namespace == 'all':
             func = self.apps_v1.list_stateful_set_for_all_namespaces
-        self.watch_resource(func, StatefulSet)
+        self.watch_resource(func, resource.StatefulSet)
 
     def watch_deployments(self):
         func = self.extensions_v1beta1.list_namespaced_deployment
         if self.namespace == 'all':
             func = self.extensions_v1beta1.list_deployment_for_all_namespaces
-        self.watch_resource(func, Deployment)
+        self.watch_resource(func, resource.Deployment)
 
 
 def parse_args():
@@ -335,7 +155,7 @@ def start_watches(cluster, namespace, args):
     resource_watcher = ResourceWatcher(cluster, namespace, args)
     for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
               resource_watcher.watch_services, resource_watcher.watch_nodes,
-              resource_watcher.watch_statefulset]:
+              resource_watcher.watch_statefulset, resource_watcher.watch_replicaset]:
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()

@@ -17,6 +17,16 @@ _pod_selector()
 	echo $res
 }
 
+_replicaset_selector()
+{
+	res=$(cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
+		| column -t \
+		| sort \
+		| fzf --sync -m --header="Namespace Name Desired Current Ready LabelSelector Age" --layout reverse -q "$2" \
+		| awk '{print $2}')
+	echo $res
+}
+
 _statefulset_selector()
 {
 	res=$(cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
@@ -64,7 +74,8 @@ _flag_selector()
 	resources_to_label[services]='3'
 	resources_to_label[deployments]='3'
 	resources_to_label[nodes]='2'
-	resources_to_label[statefulset]='3'
+	resources_to_label[statefulsets]='3'
+	resources_to_label[replicasets]='3'
 
 	local file="${KUBECTL_FZF_CACHE}/$1"
 	local column="${resources_to_label[$1]}"
@@ -91,6 +102,10 @@ __kubectl_parse_get()
 		pod?(s) )
 			filename="pods"
 			autocomplete_fun=_pod_selector
+			;;
+		rs | resplicaset?(s) )
+			filename="replicasets"
+			autocomplete_fun=_replicaset_selector
 			;;
 		node?(s) )
 			filename="nodes"
