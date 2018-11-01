@@ -39,10 +39,10 @@ _service_selector()
 
 _node_selector()
 {
-	res=$(cut -d ' ' -f 1,3-7 ${KUBECTL_FZF_CACHE}/nodes \
+	res=$(awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/nodes \
 		| column -t \
 		| sort \
-		| fzf -m --header="Node Roles InstanceType Zone InternalIp Age" --layout reverse -q "$1" \
+		| fzf -m --header="Node InternalIp Zone InstanceType Age Roles" --layout reverse -q "$1" \
 		| awk '{print $1}')
 	echo $res
 }
@@ -50,13 +50,14 @@ _node_selector()
 _flag_selector()
 {
 	declare -A resources_to_label
-	resources_to_label[pods]='$3'
-	resources_to_label[services]='$3'
-	resources_to_label[deployments]='$3'
+	resources_to_label[pods]='3'
+	resources_to_label[services]='3'
+	resources_to_label[deployments]='3'
+	resources_to_label[nodes]='2'
 
 	local file="${KUBECTL_FZF_CACHE}/$1"
 	local column="${resources_to_label[$1]}"
-	res=$(awk "{print $column }" "$file" \
+	res=$(cut -d ' ' -f $column "$file" \
 		| paste -sd ',' \
 		| tr ',' '\n' \
 		| grep -v None \

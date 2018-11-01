@@ -210,21 +210,26 @@ class ResourceWatcher(object):
             log.debug('Truncating file {}'.format(resource))
             f.seek(0)
             f.truncate()
-            f.writelines(['{}\n'.format(p) for p in resources])
+            f.writelines(['{}\n'.format(r) for r in resources])
         else:
             f.write('{}\n'.format(str(resource)))
+        f.flush()
+
+    def write_resources_to_file(self, resources, f):
+        f.writelines(['{}\n'.format(r) for r in resources])
         f.flush()
 
     def process_resource(self, resource, resources, dest):
         do_truncate = False
         if resource.is_deleted and resource in resources:
-            log.debug('Removing resource {}'.format(resource))
+            log.info('Removing resource {}'.format(resource))
             resources.remove(resource)
             do_truncate = True
-        if resource in resources:
-            do_truncate = True
-            resources.remove(resource)
         else:
+            if resource in resources:
+                log.info('Updating resource {}'.format(resource))
+                do_truncate = True
+                resources.remove(resource)
             resources.add(resource)
         self.write_resource_to_file(resource, resources, do_truncate, dest)
 
@@ -253,15 +258,13 @@ class ResourceWatcher(object):
         dest_file=ResourceCls._dest_file()
         log.info('Poll {} on namespace {}, writing results in {}'.format(
             ResourceCls.__name__, self.namespace, dest_file))
-        resources = set()
-        with open(dest_file, 'w') as dest:
-            kwargs = self._get_resource_kwargs(ResourceCls)
-            while exiting is False:
-                resp = func(**kwargs)
-                for item in resp.items:
-                    resource = ResourceCls(item)
-                    self.process_resource(resource, resources, dest)
-                time.sleep(self.poll_time)
+        kwargs = self._get_resource_kwargs(ResourceCls)
+        while exiting is False:
+            resp = func(**kwargs)
+            resources = [ResourceCls(item) for item in resp.items]
+            with open(dest_file, 'w') as dest:
+                self.write_resources_to_file(resources, dest)
+            time.sleep(self.poll_time)
         log.info('{} poll exiting {}'.format(ResourceCls.__name__, exiting))
 
     def watch_pods(self):
@@ -290,7 +293,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Watch kube resources and keep a local cache up to date.')
     parser.add_argument('--dir', '-d', dest='dir', type=str, help='cache dir location. Default to KUBECTL_FZF_CACHE env var', default=os.environ.get('KUBECTL_FZF_CACHE', None))
     parser.add_argument("--selector", "-l", dest='selector', type=str, help='Resource selector to use', default=None)
-    parser.add_argument("--poll-nodes-time", dest='poll_time', type=int, help='Time between two list requests for polled resources', default=300)
+    parser.add_argument("--poll-time", dest='poll_time', type=int, help='Time between two list requests for polled resources', default=300)
     parser.add_argument("--namespace", "-n", dest='namespace', type=str, help='Namespace to filter. Default to current namespace. all for no filter', default=None)
     parser.add_argument("--refresh-command", dest='refresh_command', type=str, help='Command to launch when the token is expired', default=None)
     parser.add_argument("--verbose", "-v", dest='verbose', action='store_true')
