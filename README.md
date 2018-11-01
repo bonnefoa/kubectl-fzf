@@ -43,5 +43,6 @@ It will watch the cluster and namespace in the current context.
 - pod
 - nodes
 - deployment
+- statefulset
 - service
 - labels

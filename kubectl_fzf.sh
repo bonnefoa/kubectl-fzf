@@ -9,40 +9,50 @@ eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 
 _pod_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/pods \
+	res=$(cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
 		| column -t \
 		| sort \
-		| fzf --sync -m --header="Namespace Name IP Node Status Age" --layout reverse -q "$1" \
+		| fzf --sync -m --header="Namespace Name IP Node Status Age" --layout reverse -q "$2" \
+		| awk '{print $2}')
+	echo $res
+}
+
+_statefulset_selector()
+{
+	res=$(cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
+		| column -t \
+		| sort \
+		| fzf --sync -m --header="Namespace Name Ready/Replicas LabelSelector Age" --layout reverse -q "$2" \
 		| awk '{print $2}')
 	echo $res
 }
 
 _deployment_selector()
 {
-	res=$(cat ${KUBECTL_FZF_CACHE}/deployments \
+	res=$(cat ${KUBECTL_FZF_CACHE}/$1 \
 		| column -t \
 		| sort \
-		| fzf -m --header="Deployment" --layout reverse -q "$1" \
+		| fzf -m --header="Deployment" --layout reverse -q "$2" \
 		| awk '{print $1 " " $3}')
 	echo $res
 }
 
 _service_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/services \
+	res=$(cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
 		| column -t \
 		| sort \
-		| fzf -m --header="Namespace Service Type Ip Ports Selector" --layout reverse -q "$1" \
+		| fzf -m --header="Namespace Service Type Ip Ports Selector" --layout reverse -q "$2" \
 		| awk '{print $2}')
 	echo $res
 }
 
 _node_selector()
 {
-	res=$(awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/nodes \
+	res=$(awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
 		| column -t \
 		| sort \
-		| fzf -m --header="Node InternalIp Zone InstanceType Age Roles" --layout reverse -q "$1" \
+		| fzf -m --header="Node InternalIp Zone InstanceType Age Roles" --layout reverse -q "$2" \
 		| awk '{print $1}')
 	echo $res
 }
@@ -54,6 +64,7 @@ _flag_selector()
 	resources_to_label[services]='3'
 	resources_to_label[deployments]='3'
 	resources_to_label[nodes]='2'
+	resources_to_label[statefulset]='3'
 
 	local file="${KUBECTL_FZF_CACHE}/$1"
 	local column="${resources_to_label[$1]}"
@@ -73,23 +84,28 @@ __kubectl_parse_get()
 	local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
 	local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
 
-	local resource_name
+	local filename
 	local autocomplete_fun
+
 	case $1 in
 		pod?(s) )
-			resource_name="pods"
+			filename="pods"
 			autocomplete_fun=_pod_selector
 			;;
 		node?(s) )
-			resource_name="nodes"
+			filename="nodes"
 			autocomplete_fun=_node_selector
 			;;
 		deployment )
-			resource_name="deployments"
+			filename="deployments"
 			autocomplete_fun=_deployment_selector
 			;;
+		sts | statefulset )
+			filename="statefulsets"
+			autocomplete_fun=_statefulset_selector
+			;;
 		svc | service )
-			resource_name="services"
+			filename="services"
 			autocomplete_fun=_service_selector
 			;;
 		* )
@@ -98,14 +114,11 @@ __kubectl_parse_get()
 			;;
 	esac
 
-
-	echo "1: $1 2: $2 penul: $penultimate last: $last_part"  >> /tmp/debug
-
 	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
-		flags=$(_flag_selector $resource_name $query)
+		flags=$(_flag_selector $filename $query)
 		if [[ -n $flags ]]; then
 			COMPREPLY=( "$flags" )
 		fi
@@ -117,7 +130,7 @@ __kubectl_parse_get()
 		query=$last_part
 	fi
 
-	results=$( ${autocomplete_fun} $query )
+	results=$( $autocomplete_fun $filename $query )
 	if [[ -n "$results" ]]; then
 		COMPREPLY=( $results )
 	fi

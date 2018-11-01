@@ -65,6 +65,12 @@ class Resource(object):
         else:
             return 'None'
 
+    def _selector_str(self):
+        if self.selector:
+            return ','.join(self.selector)
+        else:
+            return 'None'
+
     @classmethod
     def _dest_file(cls):
         return '{}s'.format(cls.__name__).lower()
@@ -107,6 +113,26 @@ class Pod(Resource):
         content.append(str(self.host_ip))
         content.append(str(self.node_name))
         content.append(self.phase)
+        content.append(self._resource_age())
+        return ' '.join(content)
+
+
+class StatefulSet(Resource):
+
+    def __init__(self, sts):
+        Resource.__init__(self, sts)
+        self.selector = ['{}={}'.format(k, v)
+                         for k, v in sts.spec.selector.match_labels.items()]
+        self.current_replicas = sts.status.current_replicas or sts.status.ready_replicas
+        self.replicas = sts.status.replicas
+
+    def __str__(self):
+        content = []
+        content.append(self.namespace)
+        content.append(self.name)
+        content.append(self._label_str())
+        content.append('{}/{}'.format(self.current_replicas, self.replicas))
+        content.append(self._selector_str())
         content.append(self._resource_age())
         return ' '.join(content)
 
@@ -182,10 +208,7 @@ class Service(Resource):
             content.append(','.join(self.ports))
         else:
             content.append('None')
-        if self.selector:
-            content.append(','.join(self.selector))
-        else:
-            content.append('None')
+        content.append(self._selector_str())
         content.append(self._resource_age())
         return ' '.join(content)
 
@@ -197,6 +220,7 @@ class ResourceWatcher(object):
         self.namespace = namespace
         kubernetes_config = get_kubernetes_config(cluster, args.refresh_command)
         self.v1 = client.CoreV1Api(api_client=kubernetes_config)
+        self.apps_v1 = client.AppsV1Api(api_client=kubernetes_config)
         self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
         self.poll_time = args.poll_time
         self.kube_kwargs = {'_request_timeout': 600}
@@ -222,12 +246,12 @@ class ResourceWatcher(object):
     def process_resource(self, resource, resources, dest):
         do_truncate = False
         if resource.is_deleted and resource in resources:
-            log.info('Removing resource {}'.format(resource))
+            log.debug('Removing resource {}'.format(resource))
             resources.remove(resource)
             do_truncate = True
         else:
             if resource in resources:
-                log.info('Updating resource {}'.format(resource))
+                log.debug('Updating resource {}'.format(resource))
                 do_truncate = True
                 resources.remove(resource)
             resources.add(resource)
@@ -282,6 +306,12 @@ class ResourceWatcher(object):
     def watch_nodes(self):
         self.poll_resource(self.v1.list_node, Node)
 
+    def watch_statefulset(self):
+        func = self.apps_v1.list_namespaced_stateful_set
+        if self.namespace == 'all':
+            func = self.apps_v1.list_stateful_set_for_all_namespaces
+        self.watch_resource(func, StatefulSet)
+
     def watch_deployments(self):
         func = self.extensions_v1beta1.list_namespaced_deployment
         if self.namespace == 'all':
@@ -304,7 +334,8 @@ def start_watches(cluster, namespace, args):
     processes = []
     resource_watcher = ResourceWatcher(cluster, namespace, args)
     for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
-              resource_watcher.watch_services, resource_watcher.watch_nodes]:
+              resource_watcher.watch_services, resource_watcher.watch_nodes,
+              resource_watcher.watch_statefulset]:
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()
