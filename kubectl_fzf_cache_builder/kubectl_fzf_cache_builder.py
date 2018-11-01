@@ -7,6 +7,7 @@ import multiprocessing
 import signal
 from datetime import datetime
 import subprocess
+import time
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -15,7 +16,7 @@ EXCLUDED_LABELS=['pod-template-generation', 'app.kubernetes.io/name', 'controlle
                  'controler-uid']
 
 watches = []
-retry = True
+exiting = False
 
 
 def get_kubernetes_config(cluster, refresh_command):
@@ -58,6 +59,20 @@ class Resource(object):
         else:
             return 'None'
 
+    def _label_str(self):
+        if self.labels:
+            return ','.join(['{}={}'.format(k, v) for k, v in self.labels.items()])
+        else:
+            return 'None'
+
+    @classmethod
+    def _dest_file(cls):
+        return '{}s'.format(cls.__name__).lower()
+
+    @staticmethod
+    def _has_namespace():
+        return True
+
     def __hash__(self):
         return hash(self.name)
 
@@ -88,10 +103,7 @@ class Pod(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        if self.labels:
-            content.append(','.join(['{}={}'.format(k, v) for k, v in self.labels.items()]))
-        else:
-            content.append('None')
+        content.append(self._label_str())
         content.append(str(self.host_ip))
         content.append(str(self.node_name))
         content.append(self.phase)
@@ -108,9 +120,42 @@ class Deployment(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(','.join(['{}={}'.format(k, v) for k, v in self.labels.items()]))
+        content.append(self._label_str())
         content.append(self._resource_age())
         return ' '.join(content)
+
+
+class Node(Resource):
+
+    def __init__(self, node):
+        Resource.__init__(self, node)
+        self.roles = []
+        for k in self.labels:
+            if k.startswith('node-role.kubernetes.io/'):
+                self.roles.append(k.split('/')[1])
+        self.instance_type = self.labels.get('beta.kubernetes.io/instance-type',
+                                             'None')
+        self.zone = self.labels.get('failure-domain.beta.kubernetes.io/zone',
+                                    'None')
+        self.internal_ip = 'None'
+        for address in node.status.addresses:
+            if address.type == 'InternalIP':
+                self.internal_ip = address.address
+
+    def __str__(self):
+        content = []
+        content.append(self.name)
+        content.append(self._label_str())
+        content.append(','.join(self.roles))
+        content.append(self.instance_type)
+        content.append(self.zone)
+        content.append(self.internal_ip)
+        content.append(self._resource_age())
+        return ' '.join(content)
+
+    @staticmethod
+    def _has_namespace():
+        return False
 
 
 class Service(Resource):
@@ -130,6 +175,7 @@ class Service(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
+        content.append(self._label_str())
         content.append(self.type)
         content.append(self.cluster_ip)
         if self.ports:
@@ -152,10 +198,7 @@ class ResourceWatcher(object):
         kubernetes_config = get_kubernetes_config(cluster, args.refresh_command)
         self.v1 = client.CoreV1Api(api_client=kubernetes_config)
         self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
-        self.pod_file_path = os.path.join(args.dir, 'pods')
-        self.service_file_path = os.path.join(args.dir, 'services')
-        self.deployment_file_path = os.path.join(args.dir, 'deployments')
-
+        self.poll_time = args.poll_time
         self.kube_kwargs = {'_request_timeout': 600}
         if args.selector:
             self.kube_kwargs['label_selector'] = args.selector
@@ -172,55 +215,84 @@ class ResourceWatcher(object):
             f.write('{}\n'.format(str(resource)))
         f.flush()
 
-    def watch_resource(self, func, Resource, dest_file):
+    def process_resource(self, resource, resources, dest):
+        do_truncate = False
+        if resource.is_deleted and resource in resources:
+            log.debug('Removing resource {}'.format(resource))
+            resources.remove(resource)
+            do_truncate = True
+        if resource in resources:
+            do_truncate = True
+            resources.remove(resource)
+        else:
+            resources.add(resource)
+        self.write_resource_to_file(resource, resources, do_truncate, dest)
+
+    def _get_resource_kwargs(self, Resource):
+        kwargs = self.kube_kwargs
+        if not Resource._has_namespace():
+            kwargs = dict(self.kube_kwargs)
+            kwargs.pop('namespace', None)
+        return kwargs
+
+    def watch_resource(self, func, ResourceCls):
+        dest_file=ResourceCls._dest_file()
         log.info('Watching {} on namespace {}, writing results in {}'.format(
-            Resource.__name__, self.namespace, dest_file))
+            ResourceCls.__name__, self.namespace, dest_file))
         w = watch.Watch()
         watches.append(w)
         resources = set()
         with open(dest_file, 'w') as dest:
-            for p in w.stream(func, **self.kube_kwargs):
-                resource = Resource(p['object'])
-                do_truncate = False
+            kwargs = self._get_resource_kwargs(ResourceCls)
+            for resp in w.stream(func, **kwargs):
+                resource = ResourceCls(resp['object'])
+                self.process_resource(resource, resources, dest)
+        log.info('{} watcher exiting'.format(ResourceCls.__name__))
 
-                if resource.is_deleted and resource in resources:
-                    log.debug('Removing resource {}'.format(resource))
-                    resources.remove(resource)
-                    do_truncate = True
-
-                if resource in resources:
-                    do_truncate = True
-                    resources.remove(resource)
-                else:
-                    resources.add(resource)
-                self.write_resource_to_file(resource, resources, do_truncate, dest)
-        log.info('{} watcher exiting'.format(Resource.__name__))
+    def poll_resource(self, func, ResourceCls):
+        dest_file=ResourceCls._dest_file()
+        log.info('Poll {} on namespace {}, writing results in {}'.format(
+            ResourceCls.__name__, self.namespace, dest_file))
+        resources = set()
+        with open(dest_file, 'w') as dest:
+            kwargs = self._get_resource_kwargs(ResourceCls)
+            while exiting is False:
+                resp = func(**kwargs)
+                for item in resp.items:
+                    resource = ResourceCls(item)
+                    self.process_resource(resource, resources, dest)
+                time.sleep(self.poll_time)
+        log.info('{} poll exiting {}'.format(ResourceCls.__name__, exiting))
 
     def watch_pods(self):
         func = self.v1.list_namespaced_pod
         if self.namespace == 'all':
             func = self.v1.list_pod_for_all_namespaces
-        self.watch_resource(func, Pod, self.pod_file_path)
+        self.watch_resource(func, Pod)
 
     def watch_services(self):
         func = self.v1.list_namespaced_service
         if self.namespace == 'all':
             func = self.v1.list_service_for_all_namespaces
-        self.watch_resource(func, Service, self.service_file_path)
+        self.watch_resource(func, Service)
+
+    def watch_nodes(self):
+        self.poll_resource(self.v1.list_node, Node)
 
     def watch_deployments(self):
         func = self.extensions_v1beta1.list_namespaced_deployment
         if self.namespace == 'all':
             func = self.extensions_v1beta1.list_deployment_for_all_namespaces
-        self.watch_resource(func, Deployment, self.deployment_file_path)
+        self.watch_resource(func, Deployment)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Watch kube resources and keep a local cache up to date.')
-    parser.add_argument('--dir', '-d', dest='dir', type=str, help='cache dir location', default=os.environ.get('KUBECTL_FZF_CACHE', None))
+    parser.add_argument('--dir', '-d', dest='dir', type=str, help='cache dir location. Default to KUBECTL_FZF_CACHE env var', default=os.environ.get('KUBECTL_FZF_CACHE', None))
     parser.add_argument("--selector", "-l", dest='selector', type=str, help='Resource selector to use', default=None)
+    parser.add_argument("--poll-nodes-time", dest='poll_time', type=int, help='Time between two list requests for polled resources', default=300)
     parser.add_argument("--namespace", "-n", dest='namespace', type=str, help='Namespace to filter. Default to current namespace. all for no filter', default=None)
-    parser.add_argument("--refresh-command", dest='refresh_command', type=str, help='Command to launch when token is expired', default=None)
+    parser.add_argument("--refresh-command", dest='refresh_command', type=str, help='Command to launch when the token is expired', default=None)
     parser.add_argument("--verbose", "-v", dest='verbose', action='store_true')
     return parser.parse_args()
 
@@ -228,7 +300,8 @@ def parse_args():
 def start_watches(cluster, namespace, args):
     processes = []
     resource_watcher = ResourceWatcher(cluster, namespace, args)
-    for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments, resource_watcher.watch_services]:
+    for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
+              resource_watcher.watch_services, resource_watcher.watch_nodes]:
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()
@@ -237,7 +310,7 @@ def start_watches(cluster, namespace, args):
 
 
 def wait_loop(processes, cluster, namespace):
-    while retry:
+    while exiting is False:
         for p in processes:
             p.join(1)
             if not p.is_alive():
@@ -271,7 +344,7 @@ def main():
     if not os.path.exists(args.dir):
         os.makedirs(args.dir)
 
-    while retry:
+    while exiting is False:
         cluster, namespace = get_current_context()
         if args.namespace is not None:
             namespace = args.namespace
@@ -295,8 +368,8 @@ def stop_watches():
 def signal_handler(signal, frame):
     log.warn('Signal received, closing watches')
     stop_watches()
-    global retry
-    retry = False
+    global exiting
+    exiting = True
 
 
 if __name__ == "__main__":
