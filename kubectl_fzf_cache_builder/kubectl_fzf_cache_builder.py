@@ -1,6 +1,7 @@
 #!env python2
 import argparse
 from kubernetes import client, config, watch
+from kubernetes.config import kube_config
 import logging
 import os.path
 import multiprocessing
@@ -8,6 +9,7 @@ import signal
 import subprocess
 import time
 from . import resource
+import yaml
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -16,14 +18,30 @@ watches = []
 exiting = False
 
 
+def is_expired(user):
+    if 'auth-provider' not in user:
+        return False
+    provider = user['auth-provider']
+    if 'config' not in provider:
+        return False
+    if 'expiry' not in provider['config']:
+        return False
+    return kube_config._is_expired(provider['config']['expiry'])
+
+
 def get_kubernetes_config(cluster, refresh_command):
     res = None
-    try:
-        res = config.new_client_from_config(context=cluster)
-    except config.config_exception.ConfigException:
-        if refresh_command:
-            subprocess.call([refresh_command, cluster])
-            res = config.new_client_from_config(context=cluster)
+
+    if refresh_command:
+        filename = os.path.expanduser(kube_config.KUBE_CONFIG_DEFAULT_LOCATION)
+        with open(filename) as f:
+            loader = kube_config.KubeConfigLoader(
+                config_dict=yaml.load(f),
+                config_base_path=os.path.abspath(os.path.dirname(filename)))
+            if is_expired(loader._user):
+                subprocess.call([refresh_command, cluster])
+
+    res = config.new_client_from_config(context=cluster)
     return res
 
 
