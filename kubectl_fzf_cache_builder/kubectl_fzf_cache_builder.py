@@ -68,6 +68,7 @@ class ResourceWatcher(object):
         self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
         self.poll_time = args.poll_time
         self.kube_kwargs = {'_request_timeout': 600}
+        self.dir = args.dir
         if args.selector:
             self.kube_kwargs['label_selector'] = args.selector
         if self.namespace != 'all':
@@ -109,7 +110,7 @@ class ResourceWatcher(object):
         return kwargs
 
     def watch_resource(self, func, ResourceCls):
-        dest_file=ResourceCls._dest_file()
+        dest_file=os.path.join(self.dir, ResourceCls._dest_file())
         log.info('Watching {} on namespace {}, writing results in {}'.format(
             ResourceCls.__name__, self.namespace, dest_file))
         w = watch.Watch()
