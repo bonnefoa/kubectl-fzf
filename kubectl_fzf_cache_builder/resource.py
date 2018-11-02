@@ -16,6 +16,8 @@ class Resource(object):
         self.labels = resource.metadata.labels or {}
         for l in EXCLUDED_LABELS:
             self.labels.pop(l, None)
+        self.label_keys = self.labels.keys()
+        self.label_keys.sort()
         if hasattr(resource, 'status') and hasattr(resource.status, 'start_time'):
             self.start_time = resource.status.start_time
         else:
@@ -39,7 +41,7 @@ class Resource(object):
 
     def _label_str(self):
         if self.labels:
-            return ','.join(['{}={}'.format(k, v) for k, v in self.labels.items()])
+            return ','.join(['{}={}'.format(k, self.labels[k]) for k in self.label_keys])
         else:
             return 'None'
 
