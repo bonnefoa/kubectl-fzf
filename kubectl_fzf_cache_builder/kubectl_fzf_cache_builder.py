@@ -10,6 +10,10 @@ import subprocess
 import time
 from . import resource
 import yaml
+import base64
+import json
+import datetime
+from dateutil import tz
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -24,9 +28,17 @@ def is_expired(user):
     provider = user['auth-provider']
     if 'config' not in provider:
         return False
-    if 'expiry' not in provider['config']:
+    parts = provider['config']['id-token'].split('.')
+    if len(parts) != 3:
         return False
-    return kube_config._is_expired(provider['config']['expiry'])
+    jwt_attributes = json.loads(base64.b64decode(parts[1] + "=="))
+    expire = jwt_attributes.get('exp')
+    if expire is None:
+        return False
+    if kube_config._is_expired(
+            datetime.datetime.fromtimestamp(expire, tz=tz.tzutc())):
+        return True
+    return False
 
 
 def get_kubernetes_config(cluster, refresh_command):
