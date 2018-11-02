@@ -70,18 +70,15 @@ class Pod(Resource):
         Resource.__init__(self, pod)
         self.host_ip = pod.status.host_ip
         self.node_name = pod.spec.node_name
-        self.phase = pod.status.phase
-        if self._is_clb(pod):
-            self.phase = 'CrashLoopBackoff'
+        self.phase = self._get_phase(pod)
 
-    def _is_clb(self, pod):
-        if pod.status.container_statuses is None:
-            return False
-        for s in pod.status.container_statuses:
-            if s.state.waiting:
-                if 'CrashLoopBackOff' == s.state.waiting.reason:
-                    return True
-        return False
+    def _get_phase(self, pod):
+        if pod.status.container_statuses:
+            for s in pod.status.container_statuses:
+                if s.state.waiting:
+                    if 'Completed' not in s.state.waiting.reason:
+                        return s.state.waiting.reason
+        return pod.status.phase
 
     def __str__(self):
         content = []
