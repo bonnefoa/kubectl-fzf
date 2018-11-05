@@ -74,19 +74,22 @@ class ResourceWatcher(object):
         if self.namespace != 'all':
             self.kube_kwargs['namespace'] = self.namespace
 
+    def write_resources_to_file(self, resources, f):
+        f.write('{}\n'.format(resources.header()))
+        f.writelines(['{}\n'.format(r) for r in resources])
+        f.flush()
+
     def write_resource_to_file(self, resource, resources, truncate_file, f):
         if truncate_file:
             log.debug('Truncating file {}'.format(resource))
             f.seek(0)
             f.truncate()
-            f.writelines(['{}\n'.format(r) for r in resources])
+            self.write_resources_to_file(resources, f)
         else:
+            if f.tell() == 0:
+                f.write('{}\n'.format(resource.header()))
             f.write('{}\n'.format(str(resource)))
-        f.flush()
-
-    def write_resources_to_file(self, resources, f):
-        f.writelines(['{}\n'.format(r) for r in resources])
-        f.flush()
+            f.flush()
 
     def process_resource(self, resource, resources, dest):
         do_truncate = False

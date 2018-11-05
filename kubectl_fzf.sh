@@ -12,7 +12,7 @@ _pod_selector()
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header="Namespace Name IP Node Status Age" --layout reverse -q "$2" \
+        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -21,7 +21,7 @@ _replicaset_selector()
     cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header="Namespace Name Desired Current Ready LabelSelector Age" --layout reverse -q "$2" \
+        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -30,7 +30,7 @@ _endpoints_selector()
     cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header="Namespace Name Age ReadyIPs ReadyPods UnreadyIPs NotReadyPods" --layout reverse -q "$2" \
+        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -39,7 +39,7 @@ _statefulset_selector()
     cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header="Namespace Name Ready/Replicas LabelSelector Age" --layout reverse -q "$2" \
+        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -48,7 +48,7 @@ _deployment_selector()
     cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header="Namespace Name Age Label" --layout reverse -q "$2" \
+        | fzf -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -57,7 +57,7 @@ _namespace_selector()
     cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header="Namespace" --layout reverse -q "$2" \
+        | fzf -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $1}'
 }
 
@@ -66,7 +66,7 @@ _configmap_selector()
     awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header="Namespace Name Age Labels" --layout reverse -q "$2" \
+        | fzf -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -75,7 +75,7 @@ _service_selector()
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header="Namespace Service Type Ip Ports Selector" --layout reverse -q "$2" \
+        | fzf -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $2}'
 }
 
@@ -84,7 +84,7 @@ _node_selector()
     awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header="Node InternalIp Zone InstanceType Age Roles" --layout reverse -q "$2" \
+        | fzf -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $1}'
 }
 
@@ -108,7 +108,7 @@ _flag_selector()
         | grep -v None \
         | sort \
         | uniq \
-        | fzf -m --header="Label Value" --layout reverse -q "$2" \
+        | fzf -m --header-lines=1 --layout reverse -q "$2" \
         | awk '{print $1}'
 }
 

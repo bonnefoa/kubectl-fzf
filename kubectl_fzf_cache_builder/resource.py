@@ -94,6 +94,10 @@ class Pod(Resource):
         content.append(self._resource_age())
         return ' '.join(content)
 
+    @staticmethod
+    def header():
+        return "Namespace Name Labels HostIp NodeName Phase Age"
+
 
 class ReplicaSet(Resource):
 
@@ -118,6 +122,10 @@ class ReplicaSet(Resource):
         content.append(self._resource_age())
         return ' '.join(content)
 
+    @staticmethod
+    def header():
+        return "Namespace Name Labels Replicas AvailableReplicas ReadyReplicas Selector Age"
+
 
 class ConfigMap(Resource):
 
@@ -131,6 +139,10 @@ class ConfigMap(Resource):
         content.append(self._label_str())
         content.append(self._resource_age())
         return ' '.join(content)
+
+    @staticmethod
+    def header():
+        return "Namespace Name Labels Age"
 
 
 class StatefulSet(Resource):
@@ -153,6 +165,10 @@ class StatefulSet(Resource):
         content.append(self._resource_age())
         return ' '.join(content)
 
+    @staticmethod
+    def header():
+        return "Namespace Name Labels Replicas Selector Age"
+
 
 class Deployment(Resource):
 
@@ -166,6 +182,10 @@ class Deployment(Resource):
         content.append(self._label_str())
         content.append(self._resource_age())
         return ' '.join(content)
+
+    @staticmethod
+    def header():
+        return "Namespace Name Labels Age"
 
 
 class Endpoint(Resource):
@@ -208,6 +228,10 @@ class Endpoint(Resource):
         content.append(','.join(self.not_ready_pods))
         return ' '.join(content)
 
+    @staticmethod
+    def header():
+        return "Namespace Name Labels Age ReadyIps ReadyPods NotReadyIps NotReadyPods"
+
 
 class Node(Resource):
 
@@ -241,6 +265,10 @@ class Node(Resource):
     def _has_namespace():
         return False
 
+    @staticmethod
+    def header():
+        return "Name Labels Roles InstanceType Zone InternalIp Age"
+
 
 class Service(Resource):
 
@@ -271,6 +299,10 @@ class Service(Resource):
         content.append(self._resource_age())
         return ' '.join(content)
 
+    @staticmethod
+    def header():
+        return "Namespace Name Labels Type ClusterIp Ports Selector Age"
+
 
 class Namespace(Resource):
 
@@ -283,6 +315,10 @@ class Namespace(Resource):
         content.append(self._label_str())
         content.append(self._resource_age())
         return ' '.join(content)
+
+    @staticmethod
+    def header():
+        return "Name Labels Age"
 
     @staticmethod
     def _has_namespace():
