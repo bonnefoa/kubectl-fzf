@@ -118,10 +118,14 @@ class ResourceWatcher(object):
         resources = set()
         with open(dest_file, 'w') as dest:
             kwargs = self._get_resource_kwargs(ResourceCls)
+            i = 0
             for resp in w.stream(func, **kwargs):
                 resource = ResourceCls(resp['object'])
                 self.process_resource(resource, resources, dest)
-        log.info('{} watcher exiting'.format(ResourceCls.__name__))
+                i = i + 1
+                if i % 1000 == 0:
+                    log.info('Process {} {}'.format(i, ResourceCls.__name__))
+        log.warn('{} watcher exiting'.format(ResourceCls.__name__))
 
     def poll_resource(self, func, ResourceCls):
         dest_file=ResourceCls._dest_file()
@@ -203,17 +207,27 @@ def start_watches(cluster, namespace, args):
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()
-        processes.append(p)
+        processes.append((p, f))
     return processes
 
 
 def wait_loop(processes, cluster, namespace):
     while exiting is False:
-        for p in processes:
+        dead_processes = []
+        for p, f in processes:
             p.join(1)
-            if not p.is_alive():
-                log.info('A process is dead, exiting wait loop')
+            if exiting is True:
+                log.info('Exiting wait loop')
                 return
+            if not p.is_alive():
+                dead_processes.append((p, f))
+        for p, f in dead_processes:
+            log.info('Restarting {} processes'.format(len(dead_processes)))
+            processes.remove((p, f))
+            new_p = multiprocessing.Process(target=f)
+            new_p.daemon = True
+            new_p.start()
+            processes.append((new_p, f))
         new_cluster, new_namespace = get_current_context()
         if cluster != new_cluster:
             log.info('Watched cluster {} != {}'.format(cluster, new_cluster))
@@ -248,7 +262,7 @@ def main():
             namespace = args.namespace
         processes = start_watches(cluster, namespace, args)
         wait_loop(processes, cluster, namespace)
-        for p in processes:
+        for p, _ in processes:
             log.warn('Terminating {}'.format(p))
             p.terminate()
             p.join(1)
