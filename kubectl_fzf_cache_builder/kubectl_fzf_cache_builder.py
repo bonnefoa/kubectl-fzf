@@ -74,8 +74,8 @@ class ResourceWatcher(object):
         if self.namespace != 'all':
             self.kube_kwargs['namespace'] = self.namespace
 
-    def write_resources_to_file(self, resources, f):
-        f.write('{}\n'.format(resources.header()))
+    def write_resources_to_file(self, header, resources, f):
+        f.write('{}\n'.format(header))
         f.writelines(['{}\n'.format(r) for r in resources])
         f.flush()
 
@@ -84,7 +84,7 @@ class ResourceWatcher(object):
             log.debug('Truncating file {}'.format(resource))
             f.seek(0)
             f.truncate()
-            self.write_resources_to_file(resources, f)
+            self.write_resources_to_file(resource.header(), resources, f)
         else:
             if f.tell() == 0:
                 f.write('{}\n'.format(resource.header()))
@@ -139,7 +139,7 @@ class ResourceWatcher(object):
             resp = func(**kwargs)
             resources = [ResourceCls(item) for item in resp.items]
             with open(dest_file, 'w') as dest:
-                self.write_resources_to_file(resources, dest)
+                self.write_resources_to_file(ResourceCls.header(), resources, dest)
             time.sleep(self.poll_time)
         log.info('{} poll exiting {}'.format(ResourceCls.__name__, exiting))
 
