@@ -167,6 +167,47 @@ class Deployment(Resource):
         return ' '.join(content)
 
 
+class Endpoint(Resource):
+
+    def __init__(self, endpoint):
+        Resource.__init__(self, endpoint)
+        self.ready_ips = []
+        self.ready_pods = []
+        self.not_ready_ips = []
+        self.not_ready_pods = []
+        self._fill_ips(endpoint)
+
+    def _fill_ips(self, endpoint):
+        if endpoint.subsets is None:
+            return
+        for subset in endpoint.subsets:
+            if subset.addresses:
+                for add in subset.addresses:
+                    self.ready_ips.append(add.ip)
+                    target = add.target_ref
+                    if target.kind == "Pod":
+                        self.ready_pods.append(target.name)
+
+            if subset.not_ready_addresses:
+                for add in subset.not_ready_addresses:
+                    self.not_ready_ips.append(add.ip)
+                    target = add.target_ref
+                    if target.kind == "Pod":
+                        self.not_ready_pods.append(target.name)
+
+    def __str__(self):
+        content = []
+        content.append(self.namespace)
+        content.append(self.name)
+        content.append(self._label_str())
+        content.append(self._resource_age())
+        content.append(','.join(self.ready_ips))
+        content.append(','.join(self.ready_pods))
+        content.append(','.join(self.not_ready_ips))
+        content.append(','.join(self.not_ready_pods))
+        return ' '.join(content)
+
+
 class Node(Resource):
 
     def __init__(self, node):

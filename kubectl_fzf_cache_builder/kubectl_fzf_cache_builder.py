@@ -111,7 +111,7 @@ class ResourceWatcher(object):
 
     def watch_resource(self, func, ResourceCls):
         dest_file=os.path.join(self.dir, ResourceCls._dest_file())
-        log.info('Watching {} on namespace {}, writing results in {}'.format(
+        log.warn('Watching {} on namespace {}, writing results in {}'.format(
             ResourceCls.__name__, self.namespace, dest_file))
         w = watch.Watch()
         watches.append(w)
@@ -163,6 +163,12 @@ class ResourceWatcher(object):
             func = self.v1.list_config_map_for_all_namespaces
         self.watch_resource(func, resource.ConfigMap)
 
+    def watch_endpoint(self):
+        func = self.v1.list_namespaced_endpoints
+        if self.namespace == 'all':
+            func = self.v1.list_endpoints_for_all_namespaces
+        self.watch_resource(func, resource.Endpoint)
+
     def watch_statefulset(self):
         func = self.apps_v1.list_namespaced_stateful_set
         if self.namespace == 'all':
@@ -193,7 +199,7 @@ def start_watches(cluster, namespace, args):
     for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
               resource_watcher.watch_services, resource_watcher.watch_nodes,
               resource_watcher.watch_statefulset, resource_watcher.watch_replicaset,
-              resource_watcher.watch_configmap]:
+              resource_watcher.watch_configmap, resource_watcher.watch_endpoint]:
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()

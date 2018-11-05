@@ -27,6 +27,16 @@ _replicaset_selector()
 	echo $res
 }
 
+_endpoints_selector()
+{
+	res=$(cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
+		| column -t \
+		| sort \
+		| fzf --sync -m --header="Namespace Name Age ReadyIPs ReadyPods UnreadyIPs NotReadyPods" --layout reverse -q "$2" \
+		| awk '{print $2}')
+	echo $res
+}
+
 _statefulset_selector()
 {
 	res=$(cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
@@ -134,6 +144,10 @@ __kubectl_parse_get()
 			filename="statefulsets"
 			autocomplete_fun=_statefulset_selector
 			;;
+		endpoints )
+			filename="endpoints"
+			autocomplete_fun=_endpoints_selector
+			;;
 		svc | service )
 			filename="services"
 			autocomplete_fun=_service_selector
@@ -156,7 +170,7 @@ __kubectl_parse_get()
 	fi
 
 	local query=""
-	if [[ $1 != $last_part ]]; then
+	if [[ $1 != $last_part && $last_part != -* ]]; then
 		query=$last_part
 	fi
 
