@@ -6,13 +6,14 @@
 
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
+KUBECTL_FZF_OPTIONS="-1 -m --header-lines=1 --layout reverse"
 
 _pod_selector()
 {
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -21,7 +22,7 @@ _replicaset_selector()
     cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -30,7 +31,7 @@ _endpoints_selector()
     cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -39,7 +40,7 @@ _statefulset_selector()
     cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf --sync -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -48,7 +49,7 @@ _deployment_selector()
     cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -57,7 +58,7 @@ _namespace_selector()
     cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $1}'
 }
 
@@ -66,7 +67,7 @@ _configmap_selector()
     awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -75,7 +76,7 @@ _service_selector()
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $2}'
 }
 
@@ -84,7 +85,7 @@ _node_selector()
     awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $1}'
 }
 
@@ -108,7 +109,7 @@ _flag_selector()
         | grep -v None \
         | sort \
         | uniq \
-        | fzf -m --header-lines=1 --layout reverse -q "$2" \
+        | fzf $KUBECTL_FZF_OPTIONS -q "$2" \
         | awk '{print $1}'
 }
 
@@ -141,7 +142,7 @@ __kubectl_parse_get()
 			filename="nodes"
 			autocomplete_fun=_node_selector
 			;;
-		deployment )
+        deployment?(s) | deployments.apps | deployments.extensions  )
 			filename="deployments"
 			autocomplete_fun=_deployment_selector
 			;;
