@@ -185,6 +185,10 @@ class ResourceWatcher(object):
             func = self.extensions_v1beta1.list_deployment_for_all_namespaces
         self.watch_resource(func, resource.Deployment)
 
+    def watch_namespaces(self):
+        func = self.v1.list_namespace
+        self.watch_resource(func, resource.Namespace)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Watch kube resources and keep a local cache up to date.')
@@ -203,7 +207,8 @@ def start_watches(cluster, namespace, args):
     for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
               resource_watcher.watch_services, resource_watcher.watch_nodes,
               resource_watcher.watch_statefulset, resource_watcher.watch_replicaset,
-              resource_watcher.watch_configmap, resource_watcher.watch_endpoint]:
+              resource_watcher.watch_configmap, resource_watcher.watch_endpoint,
+              resource_watcher.watch_namespaces]:
         p = multiprocessing.Process(target=f)
         p.daemon = True
         p.start()

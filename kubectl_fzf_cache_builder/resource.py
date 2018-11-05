@@ -12,7 +12,8 @@ class Resource(object):
 
     def __init__(self, resource):
         self.name = resource.metadata.name
-        self.namespace = resource.metadata.namespace
+        if hasattr(resource.metadata, 'namespace'):
+            self.namespace = resource.metadata.namespace
         self.labels = resource.metadata.labels or {}
         for l in EXCLUDED_LABELS:
             self.labels.pop(l, None)
@@ -269,3 +270,20 @@ class Service(Resource):
         content.append(self._selector_str())
         content.append(self._resource_age())
         return ' '.join(content)
+
+
+class Namespace(Resource):
+
+    def __init__(self, namespace):
+        Resource.__init__(self, namespace)
+
+    def __str__(self):
+        content = []
+        content.append(self.name)
+        content.append(self._label_str())
+        content.append(self._resource_age())
+        return ' '.join(content)
+
+    @staticmethod
+    def _has_namespace():
+        return False

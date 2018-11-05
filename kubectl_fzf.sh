@@ -9,82 +9,83 @@ eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 
 _pod_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf --sync -m --header="Namespace Name IP Node Status Age" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf --sync -m --header="Namespace Name IP Node Status Age" --layout reverse -q "$2" \
+        | awk '{print $2}'
 }
 
 _replicaset_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf --sync -m --header="Namespace Name Desired Current Ready LabelSelector Age" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf --sync -m --header="Namespace Name Desired Current Ready LabelSelector Age" --layout reverse -q "$2" \
+        | awk '{print $2}'
 }
 
 _endpoints_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf --sync -m --header="Namespace Name Age ReadyIPs ReadyPods UnreadyIPs NotReadyPods" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf --sync -m --header="Namespace Name Age ReadyIPs ReadyPods UnreadyIPs NotReadyPods" --layout reverse -q "$2" \
+        | awk '{print $2}'
 }
 
 _statefulset_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf --sync -m --header="Namespace Name Ready/Replicas LabelSelector Age" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf --sync -m --header="Namespace Name Ready/Replicas LabelSelector Age" --layout reverse -q "$2" \
+        | awk '{print $2}'
 }
 
 _deployment_selector()
 {
-	res=$(cat ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf -m --header="Namespace Name Age Label" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    cat ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf -m --header="Namespace Name Age Label" --layout reverse -q "$2" \
+        | awk '{print $2}'
+}
+
+_namespace_selector()
+{
+    cat ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf -m --header="Namespace" --layout reverse -q "$2" \
+        | awk '{print $1}'
 }
 
 _configmap_selector()
 {
-	res=$(awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf -m --header="Namespace Name Age Labels" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf -m --header="Namespace Name Age Labels" --layout reverse -q "$2" \
+        | awk '{print $2}'
 }
 
 _service_selector()
 {
-	res=$(cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf -m --header="Namespace Service Type Ip Ports Selector" --layout reverse -q "$2" \
-		| awk '{print $2}')
-	echo $res
+    cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf -m --header="Namespace Service Type Ip Ports Selector" --layout reverse -q "$2" \
+        | awk '{print $2}'
 }
 
 _node_selector()
 {
-	res=$(awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
-		| column -t \
-		| sort \
-		| fzf -m --header="Node InternalIp Zone InstanceType Age Roles" --layout reverse -q "$2" \
-		| awk '{print $1}')
-	echo $res
+    awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf -m --header="Node InternalIp Zone InstanceType Age Roles" --layout reverse -q "$2" \
+        | awk '{print $1}'
 }
 
 _flag_selector()
@@ -97,18 +98,18 @@ _flag_selector()
 	resources_to_label[statefulsets]='3'
 	resources_to_label[replicasets]='3'
 	resources_to_label[configmaps]='3'
+	resources_to_label[endpoints]='3'
 
 	local file="${KUBECTL_FZF_CACHE}/$1"
 	local column="${resources_to_label[$1]}"
-	res=$(cut -d ' ' -f $column "$file" \
-		| paste -sd ',' \
-		| tr ',' '\n' \
-		| grep -v None \
-		| sort \
-		| uniq \
-		| fzf -m --header="Label Value" --layout reverse -q "$2" \
-		| awk '{print $1}')
-	echo $res
+    cut -d ' ' -f $column "$file" \
+        | paste -sd ',' \
+        | tr ',' '\n' \
+        | grep -v None \
+        | sort \
+        | uniq \
+        | fzf -m --header="Label Value" --layout reverse -q "$2" \
+        | awk '{print $1}'
 }
 
 __kubectl_parse_get()
@@ -131,6 +132,10 @@ __kubectl_parse_get()
 		configmap )
 			filename="configmaps"
 			autocomplete_fun=_configmap_selector
+			;;
+        ns | namespace?(s) )
+			filename="namespaces"
+			autocomplete_fun=_namespace_selector
 			;;
 		node?(s) )
 			filename="nodes"
