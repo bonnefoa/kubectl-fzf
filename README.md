@@ -23,7 +23,8 @@ source <repository>/kubectl_fzf.sh
 
 You can also use zplug
 ```
-zplug "bonnefoa/kubectl-fzf"
+zplug "plugins/kubectl", from:oh-my-zsh, defer:2
+zplug "bonnefoa/kubectl-fzf", defer:3
 ```
 
 # Usage
