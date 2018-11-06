@@ -49,11 +49,12 @@ The script will be called to refresh oidc token when necessary.
 
 ## Available autocompletions
 
-- deployment
+- deployments
 - endpoints
 - labels
 - namespace
 - nodes
-- pod
+- pods
+- replicaset
 - service
 - statefulset
