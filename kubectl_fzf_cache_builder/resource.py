@@ -46,6 +46,12 @@ class Resource(object):
         else:
             return 'None'
 
+    def _list_str(self, lst):
+        if lst:
+            return ','.join(lst)
+        else:
+            return 'None'
+
     def _selector_str(self):
         if self.selector:
             return ','.join(self.selector)
@@ -222,10 +228,10 @@ class Endpoint(Resource):
         content.append(self.name)
         content.append(self._label_str())
         content.append(self._resource_age())
-        content.append(','.join(self.ready_ips))
-        content.append(','.join(self.ready_pods))
-        content.append(','.join(self.not_ready_ips))
-        content.append(','.join(self.not_ready_pods))
+        content.append(self._list_str(self.ready_ips))
+        content.append(self._list_str(self.ready_pods))
+        content.append(self._list_str(self.not_ready_ips))
+        content.append(self._list_str(self.not_ready_pods))
         return ' '.join(content)
 
     @staticmethod
@@ -254,7 +260,7 @@ class Node(Resource):
         content = []
         content.append(self.name)
         content.append(self._label_str())
-        content.append(','.join(self.roles))
+        content.append(self._list_str(self.roles))
         content.append(self.instance_type)
         content.append(self.zone)
         content.append(self.internal_ip)
@@ -291,10 +297,7 @@ class Service(Resource):
         content.append(self._label_str())
         content.append(self.type)
         content.append(self.cluster_ip)
-        if self.ports:
-            content.append(','.join(self.ports))
-        else:
-            content.append('None')
+        content.append(self._list_str(self.ports))
         content.append(self._selector_str())
         content.append(self._resource_age())
         return ' '.join(content)
