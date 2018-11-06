@@ -131,7 +131,7 @@ class ResourceWatcher(object):
         log.warn('{} watcher exiting'.format(ResourceCls.__name__))
 
     def poll_resource(self, func, ResourceCls):
-        dest_file=ResourceCls._dest_file()
+        dest_file=os.path.join(self.dir, ResourceCls._dest_file())
         log.info('Poll {} on namespace {}, writing results in {}'.format(
             ResourceCls.__name__, self.namespace, dest_file))
         kwargs = self._get_resource_kwargs(ResourceCls)
