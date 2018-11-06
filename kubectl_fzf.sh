@@ -7,7 +7,7 @@
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 KUBECTL_FZF_OPTIONS=(-1 -m --header-lines=1 --layout reverse)
-KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview 'echo {}')
+KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview 'echo {} | fold -w $COLUMNS')
 
 _pod_selector()
 {
