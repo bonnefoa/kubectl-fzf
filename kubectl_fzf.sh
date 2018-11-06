@@ -131,7 +131,7 @@ __kubectl_parse_get()
 			filename="replicasets"
 			autocomplete_fun=_replicaset_selector
 			;;
-		configmap )
+        configmap?(s) )
 			filename="configmaps"
 			autocomplete_fun=_configmap_selector
 			;;
