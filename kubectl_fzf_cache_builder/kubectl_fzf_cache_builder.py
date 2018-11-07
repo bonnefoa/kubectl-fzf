@@ -66,7 +66,8 @@ class ResourceWatcher(object):
         self.v1 = client.CoreV1Api(api_client=kubernetes_config)
         self.apps_v1 = client.AppsV1Api(api_client=kubernetes_config)
         self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
-        self.poll_time = args.poll_time
+        self.node_poll_time = args.node_poll_time
+        self.namespace_poll_time = args.namespace_poll_time
         self.kube_kwargs = {'_request_timeout': 600}
         self.dir = args.dir
         if args.selector:
@@ -130,7 +131,7 @@ class ResourceWatcher(object):
                     log.info('Process {} {}'.format(i, ResourceCls.__name__))
         log.warn('{} watcher exiting'.format(ResourceCls.__name__))
 
-    def poll_resource(self, func, ResourceCls):
+    def poll_resource(self, func, poll_time, ResourceCls):
         dest_file=os.path.join(self.dir, ResourceCls._dest_file())
         log.info('Poll {} on namespace {}, writing results in {}'.format(
             ResourceCls.__name__, self.namespace, dest_file))
@@ -140,7 +141,7 @@ class ResourceWatcher(object):
             resources = [ResourceCls(item) for item in resp.items]
             with open(dest_file, 'w') as dest:
                 self.write_resources_to_file(ResourceCls.header(), resources, dest)
-            time.sleep(self.poll_time)
+            time.sleep(poll_time)
         log.info('{} poll exiting {}'.format(ResourceCls.__name__, exiting))
 
     def watch_pods(self):
@@ -156,7 +157,7 @@ class ResourceWatcher(object):
         self.watch_resource(func, resource.Service)
 
     def watch_nodes(self):
-        self.poll_resource(self.v1.list_node, resource.Node)
+        self.poll_resource(self.v1.list_node, resource.Node, self.node_poll_time)
 
     def watch_replicaset(self):
         func = self.apps_v1.list_namespaced_replica_set
@@ -189,15 +190,16 @@ class ResourceWatcher(object):
         self.watch_resource(func, resource.Deployment)
 
     def watch_namespaces(self):
-        func = self.v1.list_namespace
-        self.watch_resource(func, resource.Namespace)
+        self.poll_resource(self.v1.list_namespace, resource.Namespace,
+                           self.namespace_poll_time)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Watch kube resources and keep a local cache up to date.')
     parser.add_argument('--dir', '-d', dest='dir', type=str, help='cache dir location. Default to KUBECTL_FZF_CACHE env var', default=os.environ.get('KUBECTL_FZF_CACHE', None))
     parser.add_argument("--selector", "-l", dest='selector', type=str, help='Resource selector to use', default=None)
-    parser.add_argument("--poll-time", dest='poll_time', type=int, help='Time between two list requests for polled resources', default=300)
+    parser.add_argument("--node-poll-time", dest='node_poll_time', type=int, help='Time between two polls for Nodes', default=300)
+    parser.add_argument("--namespace-poll-time", dest='namespace_poll_time', type=int, help='Time between two polls for Namespace', default=600)
     parser.add_argument("--namespace", "-n", dest='namespace', type=str, help='Namespace to filter. Default to current namespace. all for no filter', default=None)
     parser.add_argument("--refresh-command", dest='refresh_command', type=str, help='Command to launch when the token is expired', default=None)
     parser.add_argument("--verbose", "-v", dest='verbose', action='store_true')
