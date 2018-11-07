@@ -62,10 +62,7 @@ class ResourceWatcher(object):
     def __init__(self, cluster, namespace, args):
         self.cluster = cluster
         self.namespace = namespace
-        kubernetes_config = get_kubernetes_config(cluster, args.refresh_command)
-        self.v1 = client.CoreV1Api(api_client=kubernetes_config)
-        self.apps_v1 = client.AppsV1Api(api_client=kubernetes_config)
-        self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
+        self.refresh_command = args.refresh_command
         self.node_poll_time = args.node_poll_time
         self.namespace_poll_time = args.namespace_poll_time
         self.kube_kwargs = {'_request_timeout': 600}
@@ -74,6 +71,14 @@ class ResourceWatcher(object):
             self.kube_kwargs['label_selector'] = args.selector
         if self.namespace != 'all':
             self.kube_kwargs['namespace'] = self.namespace
+        self.construct_kubernetes_api()
+
+    def construct_kubernetes_api(self):
+        kubernetes_config = get_kubernetes_config(self.cluster,
+                                                  self.refresh_command)
+        self.v1 = client.CoreV1Api(api_client=kubernetes_config)
+        self.apps_v1 = client.AppsV1Api(api_client=kubernetes_config)
+        self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
 
     def write_resources_to_file(self, header, resources, f):
         f.write('{}\n'.format(header))
@@ -157,7 +162,7 @@ class ResourceWatcher(object):
         self.watch_resource(func, resource.Service)
 
     def watch_nodes(self):
-        self.poll_resource(self.v1.list_node, resource.Node, self.node_poll_time)
+        self.poll_resource(self.v1.list_node, self.node_poll_time, resource.Node)
 
     def watch_replicaset(self):
         func = self.apps_v1.list_namespaced_replica_set
@@ -190,8 +195,7 @@ class ResourceWatcher(object):
         self.watch_resource(func, resource.Deployment)
 
     def watch_namespaces(self):
-        self.poll_resource(self.v1.list_namespace, resource.Namespace,
-                           self.namespace_poll_time)
+        self.poll_resource(self.v1.list_namespace, self.namespace_poll_time, resource.Namespace)
 
 
 def parse_args():
@@ -218,10 +222,10 @@ def start_watches(cluster, namespace, args):
         p.daemon = True
         p.start()
         processes.append((p, f))
-    return processes
+    return resource_watcher, processes
 
 
-def wait_loop(processes, cluster, namespace):
+def wait_loop(resource_watcher, processes, cluster, namespace):
     while exiting is False:
         dead_processes = []
         for p, f in processes:
@@ -234,6 +238,8 @@ def wait_loop(processes, cluster, namespace):
         for p, f in dead_processes:
             log.info('Restarting {} processes'.format(len(dead_processes)))
             processes.remove((p, f))
+            # Renew login if necessary
+            resource_watcher.construct_kubernetes_api()
             new_p = multiprocessing.Process(target=f)
             new_p.daemon = True
             new_p.start()
@@ -270,8 +276,8 @@ def main():
         cluster, namespace = get_current_context()
         if args.namespace is not None:
             namespace = args.namespace
-        processes = start_watches(cluster, namespace, args)
-        wait_loop(processes, cluster, namespace)
+        resource_watcher, processes = start_watches(cluster, namespace, args)
+        wait_loop(resource_watcher, processes, cluster, namespace)
         for p, _ in processes:
             log.warn('Terminating {}'.format(p))
             p.terminate()
