@@ -103,7 +103,7 @@ class ResourceWatcher(object):
             log.debug('Removing resource {}'.format(resource))
             resources.remove(resource)
             do_truncate = True
-        else:
+        elif not resource.is_deleted:
             if resource in resources:
                 log.debug('Updating resource {}'.format(resource))
                 do_truncate = True
