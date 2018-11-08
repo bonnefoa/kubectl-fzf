@@ -6,8 +6,8 @@
 
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
-KUBECTL_FZF_OPTIONS=(-1 -m --header-lines=1 --layout reverse)
-KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview 'echo {} | fold -w $COLUMNS')
+KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
+KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
 _pod_selector()
 {
@@ -116,6 +116,7 @@ _flag_selector()
 
 __kubectl_parse_get()
 {
+    echo "a${COMP_LINE}a" > /tmp/debug
 	local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
 	local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
 
@@ -123,6 +124,9 @@ __kubectl_parse_get()
 	local autocomplete_fun
 
 	case $1 in
+		all )
+			filename="pods"
+            ;;
 		pod?(s) )
 			filename="pods"
 			autocomplete_fun=_pod_selector
@@ -166,6 +170,9 @@ __kubectl_parse_get()
 	esac
 
 	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
+        if [[ ($penultimate == "--selector" || $penultimate == "-l") && ${COMP_LINE: -1} == " " ]]; then
+            return
+        fi
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
@@ -175,6 +182,11 @@ __kubectl_parse_get()
 		fi
 		return
 	fi
+
+    if [[ -z $autocomplete_fun ]]; then
+        ___kubectl_parse_get $*
+        return
+    fi
 
 	local query=""
 	if [[ $1 != $last_part && $last_part != -* ]]; then
