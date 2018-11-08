@@ -105,7 +105,7 @@ _flag_selector()
 	local file="${KUBECTL_FZF_CACHE}/$1"
 	local column="${resources_to_label[$1]}"
     cut -d ' ' -f $column "$file" \
-        | paste -sd ',' \
+        | paste -sd ',' - \
         | tr ',' '\n' \
         | grep -v None \
         | sort \
