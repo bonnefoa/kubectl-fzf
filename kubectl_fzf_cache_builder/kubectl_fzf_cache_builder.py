@@ -248,7 +248,7 @@ def wait_loop(resource_watcher, processes, cluster, namespace):
         if cluster != new_cluster:
             log.info('Watched cluster {} != {}'.format(cluster, new_cluster))
             return
-        if namespace != new_namespace:
+        if namespace != 'all' and namespace != new_namespace:
             log.info('Watched namespace {} != {}'.format(namespace, new_namespace))
             return
 
