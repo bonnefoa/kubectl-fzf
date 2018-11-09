@@ -127,27 +127,27 @@ __kubectl_parse_get()
 		all )
 			filename="pods"
             ;;
-		pod?(s) )
+		pod | pods )
 			filename="pods"
 			autocomplete_fun=_pod_selector
 			;;
-		rs | resplicaset?(s) )
+		rs | resplicaset | replicasets )
 			filename="replicasets"
 			autocomplete_fun=_replicaset_selector
 			;;
-        configmap?(s) )
+        configmap | configmaps )
 			filename="configmaps"
 			autocomplete_fun=_configmap_selector
 			;;
-        ns | namespace?(s) )
+        ns | namespace | namespaces )
 			filename="namespaces"
 			autocomplete_fun=_namespace_selector
 			;;
-		node?(s) )
+		node | nodes )
 			filename="nodes"
 			autocomplete_fun=_node_selector
 			;;
-        deployment?(s) | deployments.apps | deployments.extensions  )
+        deployment | deployments | deployments.apps | deployments.extensions  )
 			filename="deployments"
 			autocomplete_fun=_deployment_selector
 			;;
@@ -159,7 +159,7 @@ __kubectl_parse_get()
 			filename="endpoints"
 			autocomplete_fun=_endpoints_selector
 			;;
-		svc | service )
+		svc | service | services )
 			filename="services"
 			autocomplete_fun=_service_selector
 			;;
