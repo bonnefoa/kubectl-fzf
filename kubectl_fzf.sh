@@ -14,7 +14,7 @@ _pod_selector()
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -23,7 +23,7 @@ _replicaset_selector()
     cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -32,7 +32,7 @@ _endpoints_selector()
     cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -41,7 +41,7 @@ _statefulset_selector()
     cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -50,7 +50,7 @@ _deployment_selector()
     cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -59,7 +59,7 @@ _namespace_selector()
     cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $1}'
 }
 
@@ -68,7 +68,7 @@ _configmap_selector()
     awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -77,7 +77,7 @@ _service_selector()
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $2}'
 }
 
@@ -86,7 +86,7 @@ _node_selector()
     awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
-        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $1}'
 }
 
