@@ -212,14 +212,14 @@ class Endpoint(Resource):
                 for add in subset.addresses:
                     self.ready_ips.append(add.ip)
                     target = add.target_ref
-                    if target.kind == "Pod":
+                    if target and target.kind == "Pod":
                         self.ready_pods.append(target.name)
 
             if subset.not_ready_addresses:
                 for add in subset.not_ready_addresses:
                     self.not_ready_ips.append(add.ip)
                     target = add.target_ref
-                    if target.kind == "Pod":
+                    if target and target.kind == "Pod":
                         self.not_ready_pods.append(target.name)
 
     def __str__(self):
@@ -283,12 +283,14 @@ class Service(Resource):
         self.type = service.spec.type
         self.cluster_ip = service.spec.cluster_ip
         self.ports = []
+        self.selector = []
         if service.spec.ports:
             self.ports = ['{}:{}'.format(p.name, p.port)
                           for p in service.spec.ports]
-        self.selector = ['{}={}'.format(k, v)
-                         for k, v in service.spec.selector.items()
-                         if k not in EXCLUDED_LABELS]
+        if service.spec.selector is not None:
+            self.selector = ['{}={}'.format(k, v)
+                             for k, v in service.spec.selector.items()
+                             if k not in EXCLUDED_LABELS]
 
     def __str__(self):
         content = []
