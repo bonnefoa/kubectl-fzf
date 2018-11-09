@@ -57,6 +57,37 @@ def get_kubernetes_config(cluster, refresh_command):
     return res
 
 
+class ResourceDumper(object):
+
+    def __init__(self, dest_dir, resource_cls):
+        self.resource_cls = resource_cls
+        self.header = resource_cls.header()
+        self.dest_file = os.path.join(dest_dir, resource_cls._dest_file())
+        self.tmp_file = '{}_'.format(self.dest_file)
+        self.f = open(self.dest_file, 'w')
+
+    def write_resources_to_file(self, resources):
+        self.f.write('{}\n'.format(self.header))
+        self.f.writelines(['{}\n'.format(str(r)) for r in resources])
+        self.f.flush()
+
+    def write_resource_to_file(self, resource, resource_dict, truncate_file):
+        if truncate_file:
+            self.f.close()
+            self.f = open('{}_'.format(self.dest_file), 'w')
+            self.write_resources_to_file(resource_dict)
+            os.rename(self.tmp_file, self.dest_file)
+        else:
+            if self.f.tell() == 0:
+                self.f.write('{}\n'.format(self.header))
+            self.f.write('{}\n'.format(str(resource)))
+            self.f.flush()
+
+    def close(self):
+        self.f.close()
+        self.f = None
+
+
 class ResourceWatcher(object):
 
     def __init__(self, cluster, namespace, args):
@@ -80,36 +111,20 @@ class ResourceWatcher(object):
         self.apps_v1 = client.AppsV1Api(api_client=kubernetes_config)
         self.extensions_v1beta1 = client.ExtensionsV1beta1Api(api_client=kubernetes_config)
 
-    def write_resources_to_file(self, header, resources, f):
-        f.write('{}\n'.format(header))
-        f.writelines(['{}\n'.format(r) for r in resources])
-        f.flush()
-
-    def write_resource_to_file(self, resource, resources, truncate_file, f):
-        if truncate_file:
-            log.debug('Truncating file {}'.format(resource))
-            f.seek(0)
-            f.truncate()
-            self.write_resources_to_file(resource.header(), resources, f)
-        else:
-            if f.tell() == 0:
-                f.write('{}\n'.format(resource.header()))
-            f.write('{}\n'.format(str(resource)))
-            f.flush()
-
-    def process_resource(self, resource, resources, dest):
+    def process_resource(self, resource, resource_dict, resource_dumper):
         do_truncate = False
-        if resource.is_deleted and resource in resources:
+        if resource.is_deleted and resource in resource_dict:
             log.debug('Removing resource {}'.format(resource))
-            resources.remove(resource)
+            resource_dict.pop(resource)
             do_truncate = True
         elif not resource.is_deleted:
-            if resource in resources:
+            if resource in resource_dict and \
+                    str(resource) != str(resource_dict[resource]):
                 log.debug('Updating resource {}'.format(resource))
                 do_truncate = True
-                resources.remove(resource)
-            resources.add(resource)
-        self.write_resource_to_file(resource, resources, do_truncate, dest)
+                resource_dict.pop(resource)
+            resource_dict[resource] = resource
+        resource_dumper.write_resource_to_file(resource, resource_dict, do_truncate)
 
     def _get_resource_kwargs(self, Resource):
         kwargs = self.kube_kwargs
@@ -119,21 +134,21 @@ class ResourceWatcher(object):
         return kwargs
 
     def watch_resource(self, func, ResourceCls):
-        dest_file=os.path.join(self.dir, ResourceCls._dest_file())
+        resource_dumper = ResourceDumper(self.dir, ResourceCls)
         log.warn('Watching {} on namespace {}, writing results in {}'.format(
-            ResourceCls.__name__, self.namespace, dest_file))
+            ResourceCls.__name__, self.namespace, resource_dumper.dest_file))
         w = watch.Watch()
         watches.append(w)
-        resources = set()
-        with open(dest_file, 'w') as dest:
-            kwargs = self._get_resource_kwargs(ResourceCls)
-            i = 0
-            for resp in w.stream(func, **kwargs):
-                resource = ResourceCls(resp['object'])
-                self.process_resource(resource, resources, dest)
-                i = i + 1
-                if i % 1000 == 0:
-                    log.info('Process {} {}'.format(i, ResourceCls.__name__))
+        resource_dict = {}
+        kwargs = self._get_resource_kwargs(ResourceCls)
+        i = 0
+        for resp in w.stream(func, **kwargs):
+            resource = ResourceCls(resp['object'])
+            self.process_resource(resource, resource_dict, resource_dumper)
+            i = i + 1
+            if i % 1000 == 0:
+                log.info('Process {} {}'.format(i, ResourceCls.__name__))
+        resource_dumper.close()
         log.warn('{} watcher exiting'.format(ResourceCls.__name__))
 
     def poll_resource(self, func, poll_time, ResourceCls):
@@ -141,12 +156,13 @@ class ResourceWatcher(object):
         log.info('Poll {} on namespace {}, writing results in {}'.format(
             ResourceCls.__name__, self.namespace, dest_file))
         kwargs = self._get_resource_kwargs(ResourceCls)
+        resource_dumper = ResourceDumper(self.dir, ResourceCls)
         while exiting is False:
             resp = func(**kwargs)
             resources = [ResourceCls(item) for item in resp.items]
-            with open(dest_file, 'w') as dest:
-                self.write_resources_to_file(ResourceCls.header(), resources, dest)
+            resource_dumper.write_resources_to_file(resources)
             time.sleep(poll_time)
+        resource_dumper.close()
         log.info('{} poll exiting {}'.format(ResourceCls.__name__, exiting))
 
     def watch_pods(self):

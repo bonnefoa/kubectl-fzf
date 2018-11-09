@@ -2,9 +2,9 @@ import logging
 from datetime import datetime
 
 
-EXCLUDED_LABELS=['pod-template-generation', 'app.kubernetes.io/name', 'controller-revision-hash',
-                 'app.kubernetes.io/managed-by', 'pod-template-hash', 'statefulset.kubernetes.io/pod-name',
-                 'controler-uid']
+EXCLUDED_LABELS = ['pod-template-generation', 'app.kubernetes.io/name', 'controller-revision-hash',
+                   'app.kubernetes.io/managed-by', 'pod-template-hash', 'statefulset.kubernetes.io/pod-name',
+                   'controler-uid']
 log = logging.getLogger('dd.' + __name__)
 
 
@@ -67,10 +67,10 @@ class Resource(object):
         return True
 
     def __hash__(self):
-        return hash(self.name)
+        return hash((self.name, self.namespace))
 
     def __eq__(self, other):
-        return self.name == other.name
+        return self.name == other.name and self.namespace == other.namespace
 
 
 class Pod(Resource):
