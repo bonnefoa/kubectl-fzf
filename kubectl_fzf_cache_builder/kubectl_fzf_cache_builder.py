@@ -14,6 +14,7 @@ import base64
 import json
 import datetime
 from dateutil import tz
+from urllib3.exceptions import ProtocolError
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -142,14 +143,16 @@ class ResourceWatcher(object):
         resource_dict = {}
         kwargs = self._get_resource_kwargs(ResourceCls)
         i = 0
-        for resp in w.stream(func, **kwargs):
-            resource = ResourceCls(resp['object'])
-            self.process_resource(resource, resource_dict, resource_dumper)
-            i = i + 1
-            if i % 1000 == 0:
-                log.info('Process {} {}'.format(i, ResourceCls.__name__))
-        resource_dumper.close()
-        log.warn('{} watcher exiting'.format(ResourceCls.__name__))
+        try:
+            for resp in w.stream(func, **kwargs):
+                resource = ResourceCls(resp['object'])
+                self.process_resource(resource, resource_dict, resource_dumper)
+                i = i + 1
+                if i % 1000 == 0:
+                    log.info('Processed {} {}'.format(i, ResourceCls.__name__))
+            resource_dumper.close()
+        except ProtocolError as e:
+            log.warn('{} watcher exiting due to {}'.format(ResourceCls.__name__, e))
 
     def poll_resource(self, func, poll_time, ResourceCls):
         dest_file=os.path.join(self.dir, ResourceCls._dest_file())
@@ -198,6 +201,16 @@ class ResourceWatcher(object):
             func = self.v1.list_endpoints_for_all_namespaces
         self.watch_resource(func, resource.Endpoint)
 
+    def watch_pv(self):
+        func = self.v1.list_persistent_volume
+        self.watch_resource(func, resource.Pv)
+
+    def watch_pvc(self):
+        func = self.v1.list_namespaced_persistent_volume_claim
+        if self.namespace == 'all':
+            func = self.v1.list_persistent_volume_claim_for_all_namespaces
+        self.watch_resource(func, resource.Pvc)
+
     def watch_statefulset(self):
         func = self.apps_v1.list_namespaced_stateful_set
         if self.namespace == 'all':
@@ -229,10 +242,12 @@ def parse_args():
 def start_watches(cluster, namespace, args):
     processes = []
     resource_watcher = ResourceWatcher(cluster, namespace, args)
+
     for f in [resource_watcher.watch_pods, resource_watcher.watch_deployments,
               resource_watcher.watch_services, resource_watcher.watch_nodes,
               resource_watcher.watch_statefulset, resource_watcher.watch_replicaset,
               resource_watcher.watch_configmap, resource_watcher.watch_endpoint,
+              resource_watcher.watch_pv, resource_watcher.watch_pvc,
               resource_watcher.watch_namespaces]:
         p = multiprocessing.Process(target=f)
         p.daemon = True

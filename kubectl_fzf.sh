@@ -72,6 +72,24 @@ _configmap_selector()
         | awk '{print $2}'
 }
 
+_pv_selector()
+{
+    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | awk '{print $1}'
+}
+
+_pvc_selector()
+{
+    cut -d ' ' -f 1-7 ${KUBECTL_FZF_CACHE}/$1 \
+        | column -t \
+        | sort \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | awk '{print $2}'
+}
+
 _service_selector()
 {
     cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
@@ -154,6 +172,14 @@ __kubectl_parse_get()
 		sts | statefulset )
 			filename="statefulsets"
 			autocomplete_fun=_statefulset_selector
+			;;
+		pv )
+			filename="pvs"
+			autocomplete_fun=_pv_selector
+			;;
+		pvc )
+			filename="pvcs"
+			autocomplete_fun=_pvc_selector
 			;;
 		endpoints )
 			filename="endpoints"

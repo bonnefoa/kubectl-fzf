@@ -93,16 +93,76 @@ class Pod(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append(str(self.host_ip))
         content.append(str(self.node_name))
         content.append(self.phase)
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
         return "Namespace Name Labels HostIp NodeName Phase Age"
+
+
+class Pv(Resource):
+
+    def __init__(self, pv):
+        Resource.__init__(self, pv)
+        self.capacity = pv.spec.capacity
+        self.status = pv.status.phase
+        self.claim = 'None'
+        if pv.spec.claim_ref:
+            self.claim = pv.spec.claim_ref.name
+        self.zone = self.labels.get('failure-domain.beta.kubernetes.io/zone', None)
+        self.storage_class = pv.spec.storage_class_name
+
+    def __str__(self):
+        content = []
+        content.append(self.name)
+        content.append(self.status)
+        content.append(self.storage_class)
+        content.append(self.zone)
+        content.append(self.claim)
+        content.append(self._resource_age())
+        content.append(self._label_str())
+        return ' '.join(content)
+
+    @staticmethod
+    def _has_namespace():
+        return False
+
+    @staticmethod
+    def header():
+        return "Name Status StorageClass Zone Claim Age"
+
+
+class Pvc(Resource):
+
+    def __init__(self, pvc):
+        Resource.__init__(self, pvc)
+        self.capacity = 'None'
+        if pvc.status.capacity:
+            self.capacity = pvc.status.capacity['storage']
+        self.status = pvc.status.phase
+        self.volume_name = str(pvc.spec.volume_name)
+        self.storage_class = pvc.spec.storage_class_name
+
+    def __str__(self):
+        content = []
+        content.append(self.namespace)
+        content.append(self.name)
+        content.append(self.status)
+        content.append(self.capacity)
+        content.append(self.volume_name)
+        content.append(self.storage_class)
+        content.append(self._resource_age())
+        content.append(self._label_str())
+        return ' '.join(content)
+
+    @staticmethod
+    def header():
+        return "Namespace Name Status Capacity VolumeName StorageClass Zone Age"
 
 
 class ReplicaSet(Resource):
