@@ -8,7 +8,7 @@ import multiprocessing
 import signal
 import subprocess
 import time
-from . import resource
+import k8s_resource
 import yaml
 import base64
 import json
@@ -143,16 +143,22 @@ class ResourceWatcher(object):
         resource_dict = {}
         kwargs = self._get_resource_kwargs(ResourceCls)
         i = 0
-        try:
-            for resp in w.stream(func, **kwargs):
-                resource = ResourceCls(resp['object'])
-                self.process_resource(resource, resource_dict, resource_dumper)
-                i = i + 1
-                if i % 1000 == 0:
-                    log.info('Processed {} {}'.format(i, ResourceCls.__name__))
-            resource_dumper.close()
-        except ProtocolError as e:
-            log.warn('{} watcher exiting due to {}'.format(ResourceCls.__name__, e))
+        resource_version = 0
+        while True:
+            try:
+                for resp in w.stream(func, resource_version=resource_version, **kwargs):
+                    resource = ResourceCls(resp['object'])
+                    resource_version = resp['object'].metadata.resource_version
+                    self.process_resource(resource, resource_dict, resource_dumper)
+                    i = i + 1
+                    if i % 1000 == 0:
+                        log.info('Processed {} {}'.format(i, ResourceCls.__name__))
+                resource_dumper.close()
+            except ProtocolError as e:
+                log.warn('{} watcher retrying on following error: {}'.format(ResourceCls.__name__, e))
+            except Exception as e:
+                log.warn('{} watcher exiting due to {}'.format(ResourceCls.__name__, e))
+                return
 
     def poll_resource(self, func, poll_time, ResourceCls):
         dest_file=os.path.join(self.dir, ResourceCls._dest_file())
@@ -172,59 +178,60 @@ class ResourceWatcher(object):
         func = self.v1.list_namespaced_pod
         if self.namespace == 'all':
             func = self.v1.list_pod_for_all_namespaces
-        self.watch_resource(func, resource.Pod)
+        self.watch_resource(func, k8s_resource.Pod)
 
     def watch_services(self):
         func = self.v1.list_namespaced_service
         if self.namespace == 'all':
             func = self.v1.list_service_for_all_namespaces
-        self.watch_resource(func, resource.Service)
+        self.watch_resource(func, k8s_resource.Service)
 
     def watch_nodes(self):
-        self.poll_resource(self.v1.list_node, self.node_poll_time, resource.Node)
+        self.poll_resource(self.v1.list_node, self.node_poll_time, k8s_resource.Node)
 
     def watch_replicaset(self):
         func = self.apps_v1.list_namespaced_replica_set
         if self.namespace == 'all':
             func = self.apps_v1.list_replica_set_for_all_namespaces
-        self.watch_resource(func, resource.ReplicaSet)
+        self.watch_resource(func, k8s_resource.ReplicaSet)
 
     def watch_configmap(self):
         func = self.v1.list_namespaced_config_map
         if self.namespace == 'all':
             func = self.v1.list_config_map_for_all_namespaces
-        self.watch_resource(func, resource.ConfigMap)
+        self.watch_resource(func, k8s_resource.ConfigMap)
 
     def watch_endpoint(self):
         func = self.v1.list_namespaced_endpoints
         if self.namespace == 'all':
             func = self.v1.list_endpoints_for_all_namespaces
-        self.watch_resource(func, resource.Endpoint)
+        self.watch_resource(func, k8s_resource.Endpoint)
 
     def watch_pv(self):
         func = self.v1.list_persistent_volume
-        self.watch_resource(func, resource.Pv)
+        self.watch_resource(func, k8s_resource.Pv)
 
     def watch_pvc(self):
         func = self.v1.list_namespaced_persistent_volume_claim
         if self.namespace == 'all':
             func = self.v1.list_persistent_volume_claim_for_all_namespaces
-        self.watch_resource(func, resource.Pvc)
+        self.watch_resource(func, k8s_resource.Pvc)
 
     def watch_statefulset(self):
         func = self.apps_v1.list_namespaced_stateful_set
         if self.namespace == 'all':
             func = self.apps_v1.list_stateful_set_for_all_namespaces
-        self.watch_resource(func, resource.StatefulSet)
+        self.watch_resource(func, k8s_resource.StatefulSet)
 
     def watch_deployments(self):
         func = self.extensions_v1beta1.list_namespaced_deployment
         if self.namespace == 'all':
             func = self.extensions_v1beta1.list_deployment_for_all_namespaces
-        self.watch_resource(func, resource.Deployment)
+        self.watch_resource(func, k8s_resource.Deployment)
 
     def watch_namespaces(self):
-        self.poll_resource(self.v1.list_namespace, self.namespace_poll_time, resource.Namespace)
+        self.poll_resource(self.v1.list_namespace, self.namespace_poll_time,
+                           k8s_resource.Namespace)
 
 
 def parse_args():
