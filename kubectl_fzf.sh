@@ -11,7 +11,7 @@ KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -
 
 _pod_selector()
 {
-    cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -20,7 +20,7 @@ _pod_selector()
 
 _replicaset_selector()
 {
-    cut -d ' ' -f 1,2,4-8 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -29,7 +29,7 @@ _replicaset_selector()
 
 _endpoints_selector()
 {
-    cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-4 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -38,7 +38,7 @@ _endpoints_selector()
 
 _statefulset_selector()
 {
-    cut -d ' ' -f 1,2,4-5 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-4 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -65,7 +65,7 @@ _namespace_selector()
 
 _configmap_selector()
 {
-    awk '{print $1" "$2" "$4" "$3}' ${KUBECTL_FZF_CACHE}/$1 \
+    cat ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -92,7 +92,7 @@ _pvc_selector()
 
 _service_selector()
 {
-    cut -d ' ' -f 1,2,4-7 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -101,7 +101,7 @@ _service_selector()
 
 _node_selector()
 {
-    awk '{print $1 " " $6 " " $5 " " $4 " " $7 " " $3}' ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -110,19 +110,8 @@ _node_selector()
 
 _flag_selector()
 {
-	declare -A resources_to_label
-	resources_to_label[pods]='3'
-	resources_to_label[services]='3'
-	resources_to_label[deployments]='3'
-	resources_to_label[nodes]='2'
-	resources_to_label[statefulsets]='3'
-	resources_to_label[replicasets]='3'
-	resources_to_label[configmaps]='3'
-	resources_to_label[endpoints]='3'
-
 	local file="${KUBECTL_FZF_CACHE}/$1"
-	local column="${resources_to_label[$1]}"
-    cut -d ' ' -f $column "$file" \
+    awk '{print $NF}' "$file" \
         | paste -sd ',' - \
         | tr ',' '\n' \
         | grep -v None \

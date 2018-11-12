@@ -15,7 +15,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'kubectl_fzf_cache_builder=kubectl_fzf_cache_builder.kubectl_fzf_cache_builder:main'
+            'kubectl_fzf_cache_builder=kubectl_fzf_cache_builder.cli:main'
         ]
     },
 )

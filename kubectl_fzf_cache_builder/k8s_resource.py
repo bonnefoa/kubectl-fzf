@@ -66,6 +66,10 @@ class Resource(object):
     def _has_namespace():
         return True
 
+    @staticmethod
+    def is_poll():
+        return False
+
     def __hash__(self):
         return hash((self.name, self.namespace))
 
@@ -102,7 +106,13 @@ class Pod(Resource):
 
     @staticmethod
     def header():
-        return "Namespace Name Labels HostIp NodeName Phase Age"
+        return "Namespace Name HostIp NodeName Phase Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.v1.list_pod_for_all_namespaces
+        return kube_conf.v1.list_namespaced_pod
 
 
 class Pv(Resource):
@@ -134,7 +144,11 @@ class Pv(Resource):
 
     @staticmethod
     def header():
-        return "Name Status StorageClass Zone Claim Age"
+        return "Name Status StorageClass Zone Claim Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        return kube_conf.v1.list_persistent_volume
 
 
 class Pvc(Resource):
@@ -162,7 +176,13 @@ class Pvc(Resource):
 
     @staticmethod
     def header():
-        return "Namespace Name Status Capacity VolumeName StorageClass Zone Age"
+        return "Namespace Name Status Capacity VolumeName StorageClass Zone Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.v1.list_persistent_volume_claim_for_all_namespaces
+        return kube_conf.v1.list_namespaced_persistent_volume_claim
 
 
 class ReplicaSet(Resource):
@@ -180,17 +200,23 @@ class ReplicaSet(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append(str(self.replicas))
         content.append(str(self.available_replicas))
         content.append(str(self.ready_replicas))
         content.append(self._selector_str())
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Namespace Name Labels Replicas AvailableReplicas ReadyReplicas Selector Age"
+        return "Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.apps_v1.list_replica_set_for_all_namespaces
+        return kube_conf.apps_v1.list_namespaced_replica_set
 
 
 class ConfigMap(Resource):
@@ -202,13 +228,19 @@ class ConfigMap(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Namespace Name Labels Age"
+        return "Namespace Name Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.v1.list_config_map_for_all_namespaces
+        return kube_conf.v1.list_namespaced_config_map
 
 
 class StatefulSet(Resource):
@@ -225,15 +257,21 @@ class StatefulSet(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append('{}/{}'.format(self.current_replicas, self.replicas))
         content.append(self._selector_str())
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Namespace Name Labels Replicas Selector Age"
+        return "Namespace Name Replicas Selector Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.apps_v1.list_stateful_set_for_all_namespaces
+        return kube_conf.apps_v1.list_namespaced_stateful_set
 
 
 class Deployment(Resource):
@@ -245,13 +283,19 @@ class Deployment(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Namespace Name Labels Age"
+        return "Namespace Name Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.extensions_v1beta1.list_deployment_for_all_namespaces
+        return kube_conf.extensions_v1beta1.list_namespaced_deployment
 
 
 class Endpoint(Resource):
@@ -286,17 +330,23 @@ class Endpoint(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append(self._resource_age())
         content.append(self._list_str(self.ready_ips))
         content.append(self._list_str(self.ready_pods))
         content.append(self._list_str(self.not_ready_ips))
         content.append(self._list_str(self.not_ready_pods))
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Namespace Name Labels Age ReadyIps ReadyPods NotReadyIps NotReadyPods"
+        return "Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.v1.list_endpoints_for_all_namespaces
+        return kube_conf.v1.list_namespaced_endpoints
 
 
 class Node(Resource):
@@ -319,12 +369,12 @@ class Node(Resource):
     def __str__(self):
         content = []
         content.append(self.name)
-        content.append(self._label_str())
         content.append(self._list_str(self.roles))
         content.append(self.instance_type)
         content.append(self.zone)
         content.append(self.internal_ip)
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
@@ -333,7 +383,15 @@ class Node(Resource):
 
     @staticmethod
     def header():
-        return "Name Labels Roles InstanceType Zone InternalIp Age"
+        return "Name Roles InstanceType Zone InternalIp Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        return kube_conf.v1.list_node
+
+    @staticmethod
+    def is_poll():
+        return True
 
 
 class Service(Resource):
@@ -356,17 +414,23 @@ class Service(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(self._label_str())
         content.append(self.type)
         content.append(self.cluster_ip)
         content.append(self._list_str(self.ports))
         content.append(self._selector_str())
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Namespace Name Labels Type ClusterIp Ports Selector Age"
+        return "Namespace Name Type ClusterIp Ports Selector Age Labels"
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        if namespace == 'all':
+            return kube_conf.v1.list_service_for_all_namespaces
+        return kube_conf.v1.list_namespaced_service
 
 
 class Namespace(Resource):
@@ -377,14 +441,22 @@ class Namespace(Resource):
     def __str__(self):
         content = []
         content.append(self.name)
-        content.append(self._label_str())
         content.append(self._resource_age())
+        content.append(self._label_str())
         return ' '.join(content)
 
     @staticmethod
     def header():
-        return "Name Labels Age"
+        return "Name Age Labels"
 
     @staticmethod
     def _has_namespace():
         return False
+
+    @staticmethod
+    def list_func(kube_conf, namespace):
+        return kube_conf.v1.list_namespace
+
+    @staticmethod
+    def is_poll():
+        return True
