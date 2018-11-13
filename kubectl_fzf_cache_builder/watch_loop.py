@@ -13,14 +13,14 @@ class WatchLoop():
     def __init__(self, cli_args):
         self.poll_times = {k8s_resource.Namespace: cli_args.namespace_poll_time,
                            k8s_resource.Node: cli_args.node_poll_time}
-        self.resource_watcher = watcher.ResourceWatcher(self.cluster,
-                                                        self.namespace, cli_args)
         self.resources_to_watch = cli_args.resources_to_watch.split(',')
-        self.cluster, namespace = self._get_current_context()
+        self.cluster, self.namespace = self._get_current_context()
         self.forced_namespace = False
-        if cli_args.namespace != namespace:
+        if cli_args.namespace and cli_args.namespace != self.namespace:
             self.namespace = cli_args.namespace
             self.forced_namespace = True
+        self.resource_watcher = watcher.ResourceWatcher(self.cluster,
+                                                        self.namespace, cli_args)
 
     def _get_process(self, cls):
         if cls.is_poll():
@@ -70,7 +70,7 @@ class WatchLoop():
                 new_p.daemon = True
                 new_p.start()
                 self.processes.append((new_p, cls))
-            new_cluster, new_namespace = self.get_current_context()
+            new_cluster, new_namespace = self._get_current_context()
             if self.cluster != new_cluster:
                 log.info('Watched cluster {} != {}'.format(self.cluster,
                                                            new_cluster))
