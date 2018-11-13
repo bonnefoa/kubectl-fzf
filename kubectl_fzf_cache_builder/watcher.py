@@ -3,7 +3,7 @@ from kubernetes import watch
 import logging
 import os.path
 import time
-from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import ProtocolError, ReadTimeoutError, NewConnectionError
 from configuration import KubeConfiguration
 
 
@@ -105,7 +105,7 @@ class ResourceWatcher(object):
                     if i % 1000 == 0:
                         log.info('Processed {} {}'.format(i, resource_cls.__name__))
                 resource_dumper.close()
-            except ProtocolError as e:
+            except (ReadTimeoutError, NewConnectionError, ProtocolError) as e:
                 log.warn('{} watcher retrying on following error: {}'.format(resource_cls.__name__, e))
             except Exception as e:
                 log.warn('{} watcher exiting due to {}'.format(resource_cls.__name__, e))
