@@ -52,6 +52,9 @@ class Resource(object):
         else:
             return 'None'
 
+    def _join_content(self, content):
+        return ' '.join([str(a) for a in content])
+
     def _selector_str(self):
         if self.selector:
             return ','.join(self.selector)
@@ -97,12 +100,12 @@ class Pod(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(str(self.host_ip))
-        content.append(str(self.node_name))
+        content.append(self.host_ip)
+        content.append(self.node_name)
         content.append(self.phase)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -136,7 +139,7 @@ class Pv(Resource):
         content.append(self.claim)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def _has_namespace():
@@ -159,7 +162,7 @@ class Pvc(Resource):
         if pvc.status.capacity:
             self.capacity = pvc.status.capacity['storage']
         self.status = pvc.status.phase
-        self.volume_name = str(pvc.spec.volume_name)
+        self.volume_name = pvc.spec.volume_name
         self.storage_class = pvc.spec.storage_class_name
 
     def __str__(self):
@@ -172,7 +175,7 @@ class Pvc(Resource):
         content.append(self.storage_class)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -200,13 +203,13 @@ class ReplicaSet(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
-        content.append(str(self.replicas))
-        content.append(str(self.available_replicas))
-        content.append(str(self.ready_replicas))
+        content.append(self.replicas)
+        content.append(self.available_replicas)
+        content.append(self.ready_replicas)
         content.append(self._selector_str())
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -230,7 +233,7 @@ class ConfigMap(Resource):
         content.append(self.name)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -261,7 +264,7 @@ class StatefulSet(Resource):
         content.append(self._selector_str())
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -285,7 +288,7 @@ class Deployment(Resource):
         content.append(self.name)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -336,7 +339,7 @@ class Endpoint(Resource):
         content.append(self._list_str(self.not_ready_ips))
         content.append(self._list_str(self.not_ready_pods))
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -375,7 +378,7 @@ class Node(Resource):
         content.append(self.internal_ip)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def _has_namespace():
@@ -420,7 +423,7 @@ class Service(Resource):
         content.append(self._selector_str())
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
@@ -443,7 +446,7 @@ class Namespace(Resource):
         content.append(self.name)
         content.append(self._resource_age())
         content.append(self._label_str())
-        return ' '.join(content)
+        return self._join_content(content)
 
     @staticmethod
     def header():
