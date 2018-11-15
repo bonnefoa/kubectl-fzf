@@ -158,7 +158,7 @@ __kubectl_parse_get()
 			filename="deployments"
 			autocomplete_fun=_deployment_selector
 			;;
-		sts | statefulset )
+		sts | statefulset | statefulsets | statefulsets.apps  )
 			filename="statefulsets"
 			autocomplete_fun=_statefulset_selector
 			;;
