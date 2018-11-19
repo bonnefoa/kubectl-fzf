@@ -103,7 +103,7 @@ class ResourceWatcher(object):
                     self.process_resource(resource, resource_dict, resource_dumper)
                     i = i + 1
                     if i % 1000 == 0:
-                        log.info('Processed {} {}'.format(i, resource_cls.__name__))
+                        log.info('Processed {} {}s'.format(i, resource_cls.__name__))
                 resource_dumper.close()
             except (ReadTimeoutError, NewConnectionError, ProtocolError) as e:
                 log.warn('{} watcher retrying on following error: {}'.format(resource_cls.__name__, e))
