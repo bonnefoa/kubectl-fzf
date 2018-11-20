@@ -11,7 +11,7 @@ KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -
 
 _pod_selector()
 {
-    cut -d ' ' -f 1-7 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-7 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -20,7 +20,7 @@ _pod_selector()
 
 _replicaset_selector()
 {
-    cut -d ' ' -f 1-7 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-7 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -29,7 +29,7 @@ _replicaset_selector()
 
 _endpoints_selector()
 {
-    cut -d ' ' -f 1-4 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-4 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -38,7 +38,7 @@ _endpoints_selector()
 
 _statefulset_selector()
 {
-    cut -d ' ' -f 1-4 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-4 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -47,7 +47,7 @@ _statefulset_selector()
 
 _deployment_selector()
 {
-    cat ${KUBECTL_FZF_CACHE}/$1 \
+    cat "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -56,7 +56,7 @@ _deployment_selector()
 
 _namespace_selector()
 {
-    cat ${KUBECTL_FZF_CACHE}/$1 \
+    cat "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -65,7 +65,7 @@ _namespace_selector()
 
 _configmap_selector()
 {
-    cat ${KUBECTL_FZF_CACHE}/$1 \
+    cat "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -74,7 +74,7 @@ _configmap_selector()
 
 _pv_selector()
 {
-    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-6 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -83,7 +83,7 @@ _pv_selector()
 
 _pvc_selector()
 {
-    cut -d ' ' -f 1-7 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-7 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -92,7 +92,7 @@ _pvc_selector()
 
 _service_selector()
 {
-    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-6 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -101,7 +101,7 @@ _service_selector()
 
 _node_selector()
 {
-    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-6 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
