@@ -1,9 +1,3 @@
-# Copyright 2018 Anthonin Bonnefoy
-#
-# This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
