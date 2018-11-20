@@ -123,7 +123,6 @@ _flag_selector()
 
 __kubectl_parse_get()
 {
-    echo "a${COMP_LINE}a" > /tmp/debug
 	local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
 	local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
 
