@@ -11,7 +11,7 @@ KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -
 
 _pod_selector()
 {
-    cut -d ' ' -f 1-6 ${KUBECTL_FZF_CACHE}/$1 \
+    cut -d ' ' -f 1-7 ${KUBECTL_FZF_CACHE}/$1 \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \

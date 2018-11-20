@@ -85,6 +85,7 @@ class Pod(Resource):
     def __init__(self, pod):
         Resource.__init__(self, pod)
         self.host_ip = pod.status.host_ip
+        self.pod_ip = pod.status.pod_ip
         self.node_name = pod.spec.node_name
         self.phase = self._get_phase(pod)
 
@@ -100,6 +101,7 @@ class Pod(Resource):
         content = []
         content.append(self.namespace)
         content.append(self.name)
+        content.append(self.pod_ip)
         content.append(self.host_ip)
         content.append(self.node_name)
         content.append(self.phase)
@@ -109,7 +111,7 @@ class Pod(Resource):
 
     @staticmethod
     def header():
-        return "Namespace Name HostIp NodeName Phase Age Labels"
+        return "Namespace Name PodIp HostIp NodeName Phase Age Labels"
 
     @staticmethod
     def list_func(kube_conf, namespace):
