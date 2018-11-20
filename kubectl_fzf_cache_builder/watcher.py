@@ -22,16 +22,16 @@ class ResourceDumper(object):
         self.f = open(self.dest_file, 'w')
 
     def write_resources_to_file(self, resources):
+        self.f.close()
+        self.f = open('{}_'.format(self.dest_file), 'w')
         self.f.write('{}\n'.format(self.header))
         self.f.writelines(['{}\n'.format(str(r)) for r in resources])
         self.f.flush()
+        os.rename(self.tmp_file, self.dest_file)
 
     def write_resource_to_file(self, resource, resource_dict, truncate_file):
         if truncate_file:
-            self.f.close()
-            self.f = open('{}_'.format(self.dest_file), 'w')
             self.write_resources_to_file(resource_dict)
-            os.rename(self.tmp_file, self.dest_file)
         else:
             if self.f.tell() == 0:
                 self.f.write('{}\n'.format(self.header))
