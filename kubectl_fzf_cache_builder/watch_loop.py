@@ -33,7 +33,7 @@ class WatchLoop():
     def _get_current_context(self):
         context = config.list_kube_config_contexts()[1]['context']
         cluster = context['cluster']
-        namespace = context['namespace']
+        namespace = context.get('namespace', 'default')
         return cluster, namespace
 
     def _resource_for_name(self, class_name):
