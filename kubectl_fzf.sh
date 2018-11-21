@@ -137,8 +137,9 @@ __kubectl_parse_get()
 
 	local filename
 	local autocomplete_fun
+    local resource_name=$1
 
-	case $1 in
+	case $resource_name in
 		all )
 			filename="pods"
             ;;
@@ -212,9 +213,15 @@ __kubectl_parse_get()
     fi
 
 	local query=""
-	if [[ $1 != $last_part && $last_part != -* ]]; then
-		query=$last_part
-	fi
+	case $last_part in
+        # Special case: Logs is asking for pods, however, we will have logs/log as last part
+		logs | log )
+            ;;
+        *)
+            if [[ $resource_name != $last_part && $last_part != -* ]]; then
+                query=$last_part
+            fi
+    esac
 
 	results=$( $autocomplete_fun $filename $query )
 	if [[ -n "$results" ]]; then
