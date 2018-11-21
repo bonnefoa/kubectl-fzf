@@ -107,8 +107,10 @@ class ResourceWatcher(object):
                 resource_dumper.close()
             except (ReadTimeoutError, NewConnectionError, ProtocolError) as e:
                 log.warn('{} watcher retrying on following error: {}'.format(resource_cls.__name__, e))
+                time.sleep(1)
             except Exception as e:
                 log.warn('{} watcher exiting due to {}'.format(resource_cls.__name__, e))
+                time.sleep(1)
                 return
 
     def poll_resource(self, poll_time, resource_cls):
