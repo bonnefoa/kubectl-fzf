@@ -6,8 +6,6 @@
 
 # Requirements
 
-# Requirements
-
 - [fzf](https://github.com/junegunn/fzf)
 - [kubectl shell autocompletion](https://kubernetes.io/docs/tasks/tools/install-kubectl/#enabling-shell-autocompletion)
 
