@@ -214,7 +214,7 @@ __kubectl_parse_get()
 
 	local query=""
 	case $last_part in
-        # Special cases: Some last words doesn't match the resource name, don't put them in the query
+        # Special cases: Sometime the last word doesn't match the resource name, don't put them in the query
 		exec )
             ;;
 		cp )
