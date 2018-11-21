@@ -220,7 +220,7 @@ __kubectl_parse_get()
 		logs | log )
             ;;
         *)
-            if [[ $resource_name != $last_part && $last_part != -* ]]; then
+            if [[ $resource_name != $last_part && $last_part != -* && ${COMP_LINE: -1} != " " ]]; then
                 query=$last_part
             fi
     esac
