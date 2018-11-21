@@ -214,7 +214,9 @@ __kubectl_parse_get()
 
 	local query=""
 	case $last_part in
-        # Special case: Logs is asking for pods, however, we will have logs/log as last part
+        # Special cases: Some last words doesn't match the resource name, don't put them in the query
+		exec )
+            ;;
 		logs | log )
             ;;
         *)
