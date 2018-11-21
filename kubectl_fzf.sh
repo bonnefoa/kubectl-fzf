@@ -217,6 +217,8 @@ __kubectl_parse_get()
         # Special cases: Some last words doesn't match the resource name, don't put them in the query
 		exec )
             ;;
+		cp )
+            ;;
 		logs | log )
             ;;
         *)
