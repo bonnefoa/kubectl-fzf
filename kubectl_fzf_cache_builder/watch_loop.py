@@ -19,6 +19,9 @@ class WatchLoop():
         if cli_args.namespace and cli_args.namespace != self.namespace:
             self.namespace = cli_args.namespace
             self.forced_namespace = True
+        if cli_args.all_namespaces:
+            self.namespace = None
+            self.forced_namespace = True
         self.resource_watcher = watcher.ResourceWatcher(self.cluster,
                                                         self.namespace, cli_args)
 

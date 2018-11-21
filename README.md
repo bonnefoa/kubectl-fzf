@@ -1,4 +1,10 @@
-kubectl-fzf overrides kubectl autocompletion functions with fzf using a local cache for speed.
+`kubectl-fzf` provides a fast kubectl autocompletion with fzf.
+
+`kubectl_fzf_cache_builder` will watch cluster resources and keep the current state of the cluster in local files. By defaults, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
+
+`kubectl_fzf.sh` overloads `__kubectl_parse_get` function defined by `kubectl completion zsh` (or `kubectl completion bash`) to fzf with the local files to power autocompletion.
+
+# Requirements
 
 # Requirements
 
@@ -15,7 +21,7 @@ pip2 install .
 
 ## kubectl_fzf
 
-Add in your `.bashrc` or `.zshrc`
+Source the `kubectl_fzf.sh` file in your `.bashrc` or `.zshrc`
 
 ```
 source <repository>/kubectl_fzf.sh
@@ -38,6 +44,16 @@ kubectl_fzf_cache_builder
 ```
 
 It will watch the cluster and namespace in the current context.
+
+### Watch all namespaces
+
+To create cache for all namespaces of the current cluster, just run
+
+```
+kubectl_fzf_cache_builder --all-namespaces
+```
+
+### Refresh
 
 If you have a custom login script, you can use
 

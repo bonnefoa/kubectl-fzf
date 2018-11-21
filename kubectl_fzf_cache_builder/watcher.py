@@ -55,7 +55,7 @@ class ResourceWatcher(object):
         self.dir = args.dir
         if args.selector:
             self.kube_kwargs['label_selector'] = args.selector
-        if self.namespace != 'all':
+        if self.namespace is not None:
             self.kube_kwargs['namespace'] = self.namespace
         self.kube_conf = KubeConfiguration(self.cluster, self.refresh_command)
 
@@ -84,10 +84,15 @@ class ResourceWatcher(object):
             kwargs.pop('namespace', None)
         return kwargs
 
+    def _get_namespace_str(self):
+        if self.namespace is None:
+            return 'all namespaces'
+        return 'namespace {}'.format(self.namespace)
+
     def watch_resource(self, resource_cls):
         resource_dumper = ResourceDumper(self.dir, resource_cls)
-        log.warn('Watching {} on namespace {}, writing results in {}'.format(
-            resource_cls.__name__, self.namespace, resource_dumper.dest_file))
+        log.warn('Watching {} on {}, writing results in {}'.format(
+            resource_cls.__name__, self._get_namespace_str(), resource_dumper.dest_file))
         w = watch.Watch()
         watches.append(w)
         resource_dict = {}
@@ -115,8 +120,8 @@ class ResourceWatcher(object):
 
     def poll_resource(self, poll_time, resource_cls):
         dest_file=os.path.join(self.dir, resource_cls._dest_file())
-        log.info('Poll {} on namespace {}, writing results in {}'.format(
-            resource_cls.__name__, self.namespace, dest_file))
+        log.info('Poll {} on {}, writing results in {}'.format(
+            resource_cls.__name__, self._get_namespace_str(), dest_file))
         kwargs = self._get_resource_kwargs(resource_cls)
         resource_dumper = ResourceDumper(self.dir, resource_cls)
         list_func = resource_cls.list_func(self.kube_conf, self.namespace)

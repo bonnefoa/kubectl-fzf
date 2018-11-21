@@ -121,7 +121,7 @@ class Pod(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.v1.list_pod_for_all_namespaces
         return kube_conf.v1.list_namespaced_pod
 
@@ -191,7 +191,7 @@ class Pvc(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.v1.list_persistent_volume_claim_for_all_namespaces
         return kube_conf.v1.list_namespaced_persistent_volume_claim
 
@@ -225,7 +225,7 @@ class ReplicaSet(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.apps_v1.list_replica_set_for_all_namespaces
         return kube_conf.apps_v1.list_namespaced_replica_set
 
@@ -249,7 +249,7 @@ class ConfigMap(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.v1.list_config_map_for_all_namespaces
         return kube_conf.v1.list_namespaced_config_map
 
@@ -280,7 +280,7 @@ class StatefulSet(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.apps_v1.list_stateful_set_for_all_namespaces
         return kube_conf.apps_v1.list_namespaced_stateful_set
 
@@ -304,7 +304,7 @@ class Deployment(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.extensions_v1beta1.list_deployment_for_all_namespaces
         return kube_conf.extensions_v1beta1.list_namespaced_deployment
 
@@ -355,7 +355,7 @@ class Endpoint(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.v1.list_endpoints_for_all_namespaces
         return kube_conf.v1.list_namespaced_endpoints
 
@@ -439,7 +439,7 @@ class Service(Resource):
 
     @staticmethod
     def list_func(kube_conf, namespace):
-        if namespace == 'all':
+        if namespace is None:
             return kube_conf.v1.list_service_for_all_namespaces
         return kube_conf.v1.list_namespaced_service
 
