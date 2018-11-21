@@ -1,11 +1,12 @@
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
+eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
 _pod_selector()
 {
-    cut -d ' ' -f 1-7 "${KUBECTL_FZF_CACHE}/$1" \
+    cut -d ' ' -f 1-8 "${KUBECTL_FZF_CACHE}/$1" \
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
@@ -115,6 +116,20 @@ _flag_selector()
         | awk '{print $1}'
 }
 
+__kubectl_get_containers()
+{
+	local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
+    containers=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/pods \
+        | tr ',' '\n' \
+        | sort)
+    if [[ $containers == "" ]]; then
+        ___kubectl_get_containers $*
+        return
+    fi
+    { echo "ContainerName"; echo "$containers" } | fzf ${KUBECTL_FZF_OPTIONS[@]}
+}
+
+# $1 is the type of resource to get
 __kubectl_parse_get()
 {
 	local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
