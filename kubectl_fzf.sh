@@ -126,7 +126,7 @@ __kubectl_get_containers()
         ___kubectl_get_containers $*
         return
     fi
-    { echo "ContainerName"; echo "$containers" } | fzf ${KUBECTL_FZF_OPTIONS[@]}
+    { echo "ContainerName"; echo "$containers"; } | fzf ${KUBECTL_FZF_OPTIONS[@]}
 }
 
 # $1 is the type of resource to get
