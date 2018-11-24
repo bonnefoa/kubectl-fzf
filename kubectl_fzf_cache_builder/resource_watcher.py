@@ -22,6 +22,7 @@ class ResourceDumper(object):
         self.f = open(self.dest_file, 'w')
 
     def write_resources_to_file(self, resources):
+        log.debug('Writing {} resources in {}'.format(len(resources), self.dest_file))
         self.f.close()
         self.f = open('{}_'.format(self.dest_file), 'w')
         self.f.write('{}\n'.format(self.header))
@@ -31,7 +32,7 @@ class ResourceDumper(object):
 
     def write_resource_to_file(self, resource, resource_dict, truncate_file):
         if truncate_file:
-            self.write_resources_to_file(resource_dict)
+            self.write_resources_to_file(resource_dict.values())
         else:
             if self.f.tell() == 0:
                 self.f.write('{}\n'.format(self.header))
@@ -57,25 +58,34 @@ class ResourceWatcher(object):
             self.kube_kwargs['label_selector'] = args.selector
         if self.namespace is not None:
             self.kube_kwargs['namespace'] = self.namespace
-        self.kube_conf = KubeConfiguration(self.cluster, self.refresh_command)
+        self.kube_conf = None
 
     def check_expired_conf(self):
         self.kube_conf = KubeConfiguration(self.cluster, self.refresh_command)
 
     def process_resource(self, resource, resource_dict, resource_dumper):
-        do_truncate = False
-        if resource.is_deleted and resource in resource_dict:
-            log.debug('Removing resource {}'.format(resource))
-            resource_dict.pop(resource)
-            do_truncate = True
-        elif not resource.is_deleted:
-            if resource in resource_dict and \
-                    str(resource) != str(resource_dict[resource]):
-                log.debug('Updating resource {}'.format(resource))
-                do_truncate = True
+        resource_present = resource in resource_dict
+        if resource.is_deleted(resource_present):
+            if resource_present:
+                log.debug('Removing resource {}'.format(resource))
                 resource_dict.pop(resource)
+                resource_dumper.write_resource_to_file(resource, resource_dict,
+                                                       True)
+            return
+
+        if not resource_present:
+            log.debug('Adding resource {}'.format(resource))
             resource_dict[resource] = resource
-        resource_dumper.write_resource_to_file(resource, resource_dict, do_truncate)
+            resource_dumper.write_resource_to_file(resource, resource_dict,
+                                                   False)
+            return
+
+        if resource_dict[resource].has_changed(resource):
+            log.debug('Updating resource {}'.format(resource))
+            resource_dict.pop(resource)
+            resource_dict[resource] = resource
+            resource_dumper.write_resource_to_file(resource, resource_dict,
+                                                   True)
 
     def _get_resource_kwargs(self, Resource):
         kwargs = self.kube_kwargs
@@ -90,9 +100,12 @@ class ResourceWatcher(object):
         return 'namespace {}'.format(self.namespace)
 
     def watch_resource(self, resource_cls):
+        if self.kube_conf is None:
+            self.kube_conf = KubeConfiguration(self.cluster, self.refresh_command)
         resource_dumper = ResourceDumper(self.dir, resource_cls)
         log.warn('Watching {} on {}, writing results in {}'.format(
-            resource_cls.__name__, self._get_namespace_str(), resource_dumper.dest_file))
+            resource_cls.__name__, self._get_namespace_str(),
+            resource_dumper.dest_file))
         w = watch.Watch()
         watches.append(w)
         resource_dict = {}
@@ -119,6 +132,8 @@ class ResourceWatcher(object):
                 return
 
     def poll_resource(self, poll_time, resource_cls):
+        if self.kube_conf is None:
+            self.kube_conf = KubeConfiguration(self.cluster, self.refresh_command)
         dest_file=os.path.join(self.dir, resource_cls._dest_file())
         log.info('Poll {} on {}, writing results in {}'.format(
             resource_cls.__name__, self._get_namespace_str(), dest_file))

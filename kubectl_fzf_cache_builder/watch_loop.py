@@ -2,7 +2,7 @@ from kubernetes import config
 import k8s_resource
 import logging
 import multiprocessing
-import watcher
+import resource_watcher
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -22,8 +22,9 @@ class WatchLoop():
         if cli_args.all_namespaces:
             self.namespace = None
             self.forced_namespace = True
-        self.resource_watcher = watcher.ResourceWatcher(self.cluster,
-                                                        self.namespace, cli_args)
+        self.resource_watcher = resource_watcher.ResourceWatcher(self.cluster,
+                                                                 self.namespace,
+                                                                 cli_args)
 
     def _get_process(self, cls):
         if cls.is_poll():
@@ -55,11 +56,11 @@ class WatchLoop():
             self.processes.append((p, cls))
 
     def wait_loop(self):
-        while watcher.exiting is False:
+        while resource_watcher.exiting is False:
             dead_processes = []
             for p, cls in self.processes:
                 p.join(1)
-                if watcher.exiting is True:
+                if resource_watcher.exiting is True:
                     log.info('Exiting wait loop')
                     return
                 if not p.is_alive():
