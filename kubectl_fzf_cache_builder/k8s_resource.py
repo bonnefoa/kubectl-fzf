@@ -14,16 +14,17 @@ class Resource(object):
         self.name = resource.metadata.name
         if hasattr(resource.metadata, 'namespace'):
             self.namespace = resource.metadata.namespace
+        self.labels = {}
         self.labels = resource.metadata.labels or {}
         for l in EXCLUDED_LABELS:
             self.labels.pop(l, None)
-        self.label_keys = self.labels.keys()
+        self.label_keys = list(self.labels.keys())
         self.label_keys.sort()
         if hasattr(resource, 'status') and hasattr(resource.status, 'start_time'):
             self.start_time = resource.status.start_time
         else:
             self.start_time = resource.metadata.creation_timestamp
-        self.is_deleted = resource.metadata.deletion_timestamp is not None
+        self.deletion_timestamp = resource.metadata.deletion_timestamp
 
     def _resource_age(self):
         if self.start_time:
@@ -42,7 +43,8 @@ class Resource(object):
 
     def _label_str(self):
         if self.labels:
-            return ','.join(['{}={}'.format(k, self.labels[k]) for k in self.label_keys])
+            return ','.join(['{}={}'.format(k, self.labels[k])
+                             for k in self.label_keys])
         else:
             return 'None'
 
@@ -61,6 +63,9 @@ class Resource(object):
         else:
             return 'None'
 
+    def is_deleted(self, has_previous):
+        return self.deletion_timestamp is not None
+
     @classmethod
     def _dest_file(cls):
         return '{}s'.format(cls.__name__).lower()
@@ -72,6 +77,9 @@ class Resource(object):
     @staticmethod
     def is_poll():
         return False
+
+    def has_changed(self, other):
+        return self.labels != other.labels
 
     def __hash__(self):
         return hash((self.name, self.namespace))
@@ -101,6 +109,12 @@ class Pod(Resource):
                     if 'Completed' not in s.state.waiting.reason:
                         return s.state.waiting.reason
         return pod.status.phase
+
+    def has_changed(self, other):
+        return (self.phase != other.phase or
+                self.pod_ip != other.pod_ip or
+                self.node_name != other.node_name or
+                self.labels != other.labels)
 
     def __str__(self):
         content = []
@@ -149,6 +163,10 @@ class Pv(Resource):
         content.append(self._label_str())
         return self._join_content(content)
 
+    def has_changed(self, other):
+        return (self.status != other.status or
+                self.labels != other.labels)
+
     @staticmethod
     def _has_namespace():
         return False
@@ -185,6 +203,10 @@ class Pvc(Resource):
         content.append(self._label_str())
         return self._join_content(content)
 
+    def has_changed(self, other):
+        return (self.status != other.status or
+                self.labels != other.labels)
+
     @staticmethod
     def header():
         return "Namespace Name Status Capacity VolumeName StorageClass Zone Age Labels"
@@ -218,6 +240,12 @@ class ReplicaSet(Resource):
         content.append(self._resource_age())
         content.append(self._label_str())
         return self._join_content(content)
+
+    def has_changed(self, other):
+        return (self.replicas != other.replicas or
+                self.available_replicas != other.available_replicas or
+                self.ready_replicas != other.ready_replicas or
+                self.labels != other.labels)
 
     @staticmethod
     def header():
@@ -274,6 +302,11 @@ class StatefulSet(Resource):
         content.append(self._label_str())
         return self._join_content(content)
 
+    def has_changed(self, other):
+        return (self.replicas != other.replicas or
+                self.ready_replicas != other.ready_replicas or
+                self.labels != other.labels)
+
     @staticmethod
     def header():
         return "Namespace Name Replicas Selector Age Labels"
@@ -301,6 +334,9 @@ class Deployment(Resource):
     @staticmethod
     def header():
         return "Namespace Name Age Labels"
+
+    def is_deleted(self, has_previous):
+        return has_previous
 
     @staticmethod
     def list_func(kube_conf, namespace):
@@ -349,6 +385,13 @@ class Endpoint(Resource):
         content.append(self._label_str())
         return self._join_content(content)
 
+    def has_changed(self, other):
+        return (self.ready_ips != other.ready_ips or
+                self.ready_pods != other.ready_pods or
+                self.not_ready_ips != other.not_ready_ips or
+                self.not_ready_pods != other.not_ready_pods or
+                self.labels != other.labels)
+
     @staticmethod
     def header():
         return "Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels"
@@ -387,6 +430,10 @@ class Node(Resource):
         content.append(self._resource_age())
         content.append(self._label_str())
         return self._join_content(content)
+
+    def has_changed(self, other):
+        return (self.internal_ip != other.internal_ip or
+                self.labels != other.labels)
 
     @staticmethod
     def _has_namespace():
@@ -432,6 +479,11 @@ class Service(Resource):
         content.append(self._resource_age())
         content.append(self._label_str())
         return self._join_content(content)
+
+    def has_changed(self, other):
+        return (self.ports != other.ports or
+                self._selector_str() != other._selector_str() or
+                self.labels != other.labels)
 
     @staticmethod
     def header():
