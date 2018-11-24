@@ -10,7 +10,7 @@ _pod_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _replicaset_selector()
@@ -19,7 +19,7 @@ _replicaset_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _endpoints_selector()
@@ -28,7 +28,7 @@ _endpoints_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _statefulset_selector()
@@ -37,7 +37,7 @@ _statefulset_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _deployment_selector()
@@ -46,7 +46,7 @@ _deployment_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _namespace_selector()
@@ -64,7 +64,7 @@ _configmap_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _pv_selector()
@@ -82,7 +82,7 @@ _pvc_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _service_selector()
@@ -91,7 +91,7 @@ _service_selector()
         | column -t \
         | sort \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $2}'
+        | awk '{print $1 " " $2}'
 }
 
 _node_selector()
@@ -127,6 +127,12 @@ __kubectl_get_containers()
         return
     fi
     { echo "ContainerName"; echo "$containers"; } | fzf ${KUBECTL_FZF_OPTIONS[@]}
+}
+
+__get_current_namespace()
+{
+    local namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+    echo "${namespace:-default}"
 }
 
 # $1 is the type of resource to get
@@ -227,8 +233,22 @@ __kubectl_parse_get()
             fi
     esac
 
-	results=$( $autocomplete_fun $filename $query )
-	if [[ -n "$results" ]]; then
-		COMPREPLY=( $results )
+	result=$( $autocomplete_fun $filename $query)
+	if [[ -z "$result" ]]; then
+        return
 	fi
+
+    result=($result)
+    if [[ ${#result[@]} -eq 2 ]]; then
+        # We have namespace as first
+        local current_namespace=$(__get_current_namespace)
+        local namespace=${result[0]}
+        if [[ $namespace != $current_namespace ]]; then
+            COMPREPLY=( "-n ${result[0]} ${result[1]}" )
+        else
+            COMPREPLY=( ${result[1]} )
+        fi
+    else
+        COMPREPLY=( $result )
+    fi
 }
