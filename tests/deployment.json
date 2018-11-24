@@ -1,0 +1,84 @@
+{
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+        "annotations": {
+            "deployment.kubernetes.io/revision": "1",
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"name\":\"haproxy\",\"namespace\":\"default\"},\"spec\":{\"replicas\":2,\"selector\":{\"matchLabels\":{\"app\":\"haproxy\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"haproxy\"}},\"spec\":{\"containers\":[{\"image\":\"kubernetes/pause\",\"name\":\"pause\"}]}}}}\n"
+        },
+        "creationTimestamp": "2018-11-24T09:38:08Z",
+        "generation": 1,
+        "name": "haproxy",
+        "namespace": "default",
+        "resourceVersion": "34529",
+        "selfLink": "/apis/apps/v1/namespaces/default/deployments/haproxy",
+        "uid": "a70e4d55-efcc-11e8-a195-08002728d0cc"
+    },
+    "spec": {
+        "progressDeadlineSeconds": 600,
+        "replicas": 2,
+        "revisionHistoryLimit": 10,
+        "selector": {
+            "matchLabels": {
+                "app": "haproxy"
+            }
+        },
+        "strategy": {
+            "rollingUpdate": {
+                "maxSurge": "25%",
+                "maxUnavailable": "25%"
+            },
+            "type": "RollingUpdate"
+        },
+        "template": {
+            "metadata": {
+                "creation_timestamp": null,
+                "labels": {
+                    "app": "haproxy"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "image": "kubernetes/pause",
+                        "imagePullPolicy": "Always",
+                        "name": "pause",
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "terminationGracePeriodSeconds": 30
+            }
+        }
+    },
+    "status": {
+        "availableReplicas": 2,
+        "conditions": [
+            {
+                "lastTransitionTime": "2018-11-24T09:38:15Z",
+                "lastUpdateTime": "2018-11-24T09:38:15Z",
+                "message": "Deployment has minimum availability.",
+                "reason": "MinimumReplicasAvailable",
+                "status": "True",
+                "type": "Available"
+            },
+            {
+                "lastTransitionTime": "2018-11-24T09:38:09Z",
+                "lastUpdateTime": "2018-11-24T09:38:15Z",
+                "message": "ReplicaSet \"haproxy-bd57b6f45\" has successfully progressed.",
+                "reason": "NewReplicaSetAvailable",
+                "status": "True",
+                "type": "Progressing"
+            }
+        ],
+        "observedGeneration": 1,
+        "readyReplicas": 2,
+        "replicas": 2,
+        "updatedReplicas": 2
+    }
+}

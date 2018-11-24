@@ -13,6 +13,7 @@ setup(
     install_requires=[
         'kubernetes',
     ],
+    test_suite="tests",
     entry_points={
         'console_scripts': [
             'kubectl_fzf_cache_builder=kubectl_fzf_cache_builder.cli:main'
