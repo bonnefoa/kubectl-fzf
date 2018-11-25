@@ -31,6 +31,7 @@ class ResourceDumper(object):
         os.rename(self.tmp_file, self.dest_file)
 
     def write_resource_to_file(self, resource, resource_dict, truncate_file):
+        log.debug('Adding new resource in {}: {} '.format(self.dest_file, resource))
         if truncate_file:
             self.write_resources_to_file(resource_dict.values())
         else:
@@ -74,7 +75,6 @@ class ResourceWatcher(object):
             return
 
         if not resource_present:
-            log.debug('Adding resource {}'.format(resource))
             resource_dict[resource] = resource
             resource_dumper.write_resource_to_file(resource, resource_dict,
                                                    False)
@@ -127,7 +127,7 @@ class ResourceWatcher(object):
                 log.warn('{} watcher retrying on following error: {}'.format(resource_cls.__name__, e))
                 time.sleep(1)
             except Exception as e:
-                log.warn('{} watcher exiting due to {}'.format(resource_cls.__name__, e))
+                log.exception('{} watcher exiting'.format(resource_cls.__name__))
                 time.sleep(1)
                 return
 
