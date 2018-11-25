@@ -131,7 +131,7 @@ class Pod(Resource):
 
     @staticmethod
     def header():
-        return "Namespace Name PodIp HostIp NodeName Phase Age Containers Labels"
+        return "Namespace Name PodIp HostIp NodeName Phase Containers Age Labels"
 
     @staticmethod
     def list_func(kube_conf, namespace):
