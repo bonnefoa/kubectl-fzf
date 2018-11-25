@@ -94,7 +94,7 @@ __kubectl_parse_get()
 			filename="nodes"
 			autocomplete_fun=_fzf_without_namespace
 			;;
-        deployment | deployments | deployments.apps | deployments.extensions  )
+        deployment | deployments | deployments. | deployments.apps | deployments.extensions  )
 			filename="deployments"
 			autocomplete_fun=_fzf_with_namespace
 			;;
