@@ -63,7 +63,7 @@ class Resource(object):
         else:
             return 'None'
 
-    def is_deleted(self, has_previous):
+    def is_deleted(self, previous):
         return self.deletion_timestamp is not None
 
     @classmethod
@@ -322,6 +322,7 @@ class Deployment(Resource):
 
     def __init__(self, deployment):
         Resource.__init__(self, deployment)
+        self.status = deployment.status
 
     def __str__(self):
         content = []
@@ -335,8 +336,10 @@ class Deployment(Resource):
     def header():
         return "Namespace Name Age Labels"
 
-    def is_deleted(self, has_previous):
-        return has_previous
+    def is_deleted(self, previous):
+        if previous is None:
+            return False
+        return previous.status == self.status
 
     @staticmethod
     def list_func(kube_conf, namespace):

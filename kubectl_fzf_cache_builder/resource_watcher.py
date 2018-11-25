@@ -65,16 +65,16 @@ class ResourceWatcher(object):
         self.kube_conf = KubeConfiguration(self.cluster, self.refresh_command)
 
     def process_resource(self, resource, resource_dict, resource_dumper):
-        resource_present = resource in resource_dict
-        if resource.is_deleted(resource_present):
-            if resource_present:
+        previous_resource = resource_dict.get(resource, None)
+        if resource.is_deleted(previous_resource):
+            if previous_resource:
                 log.debug('Removing resource {}'.format(resource))
                 resource_dict.pop(resource)
                 resource_dumper.write_resource_to_file(resource, resource_dict,
                                                        True)
             return
 
-        if not resource_present:
+        if previous_resource is None:
             resource_dict[resource] = resource
             resource_dumper.write_resource_to_file(resource, resource_dict,
                                                    False)
