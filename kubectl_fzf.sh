@@ -4,103 +4,28 @@ eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
-_pod_selector()
+_fzf_kubectl_complete()
 {
-    cut -d ' ' -f 1-8 "${KUBECTL_FZF_CACHE}/$1" \
+    local end_print=$1
+    local file="${KUBECTL_FZF_CACHE}/$2"
+    local query=$3
+    local end_field=$(awk 'NR==1{ for(i = 1; i <= NF; i++){ if ($i == "Labels") {print i - 1; } } } ' $file)
+    local header=$(head -n1 "$file" | cut -d ' ' -f 1-$end_field)
+    local rest=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort)
+    printf "$header\n$rest\n" \
         | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+        | awk "$end_print"
 }
 
-_replicaset_selector()
+_fzf_with_namespace()
 {
-    cut -d ' ' -f 1-7 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
+    _fzf_kubectl_complete '{print $1 " " $2}' $1 $2
 }
 
-_endpoints_selector()
+_fzf_without_namespace()
 {
-    cut -d ' ' -f 1-4 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
-}
-
-_statefulset_selector()
-{
-    cut -d ' ' -f 1-4 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
-}
-
-_deployment_selector()
-{
-    cat "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
-}
-
-_namespace_selector()
-{
-    cat "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1}'
-}
-
-_configmap_selector()
-{
-    cat "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
-}
-
-_pv_selector()
-{
-    cut -d ' ' -f 1-6 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1}'
-}
-
-_pvc_selector()
-{
-    cut -d ' ' -f 1-7 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
-}
-
-_service_selector()
-{
-    cut -d ' ' -f 1-6 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
-}
-
-_node_selector()
-{
-    cut -d ' ' -f 1-6 "${KUBECTL_FZF_CACHE}/$1" \
-        | column -t \
-        | sort \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1}'
+    _fzf_kubectl_complete '{print $1}' $1 $2
 }
 
 _flag_selector()
@@ -151,47 +76,47 @@ __kubectl_parse_get()
             ;;
 		pod | pods )
 			filename="pods"
-			autocomplete_fun=_pod_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
 		rs | resplicaset | replicasets )
 			filename="replicasets"
-			autocomplete_fun=_replicaset_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
         configmap | configmaps )
 			filename="configmaps"
-			autocomplete_fun=_configmap_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
         ns | namespace | namespaces )
 			filename="namespaces"
-			autocomplete_fun=_namespace_selector
+			autocomplete_fun=_fzf_without_namespace
 			;;
 		node | nodes )
 			filename="nodes"
-			autocomplete_fun=_node_selector
+			autocomplete_fun=_fzf_without_namespace
 			;;
         deployment | deployments | deployments.apps | deployments.extensions  )
 			filename="deployments"
-			autocomplete_fun=_deployment_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
 		sts | statefulset | statefulsets | statefulsets.apps  )
 			filename="statefulsets"
-			autocomplete_fun=_statefulset_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
 		pv )
 			filename="pvs"
-			autocomplete_fun=_pv_selector
+			autocomplete_fun=_fzf_without_namespace
 			;;
 		pvc )
 			filename="pvcs"
-			autocomplete_fun=_pvc_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
 		endpoints )
 			filename="endpoints"
-			autocomplete_fun=_endpoints_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
 		svc | service | services )
 			filename="services"
-			autocomplete_fun=_service_selector
+			autocomplete_fun=_fzf_with_namespace
 			;;
 		* )
 			___kubectl_parse_get $*
