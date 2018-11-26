@@ -25,8 +25,6 @@ Table of Contents
 - Scale with clusters > 1K pods
 - Provide label autocompletion
 
-...
-
 # Installation
 
 Install `kubectl_fzf_cache_builder` script
@@ -38,7 +36,9 @@ pip2 install -U kubectl-fzf/
 
 Source the autocompletion functions
 ```
-# This need to be done after kubectl autocompletion
+# kubectl_fzf.sh needs to be sourced after kubectl completion.
+
+# bash version
 echo "source <(kubectl completion bash)" >> ~/.bashrc
 echo "source $PWD/kubectl-fzf/kubectl_fzf.sh" >> ~/.bashrc
 
