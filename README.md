@@ -1,31 +1,55 @@
-`kubectl-fzf` provides a fast kubectl autocompletion with fzf.
+kubectl-fzf provides a fast kubectl autocompletion with fzf.
 
-`kubectl_fzf_cache_builder` will watch cluster resources and keep the current state of the cluster in local files. By defaults, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
+Table of Contents
+=================
 
-`kubectl_fzf.sh` overloads `__kubectl_parse_get` function defined by `kubectl completion zsh` (or `kubectl completion bash`) to fzf with the local files to power autocompletion.
+   * [Requirements](#requirements)
+   * [Pros](#pros)
+   * [Table of Contents](#table-of-contents)
+   * [Installation](#installation)
+      * [Using zplug](#using-zplug)
+   * [Usage](#usage)
+      * [kubectl_fzf_cache_builder](#kubectl_fzf_cache_builder)
+         * [Watch all namespaces](#watch-all-namespaces)
+         * [Refresh](#refresh)
+      * [kubectl_fzf](#kubectl_fzf)
 
 # Requirements
 
 - [fzf](https://github.com/junegunn/fzf)
 - [kubectl shell autocompletion](https://kubernetes.io/docs/tasks/tools/install-kubectl/#enabling-shell-autocompletion)
 
+# Pros
+
+- Seamless integration
+- Scale with clusters > 1K pods
+- Provide label autocompletion
+
+...
+
 # Installation
 
-## kubectl_fzf_cache_builder
+Install `kubectl_fzf_cache_builder` script
 
 ```
-pip2 install .
+git clone --depth 1 https://github.com/bonnefoa/kubectl-fzf
+pip2 install -U kubectl-fzf/
 ```
 
-## kubectl_fzf
-
-Source the `kubectl_fzf.sh` file in your `.bashrc` or `.zshrc`
-
+Source the autocompletion functions
 ```
-source <repository>/kubectl_fzf.sh
+# This need to be done after kubectl autocompletion
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+echo "source $PWD/kubectl-fzf/kubectl_fzf.sh" >> ~/.bashrc
+
+# zsh version
+echo "source <(kubectl completion zsh)" >> ~/.zshrc
+echo "source $PWD/kubectl-fzf/kubectl_fzf.sh" >> ~/.zshrc
 ```
 
-You can also use zplug
+## Using zplug
+
+You can use zplug to install the autocompletion functions
 ```
 zplug "plugins/kubectl", from:oh-my-zsh, defer:2
 zplug "bonnefoa/kubectl-fzf", defer:3
@@ -33,7 +57,11 @@ zplug "bonnefoa/kubectl-fzf", defer:3
 
 # Usage
 
-## kubectl_fzf_cache_builder
+## `kubectl_fzf_cache_builder`
+
+`kubectl_fzf_cache_builder` will watch cluster resources and keep the current state of the cluster in local files.
+
+By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
 
 To create cache files necessary for `kubectl_fzf`, just run
 
@@ -61,14 +89,6 @@ kubectl_fzf_cache_builder --refresh-command <script>
 
 The script will be called to refresh oidc token when necessary.
 
-## Available autocompletions
+## `kubectl_fzf`
 
-- deployments
-- endpoints
-- labels
-- namespace
-- nodes
-- pods
-- replicaset
-- service
-- statefulset
+`kubectl_fzf.sh` overloads autocompletion function defined by `kubectl completion zsh` (or `kubectl completion bash`) to fzf with the local files to power autocompletion.
