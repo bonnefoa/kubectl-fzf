@@ -3,6 +3,7 @@ import k8s_resource
 import logging
 import multiprocessing
 import resource_watcher
+from configuration import KubeConfiguration
 
 
 log = logging.getLogger('dd.' + __name__)
@@ -16,6 +17,7 @@ class WatchLoop():
         self.resources_to_watch = cli_args.resources_to_watch.split(',')
         self.cluster, self.namespace = self._get_current_context()
         self.forced_namespace = False
+        self.refresh_command = cli_args.refresh_command
         if cli_args.namespace and cli_args.namespace != self.namespace:
             self.namespace = cli_args.namespace
             self.forced_namespace = True
@@ -47,6 +49,11 @@ class WatchLoop():
 
     def start_watches(self):
         self.processes = []
+        if self.refresh_command:
+            # Trigger a refresh if necessary
+            conf = KubeConfiguration(self.cluster, self.refresh_command)
+            conf._get_kubernetes_config()
+
         for r in self.resources_to_watch:
             cls = self._resource_for_name(r)
             p = None
