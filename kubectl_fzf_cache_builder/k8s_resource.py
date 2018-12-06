@@ -144,13 +144,14 @@ class Pv(Resource):
 
     def __init__(self, pv):
         Resource.__init__(self, pv)
-        self.capacity = pv.spec.capacity
         self.status = pv.status.phase
         self.claim = 'None'
-        if pv.spec.claim_ref:
-            self.claim = pv.spec.claim_ref.name
         self.zone = self.labels.get('failure-domain.beta.kubernetes.io/zone', None)
-        self.storage_class = pv.spec.storage_class_name
+        if pv.spec:
+            self.capacity = pv.spec.capacity
+            if pv.spec.claim_ref:
+                self.claim = pv.spec.claim_ref.name
+            self.storage_class = pv.spec.storage_class_name
 
     def __str__(self):
         content = []
