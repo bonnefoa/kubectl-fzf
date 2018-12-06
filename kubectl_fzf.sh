@@ -165,10 +165,10 @@ __kubectl_parse_get()
 
     result=($result)
     if [[ ${#result[@]} -eq 2 ]]; then
-        # We have namespace as first
+        # We have namespace in first position
         local current_namespace=$(__get_current_namespace)
         local namespace=${result[0]}
-        if [[ $namespace != $current_namespace ]]; then
+        if [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
             COMPREPLY=( "-n ${result[0]} ${result[1]}" )
         else
             COMPREPLY=( ${result[1]} )
