@@ -116,6 +116,7 @@ func main() {
 		storeConfig{func() K8sResource { return &Service{} }, string(corev1.ResourceServices), coreGetter, &corev1.Service{}},
 		storeConfig{func() K8sResource { return &ReplicaSet{} }, "replicasets", appsGetter, &appsv1.ReplicaSet{}},
 		storeConfig{func() K8sResource { return &ConfigMap{} }, "configmaps", coreGetter, &corev1.ConfigMap{}},
+		storeConfig{func() K8sResource { return &StatefulSet{} }, "statefulsets", appsGetter, &appsv1.StatefulSet{}},
 	}
 
 	for _, storeConfig := range storeConfigs {
