@@ -25,6 +25,19 @@ func JoinSlicesOrNone(sl []string, sep string) string {
 	return strings.Join(sl, sep)
 }
 
+// JoinSlicesWithMaxOrNone joins a slice of string with separator up to x elements. Display None if there's no elements
+func JoinSlicesWithMaxOrNone(sl []string, max int, sep string) string {
+	if len(sl) == 0 {
+		return "None"
+	}
+	if len(sl) < max {
+		return strings.Join(sl, sep)
+	}
+	toDisplay := sl[:max]
+	toDisplay = append(toDisplay, "...")
+	return strings.Join(toDisplay, sep)
+}
+
 // StringMapsEqual returns true if maps are equals
 func StringMapsEqual(a map[string]string, b map[string]string) bool {
 	if len(a) != len(b) {
