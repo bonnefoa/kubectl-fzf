@@ -86,6 +86,13 @@ func handleSignals(cancel context.CancelFunc) {
 	}
 }
 
+type storeConfig struct {
+	resourceCtor  func() K8sResource
+	resourceName  string
+	getter        cache.Getter
+	runtimeObject runtime.Object
+}
+
 func main() {
 	flag.Parse()
 
@@ -104,20 +111,18 @@ func main() {
 	coreGetter := resourceWatcher.clientset.Core().RESTClient()
 	appsGetter := resourceWatcher.clientset.Apps().RESTClient()
 
-	podStore, err := NewK8sStore(func() K8sResource { return &Pod{} },
-		string(corev1.ResourcePods), cacheDir)
-	fatalIf(err)
-	go resourceWatcher.watchResource(ctx, coreGetter, podStore, &corev1.Pod{})
+	storeConfigs := []storeConfig{
+		storeConfig{func() K8sResource { return &Pod{} }, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}},
+		storeConfig{func() K8sResource { return &Service{} }, string(corev1.ResourceServices), coreGetter, &corev1.Service{}},
+		storeConfig{func() K8sResource { return &ReplicaSet{} }, "replicasets", appsGetter, &appsv1.ReplicaSet{}},
+		storeConfig{func() K8sResource { return &ConfigMap{} }, "configmaps", coreGetter, &corev1.ConfigMap{}},
+	}
 
-	serviceStore, err := NewK8sStore(func() K8sResource { return &Service{} },
-		string(corev1.ResourceServices), cacheDir)
-	fatalIf(err)
-	go resourceWatcher.watchResource(ctx, coreGetter, serviceStore, &corev1.Service{})
-
-	rsStore, err := NewK8sStore(func() K8sResource { return &ReplicaSet{} },
-		"replicasets", cacheDir)
-	fatalIf(err)
-	go resourceWatcher.watchResource(ctx, appsGetter, rsStore, &appsv1.ReplicaSet{})
+	for _, storeConfig := range storeConfigs {
+		store, err := NewK8sStore(storeConfig.resourceCtor, storeConfig.resourceName, cacheDir)
+		fatalIf(err)
+		go resourceWatcher.watchResource(ctx, storeConfig.getter, store, storeConfig.runtimeObject)
+	}
 
 	<-ctx.Done()
 }
