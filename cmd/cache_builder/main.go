@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,10 +52,11 @@ func fatalIf(err error) {
 	}
 }
 
-func (r *resourceWatcher) watchResource(ctx context.Context, k8sStore K8sStore, runtimeObject runtime.Object) {
+func (r *resourceWatcher) watchResource(ctx context.Context, getter cache.Getter,
+	k8sStore K8sStore, runtimeObject runtime.Object) {
 	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName,
 		r.namespace)
-	watchlist := cache.NewListWatchFromClient(r.clientset.Core().RESTClient(),
+	watchlist := cache.NewListWatchFromClient(getter,
 		k8sStore.resourceName, r.namespace, fields.Everything())
 
 	_, controller := cache.NewInformer(
@@ -99,14 +101,23 @@ func main() {
 	resourceWatcher.clientset, err = kubernetes.NewForConfig(config)
 	fatalIf(err)
 
-	serviceStore, err := NewK8sStore(func() K8sResource { return &Service{} },
-		"services", cacheDir)
-	fatalIf(err)
+	coreGetter := resourceWatcher.clientset.Core().RESTClient()
+	appsGetter := resourceWatcher.clientset.Apps().RESTClient()
+
 	podStore, err := NewK8sStore(func() K8sResource { return &Pod{} },
-		"pods", cacheDir)
+		string(corev1.ResourcePods), cacheDir)
 	fatalIf(err)
-	go resourceWatcher.watchResource(ctx, podStore, &corev1.Pod{})
-	go resourceWatcher.watchResource(ctx, serviceStore, &corev1.Service{})
+	go resourceWatcher.watchResource(ctx, coreGetter, podStore, &corev1.Pod{})
+
+	serviceStore, err := NewK8sStore(func() K8sResource { return &Service{} },
+		string(corev1.ResourceServices), cacheDir)
+	fatalIf(err)
+	go resourceWatcher.watchResource(ctx, coreGetter, serviceStore, &corev1.Service{})
+
+	rsStore, err := NewK8sStore(func() K8sResource { return &ReplicaSet{} },
+		"replicasets", cacheDir)
+	fatalIf(err)
+	go resourceWatcher.watchResource(ctx, appsGetter, rsStore, &appsv1.ReplicaSet{})
 
 	<-ctx.Done()
 }
