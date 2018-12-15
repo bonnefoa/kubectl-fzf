@@ -25,6 +25,43 @@ func JoinSlicesOrNone(sl []string, sep string) string {
 	return strings.Join(sl, sep)
 }
 
+// StringMapsEqual returns true if maps are equals
+func StringMapsEqual(a map[string]string, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if a[k] != b[k] {
+			return false
+		}
+	}
+	return true
+}
+
+// StringSlicesEqual returns true if slices are equals
+func StringSlicesEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if a[k] != b[k] {
+			return false
+		}
+	}
+	return true
+}
+
+// DumpLine replaces empty string by None, join the slice and append newline
+func DumpLine(lst []string) string {
+	for k, v := range lst {
+		if v == "" {
+			lst[k] = "None"
+		}
+	}
+	line := strings.Join(lst, " ")
+	return fmt.Sprintf("%s\n", line)
+}
+
 // ExcludeFromSlice removes elements in exclude map from slice sl
 func ExcludeFromSlice(sl []string, exclude map[string]string) []string {
 	res := make([]string, len(sl))

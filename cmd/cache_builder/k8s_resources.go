@@ -9,7 +9,9 @@ import (
 
 // K8sResource is the generic information of a k8s entity
 type K8sResource interface {
+	HasChanged(k K8sResource) bool
 	ToString() string
+	Header() string
 	FromRuntime(obj interface{})
 }
 

@@ -17,10 +17,10 @@ type Service struct {
 	selectors   []string
 }
 
-// FromRuntime copies generic object
+// FromRuntime builds object from the informer's result
 func (s *Service) FromRuntime(obj interface{}) {
 	service := obj.(*corev1.Service)
-	glog.V(19).Infof("Reading meta %#v", s)
+	glog.V(19).Infof("Reading meta %#v", service)
 	s.FromObjectMeta(service.ObjectMeta)
 	s.serviceType = string(service.Spec.Type)
 	s.clusterIP = service.Spec.ClusterIP
@@ -33,6 +33,19 @@ func (s *Service) FromRuntime(obj interface{}) {
 		}
 	}
 	s.selectors = JoinStringMap(service.Spec.Selector, ExcludedLabels, "=")
+}
+
+// HasChanged returns true if the resource's dump needs to be updated
+func (s *Service) HasChanged(k K8sResource) bool {
+	oldService := k.(*Service)
+	return (StringSlicesEqual(s.ports, oldService.ports) ||
+		StringSlicesEqual(s.selectors, oldService.selectors) ||
+		StringMapsEqual(s.labels, oldService.labels))
+}
+
+// Header generates the csv header for the resource
+func (s *Service) Header() string {
+	return "Namespace Name Type ClusterIp Ports Selector Age Labels\n"
 }
 
 // ToString serializes the object to strings

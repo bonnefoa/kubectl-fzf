@@ -13,86 +13,97 @@ import (
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
 	data         map[string]K8sResource
-	object       K8sResource
+	resourceCtor func() K8sResource
 	resourceName string
 	destFile     string
 	currentFile  *os.File
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(object K8sResource, resourceName string, cacheDir string) (K8sStore, error) {
-	k8sStore := K8sStore{}
+func NewK8sStore(resourceCtor func() K8sResource,
+	resourceName string, cacheDir string) (K8sStore, error) {
+	k := K8sStore{}
 	destFile := path.Join(cacheDir, resourceName)
 	err := os.MkdirAll(cacheDir, os.ModePerm)
 	if err != nil {
-		return k8sStore, errors.Wrapf(err, "Error creating directory %s", cacheDir)
+		return k, errors.Wrapf(err, "Error creating directory %s", cacheDir)
 	}
 	currentFile, err := os.Create(destFile)
 	if err != nil {
-		return k8sStore, errors.Wrapf(err, "Error creating file %s", destFile)
+		return k, errors.Wrapf(err, "Error creating file %s", destFile)
 	}
-	k8sStore.data = make(map[string]K8sResource, 0)
-	k8sStore.object = object
-	k8sStore.resourceName = resourceName
-	k8sStore.destFile = destFile
-	k8sStore.currentFile = currentFile
-	return k8sStore, nil
+	k.data = make(map[string]K8sResource, 0)
+	k.resourceCtor = resourceCtor
+	k.resourceName = resourceName
+	k.destFile = destFile
+	k.currentFile = currentFile
+	currentFile.WriteString(k.resourceCtor().Header())
+	return k, nil
 }
 
 // AddResource adds a new k8s object to the store
-func (k8sStore K8sStore) AddResource(obj interface{}) {
+func (k *K8sStore) AddResource(obj interface{}) {
 	key := resourceKey(obj)
-	newObj := k8sStore.object
+	newObj := k.resourceCtor()
 	newObj.FromRuntime(obj)
-	glog.V(9).Infof("Object added: %s", key)
-	k8sStore.data[key] = newObj
+	glog.V(9).Infof("%s added: %s", k.resourceName, key)
+	k.data[key] = newObj
 
-	err := k8sStore.AppendNewObject(newObj)
+	err := k.AppendNewObject(newObj)
 	if err != nil {
 		glog.Warningf("Error when appending new object to current state: %v", err)
 	}
 }
 
 // DeleteResource removes an existing k8s object to the store
-func (k8sStore K8sStore) DeleteResource(obj interface{}) {
+func (k *K8sStore) DeleteResource(obj interface{}) {
 	key := resourceKey(obj)
-	glog.V(9).Infof("Object deleted: %s", key)
-	delete(k8sStore.data, key)
+	glog.V(9).Infof("%s deleted: %s", k.resourceName, key)
+	delete(k.data, key)
 
-	err := k8sStore.DumpFullState()
+	err := k.DumpFullState()
 	if err != nil {
 		glog.Warningf("Error when dumping state: %v", err)
 	}
 }
 
 // UpdateResource update an existing k8s object
-func (k8sStore K8sStore) UpdateResource(oldObj, newObj interface{}) {
+func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	key := resourceKey(newObj)
-	glog.V(9).Infof("Object changed: %s", key)
-	k8sObj := k8sStore.object
+	k8sObj := k.resourceCtor()
 	k8sObj.FromRuntime(newObj)
-	k8sStore.data[key] = k8sObj
+	if k8sObj.HasChanged(k.data[key]) {
+		glog.V(9).Infof("%s changed: %s", k.resourceName, key)
+		k.data[key] = k8sObj
+		err := k.DumpFullState()
+		if err != nil {
+			glog.Warningf("Error when dumping state: %v", err)
+		}
+	}
 }
 
 // AppendNewObject appends a new object to the cache dump
-func (k8sStore K8sStore) AppendNewObject(resource K8sResource) error {
-	_, err := k8sStore.currentFile.WriteString(resource.ToString())
+func (k *K8sStore) AppendNewObject(resource K8sResource) error {
+	_, err := k.currentFile.WriteString(resource.ToString())
 	if err != nil {
 		return err
 	}
-	err = k8sStore.currentFile.Sync()
+	err = k.currentFile.Sync()
 	return err
 }
 
 // DumpFullState writes the full state to the cache file
-func (k8sStore K8sStore) DumpFullState() error {
-	tempFilePath := fmt.Sprintf("%s_", k8sStore.destFile)
+func (k *K8sStore) DumpFullState() error {
+	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
+	tempFilePath := fmt.Sprintf("%s_", k.destFile)
 	tempFile, err := os.Create(tempFilePath)
+	glog.V(12).Infof("Creating temp file for full state %s", tempFile.Name())
 	if err != nil {
 		return errors.Wrapf(err, "Error creating temp file %s", tempFilePath)
 	}
 	w := bufio.NewWriter(tempFile)
-	for _, v := range k8sStore.data {
+	w.WriteString(k.resourceCtor().Header())
+	for _, v := range k.data {
 		_, err := w.WriteString(v.ToString())
 		if err != nil {
 			return errors.Wrapf(err, "Error writing bytes to file %s", tempFilePath)
@@ -102,12 +113,19 @@ func (k8sStore K8sStore) DumpFullState() error {
 	if err != nil {
 		return errors.Wrapf(err, "Error flushing buffer")
 	}
-	k8sStore.currentFile.Close()
-	err = os.Rename(tempFilePath, k8sStore.destFile)
+
+	err = tempFile.Sync()
+	if err != nil {
+		return errors.Wrapf(err, "Error syncing file")
+	}
+
+	glog.V(17).Infof("Closing file %s", k.currentFile.Name())
+	k.currentFile.Close()
+	err = os.Rename(tempFilePath, k.destFile)
 	if err != nil {
 		return errors.Wrapf(err, "Error moving file from %s to %s",
-			tempFilePath, k8sStore.destFile)
+			tempFilePath, k.destFile)
 	}
-	k8sStore.currentFile = tempFile
+	k.currentFile = tempFile
 	return nil
 }
