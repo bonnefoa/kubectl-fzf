@@ -15,10 +15,11 @@ import (
 )
 
 var (
-	kubeconfig        string
-	namespace         string
-	cacheDir          string
-	nodePollingPeriod time.Duration
+	kubeconfig             string
+	namespace              string
+	cacheDir               string
+	nodePollingPeriod      time.Duration
+	namespacePollingPeriod time.Duration
 )
 
 func init() {
@@ -27,9 +28,11 @@ func init() {
 	} else {
 		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
 	}
+
 	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
 	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
+	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 300*time.Second, "Polling period for namespaces")
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -63,6 +66,7 @@ func main() {
 		watchConfig{NewDeploymentFromRuntime, DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
 		watchConfig{NewEndpointsFromRuntime, EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
 		watchConfig{NewNodeFromRuntime, NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
+		watchConfig{NewNamespaceFromRuntime, NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
 	}
 
 	for _, watchConfig := range storeConfigs {
