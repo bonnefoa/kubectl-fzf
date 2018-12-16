@@ -106,8 +106,8 @@ __kubectl_parse_get()
 			filename="pvs"
 			autocomplete_fun=_fzf_without_namespace
 			;;
-		pvc )
-			filename="pvcs"
+		persistentvolumeclaims | pvc )
+			filename="persistentvolumeclaims"
 			autocomplete_fun=_fzf_with_namespace
 			;;
 		endpoints )
