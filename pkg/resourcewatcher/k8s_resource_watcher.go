@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	restclient "k8s.io/client-go/rest"
-	"k8s.io/kubernetes/staging/src/k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/cache"
 )
 
 type ResourceWatcher struct {
