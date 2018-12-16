@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -23,7 +24,7 @@ type resourceWatcher struct {
 }
 
 type watchConfig struct {
-	resourceCtor  func(obj interface{}) K8sResource
+	resourceCtor  func(obj interface{}) k8sresources.K8sResource
 	header        string
 	resourceName  string
 	getter        cache.Getter

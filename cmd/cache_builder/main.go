@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
@@ -59,17 +60,17 @@ func main() {
 	appsGetter := resourceWatcher.clientset.Apps().RESTClient()
 
 	storeConfigs := []watchConfig{
-		watchConfig{NewPodFromRuntime, PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
-		watchConfig{NewServiceFromRuntime, ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
-		watchConfig{NewReplicaSetFromRuntime, ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
-		watchConfig{NewConfigMapFromRuntime, ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
-		watchConfig{NewStatefulSetFromRuntime, StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
-		watchConfig{NewDeploymentFromRuntime, DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
-		watchConfig{NewEndpointsFromRuntime, EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
-		watchConfig{NewPersistentVolumeFromRuntime, PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
-		watchConfig{NewPersistentVolumeClaimFromRuntime, PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
-		watchConfig{NewNodeFromRuntime, NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
-		watchConfig{NewNamespaceFromRuntime, NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
+		watchConfig{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
+		watchConfig{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
+		watchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
+		watchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
+		watchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
+		watchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
+		watchConfig{k8sresources.NewEndpointsFromRuntime, k8sresources.EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
+		watchConfig{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
+		watchConfig{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
+		watchConfig{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
+		watchConfig{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
 	}
 
 	for _, watchConfig := range storeConfigs {

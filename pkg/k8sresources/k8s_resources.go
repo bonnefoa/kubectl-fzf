@@ -1,4 +1,4 @@
-package main
+package k8sresources
 
 import (
 	"fmt"
@@ -21,11 +21,6 @@ type ResourceMeta struct {
 	namespace    string
 	labels       map[string]string
 	creationTime time.Time
-}
-
-func resourceKey(obj interface{}) string {
-	o := obj.(metav1.ObjectMetaAccessor).GetObjectMeta()
-	return fmt.Sprintf("%s_%s", o.GetNamespace(), o.GetName())
 }
 
 // FromObjectMeta copies meta information to the object

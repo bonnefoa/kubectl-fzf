@@ -1,4 +1,4 @@
-package main
+package k8sresources
 
 import (
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"

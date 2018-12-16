@@ -6,15 +6,17 @@ import (
 	"os"
 	"path"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
-	data         map[string]K8sResource
-	resourceCtor func(obj interface{}) K8sResource
+	data         map[string]k8sresources.K8sResource
+	resourceCtor func(obj interface{}) k8sresources.K8sResource
 	header       string
 	resourceName string
 	destFile     string
@@ -22,7 +24,7 @@ type K8sStore struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(resourceCtor func(obj interface{}) K8sResource, resourceName string,
+func NewK8sStore(resourceCtor func(obj interface{}) k8sresources.K8sResource, resourceName string,
 	header string, cacheDir string) (K8sStore, error) {
 	k := K8sStore{}
 	destFile := path.Join(cacheDir, resourceName)
@@ -34,7 +36,7 @@ func NewK8sStore(resourceCtor func(obj interface{}) K8sResource, resourceName st
 	if err != nil {
 		return k, errors.Wrapf(err, "Error creating file %s", destFile)
 	}
-	k.data = make(map[string]K8sResource, 0)
+	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = resourceCtor
 	k.resourceName = resourceName
 	k.header = header
@@ -44,10 +46,15 @@ func NewK8sStore(resourceCtor func(obj interface{}) K8sResource, resourceName st
 	return k, nil
 }
 
+func resourceKey(obj interface{}) string {
+	o := obj.(metav1.ObjectMetaAccessor).GetObjectMeta()
+	return fmt.Sprintf("%s_%s", o.GetNamespace(), o.GetName())
+}
+
 // AddResourceList clears current state add the objects to the store.
 // It will trigger a full dump
 func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
-	k.data = make(map[string]K8sResource, 0)
+	k.data = make(map[string]k8sresources.K8sResource, 0)
 	for _, runtimeObject := range lstRuntime {
 		key := resourceKey(runtimeObject)
 		resource := k.resourceCtor(runtimeObject)
@@ -99,7 +106,7 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 }
 
 // AppendNewObject appends a new object to the cache dump
-func (k *K8sStore) AppendNewObject(resource K8sResource) error {
+func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	_, err := k.currentFile.WriteString(resource.ToString())
 	if err != nil {
 		return err
