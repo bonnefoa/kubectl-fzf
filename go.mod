@@ -3,14 +3,14 @@ module github.com/bonnefoa/kubectl-fzf
 replace github.com/bonnefoa/kubectl-fzf/cmd/cache_builder => ./cache_builder
 
 require (
-	github.com/alecthomas/gometalinter v2.0.11+incompatible // indirect
+	github.com/alecthomas/gometalinter v2.0.12+incompatible // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/cosiner/argv v0.0.1 // indirect
 	github.com/davidrjenni/reftools v0.0.0-20180914123528-654d0ba4f96d // indirect
 	github.com/derekparker/delve v1.1.0 // indirect
 	github.com/fatih/gomodifytags v0.0.0-20180914191908-141225bf62b6 // indirect
 	github.com/fatih/motion v0.0.0-20180408211639-218875ebe238 // indirect
-	github.com/gogo/protobuf v1.1.1 // indirect
+	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
@@ -45,21 +45,22 @@ require (
 	golang.org/x/arch v0.0.0-20181203225421-5a4828bb7045 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
 	golang.org/x/lint v0.0.0-20181212231659-93c0bb5c8393 // indirect
-	golang.org/x/net v0.0.0-20181207154023-610586996380 // indirect
+	golang.org/x/net v0.0.0-20181213202711-891ebc4b82d6 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
 	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
-	golang.org/x/sys v0.0.0-20181208175041-ad97f365e150 // indirect
+	golang.org/x/sys v0.0.0-20181213200352-4d1cda033e06 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	golang.org/x/tools v0.0.0-20181214171254-3c39ce7b6105 // indirect
 	google.golang.org/appengine v1.3.0 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 	honnef.co/go/tools v0.0.0-20180920025451-e3ad64cb4ed3 // indirect
 	k8s.io/api v0.0.0-20181130031204-d04500c8c3dd
-	k8s.io/apimachinery v0.0.0-20181207080347-f1a02064268b
+	k8s.io/apimachinery v0.0.0-20181215012845-4d029f033399
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0
-	k8s.io/kubernetes v1.13.0
+	k8s.io/kubernetes v1.13.1
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
