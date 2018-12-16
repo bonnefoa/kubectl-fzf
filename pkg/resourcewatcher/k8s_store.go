@@ -124,7 +124,7 @@ func (k *K8sStore) DumpFullState() error {
 	now := time.Now()
 	delta := now.Sub(k.lastFullDump)
 	if delta < k.timeBetweenFullDump {
-		glog.V(8).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceName, delta)
+		glog.V(10).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceName, delta)
 		return nil
 	}
 	k.lastFullDump = now

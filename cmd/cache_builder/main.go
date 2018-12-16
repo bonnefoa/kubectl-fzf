@@ -14,6 +14,7 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -57,6 +58,18 @@ func handleSignals(cancel context.CancelFunc) {
 	}
 }
 
+func startWatchOnCluster(ctx context.Context, config *restclient.Config) resourcewatcher.ResourceWatcher {
+	watcher := resourcewatcher.NewResourceWatcher(namespace, config)
+	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
+
+	glog.Infof("Start cache build on cluster %s", config.Host)
+	for _, watchConfig := range watchConfigs {
+		err := watcher.Start(ctx, watchConfig, cacheDir, timeBetweenFullDump)
+		util.FatalIf(err)
+	}
+	return watcher
+}
+
 func main() {
 	flag.Parse()
 
@@ -75,15 +88,25 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	currentConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	util.FatalIf(err)
-	watcher := resourcewatcher.NewResourceWatcher(namespace, config)
-	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 
-	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig, cacheDir, timeBetweenFullDump)
-		util.FatalIf(err)
+	watcher := startWatchOnCluster(ctx, currentConfig)
+	ticker := time.NewTicker(time.Second * 5)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+			glog.V(7).Infof("Checking config %s %s ", config.Host, currentConfig.Host)
+			util.FatalIf(err)
+			if config.Host != currentConfig.Host {
+				glog.Infof("Detected cluster change %s != %s", config.Host, currentConfig.Host)
+				watcher.Stop()
+				watcher = startWatchOnCluster(ctx, config)
+				currentConfig = config
+			}
+		}
 	}
-
-	<-ctx.Done()
 }

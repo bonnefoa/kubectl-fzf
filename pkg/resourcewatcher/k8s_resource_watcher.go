@@ -19,7 +19,7 @@ import (
 	"k8s.io/kubernetes/staging/src/k8s.io/client-go/tools/cache"
 )
 
-type resourceWatcher struct {
+type ResourceWatcher struct {
 	clientset   *kubernetes.Clientset
 	namespace   string
 	cluster     string
@@ -36,9 +36,9 @@ type watchConfig struct {
 	pollingPeriod time.Duration
 }
 
-func NewResourceWatcher(namespace string, config *restclient.Config) resourceWatcher {
+func NewResourceWatcher(namespace string, config *restclient.Config) ResourceWatcher {
 	var err error
-	resourceWatcher := resourceWatcher{}
+	resourceWatcher := ResourceWatcher{}
 	resourceWatcher.namespace = namespace
 	resourceWatcher.clientset, err = kubernetes.NewForConfig(config)
 
@@ -46,7 +46,7 @@ func NewResourceWatcher(namespace string, config *restclient.Config) resourceWat
 	return resourceWatcher
 }
 
-func (r *resourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cacheDir string, timeBetweenFullDump time.Duration) error {
+func (r *ResourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cacheDir string, timeBetweenFullDump time.Duration) error {
 	store, err := NewK8sStore(cfg, timeBetweenFullDump, cacheDir)
 	if err != nil {
 		return err
@@ -61,13 +61,14 @@ func (r *resourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cach
 	return nil
 }
 
-func (r *resourceWatcher) Stop() {
+func (r *ResourceWatcher) Stop() {
+	glog.Infof("Stopping %d resource watcher", len(r.cancelFuncs))
 	for _, cancel := range r.cancelFuncs {
 		cancel()
 	}
 }
 
-func (r *resourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
+func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
 	coreGetter := r.clientset.Core().RESTClient()
 	appsGetter := r.clientset.Apps().RESTClient()
 
@@ -87,7 +88,7 @@ func (r *resourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	return watchConfigs
 }
 
-func (r *resourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) {
+func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) {
 	obj, err := watchlist.List(metav1.ListOptions{})
 	if err != nil {
 		glog.Warningf("Error on listing %s: %v", k8sStore.resourceName, err)
@@ -99,7 +100,7 @@ func (r *resourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) 
 	k8sStore.AddResourceList(lst)
 }
 
-func (r *resourceWatcher) pollResource(ctx context.Context,
+func (r *ResourceWatcher) pollResource(ctx context.Context,
 	cfg watchConfig, k8sStore K8sStore) {
 	glog.V(4).Infof("Start poller for %s on namespace %s", k8sStore.resourceName, r.namespace)
 	namespace := ""
@@ -110,16 +111,17 @@ func (r *resourceWatcher) pollResource(ctx context.Context,
 		k8sStore.resourceName, namespace, fields.Everything())
 
 	r.doPoll(watchlist, k8sStore)
-	timer := time.NewTimer(cfg.pollingPeriod)
+	ticker := time.NewTicker(cfg.pollingPeriod)
 	select {
 	case <-ctx.Done():
+		glog.Infof("Exiting poll of %s", k8sStore.resourceName)
 		return
-	case <-timer.C:
+	case <-ticker.C:
 		r.doPoll(watchlist, k8sStore)
 	}
 }
 
-func (r *resourceWatcher) watchResource(ctx context.Context,
+func (r *ResourceWatcher) watchResource(ctx context.Context,
 	cfg watchConfig, k8sStore K8sStore) {
 	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, r.namespace)
 	namespace := ""
@@ -141,5 +143,6 @@ func (r *resourceWatcher) watchResource(ctx context.Context,
 	stop := make(chan struct{})
 	go controller.Run(stop)
 	<-ctx.Done()
+	glog.Infof("Exiting watch of %s", k8sStore.resourceName)
 	close(stop)
 }
