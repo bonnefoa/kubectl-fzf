@@ -5,14 +5,14 @@ Table of Contents
 
    * [Requirements](#requirements)
    * [Pros](#pros)
-   * [Table of Contents](#table-of-contents)
    * [Installation](#installation)
       * [Using zplug](#using-zplug)
    * [Usage](#usage)
-      * [kubectl_fzf_cache_builder](#kubectl_fzf_cache_builder)
-         * [Watch all namespaces](#watch-all-namespaces)
-         * [Refresh](#refresh)
+      * [cache_builder](#cache_builder)
+         * [Watch a specific namespace](#watch-a-specific-namespace)
       * [kubectl_fzf](#kubectl_fzf)
+         * [fzf options](#fzf-options)
+   * [Debugging](#debugging)
 
 # Requirements
 
@@ -28,7 +28,7 @@ Table of Contents
 
 # Installation
 
-Install `cache_builder` script
+Install `cache_builder`
 
 ```
 go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
