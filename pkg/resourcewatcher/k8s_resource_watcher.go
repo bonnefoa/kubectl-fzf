@@ -20,10 +20,10 @@ import (
 )
 
 type resourceWatcher struct {
-	clientset *kubernetes.Clientset
-	namespace string
-	cluster   string
-	cancel    context.CancelFunc
+	clientset   *kubernetes.Clientset
+	namespace   string
+	cluster     string
+	cancelFuncs []context.CancelFunc
 }
 
 type watchConfig struct {
@@ -52,7 +52,7 @@ func (r *resourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cach
 		return err
 	}
 	ctx, cancel := context.WithCancel(parentCtx)
-	r.cancel = cancel
+	r.cancelFuncs = append(r.cancelFuncs, cancel)
 	if cfg.pollingPeriod > 0 {
 		go r.pollResource(ctx, cfg, store)
 	} else {
@@ -62,7 +62,9 @@ func (r *resourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cach
 }
 
 func (r *resourceWatcher) Stop() {
-	r.cancel()
+	for _, cancel := range r.cancelFuncs {
+		cancel()
+	}
 }
 
 func (r *resourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
