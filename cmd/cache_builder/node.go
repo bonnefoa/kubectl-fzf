@@ -29,9 +29,11 @@ func NewNodeFromRuntime(obj interface{}) K8sResource {
 func (n *Node) FromRuntime(obj interface{}) {
 	node := obj.(*corev1.Node)
 	n.FromObjectMeta(node.ObjectMeta)
-	for k, v := range n.labels {
-		if strings.HasPrefix(k, "node-role.kubernetes.io/") {
-			n.roles = append(n.roles, v)
+	for k, _ := range n.labels {
+		nodePrefix := "node-role.kubernetes.io/"
+		if strings.HasPrefix(k, nodePrefix) {
+			role := strings.Replace(k, nodePrefix, "", 1)
+			n.roles = append(n.roles, role)
 		}
 	}
 	n.instanceType = n.labels["beta.kubernetes.io/instance-type"]
