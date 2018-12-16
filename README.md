@@ -40,11 +40,11 @@ Source the autocompletion functions
 
 # bash version
 echo "source <(kubectl completion bash)" >> ~/.bashrc
-echo "source $PWD/kubectl-fzf/kubectl_fzf.sh" >> ~/.bashrc
+echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.sh" >> ~/.bashrc
 
 # zsh version
 echo "source <(kubectl completion zsh)" >> ~/.zshrc
-echo "source $PWD/kubectl-fzf/kubectl_fzf.sh" >> ~/.zshrc
+echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.sh" >> ~/.zshrc
 ```
 
 ## Using zplug
