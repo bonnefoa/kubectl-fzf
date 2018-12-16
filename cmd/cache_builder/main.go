@@ -14,6 +14,7 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -74,7 +75,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	watcher := resourcewatcher.NewResourceWatcher(namespace, kubeconfig)
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	util.FatalIf(err)
+	watcher := resourcewatcher.NewResourceWatcher(namespace, config)
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 
 	for _, watchConfig := range watchConfigs {

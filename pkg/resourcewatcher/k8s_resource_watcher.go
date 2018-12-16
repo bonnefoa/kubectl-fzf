@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"k8s.io/client-go/tools/clientcmd"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/staging/src/k8s.io/client-go/tools/cache"
 )
 
@@ -23,6 +23,7 @@ type resourceWatcher struct {
 	clientset *kubernetes.Clientset
 	namespace string
 	cluster   string
+	cancel    context.CancelFunc
 }
 
 type watchConfig struct {
@@ -35,10 +36,8 @@ type watchConfig struct {
 	pollingPeriod time.Duration
 }
 
-func NewResourceWatcher(namespace string, kubeconfig string) resourceWatcher {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	util.FatalIf(err)
-
+func NewResourceWatcher(namespace string, config *restclient.Config) resourceWatcher {
+	var err error
 	resourceWatcher := resourceWatcher{}
 	resourceWatcher.namespace = namespace
 	resourceWatcher.clientset, err = kubernetes.NewForConfig(config)
@@ -47,17 +46,23 @@ func NewResourceWatcher(namespace string, kubeconfig string) resourceWatcher {
 	return resourceWatcher
 }
 
-func (r *resourceWatcher) Start(ctx context.Context, cfg watchConfig, cacheDir string, timeBetweenFullDump time.Duration) error {
+func (r *resourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cacheDir string, timeBetweenFullDump time.Duration) error {
 	store, err := NewK8sStore(cfg, timeBetweenFullDump, cacheDir)
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithCancel(parentCtx)
+	r.cancel = cancel
 	if cfg.pollingPeriod > 0 {
 		go r.pollResource(ctx, cfg, store)
 	} else {
 		go r.watchResource(ctx, cfg, store)
 	}
 	return nil
+}
+
+func (r *resourceWatcher) Stop() {
+	r.cancel()
 }
 
 func (r *resourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
@@ -80,6 +85,18 @@ func (r *resourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	return watchConfigs
 }
 
+func (r *resourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) {
+	obj, err := watchlist.List(metav1.ListOptions{})
+	if err != nil {
+		glog.Warningf("Error on listing %s: %v", k8sStore.resourceName, err)
+	}
+	lst, err := apimeta.ExtractList(obj)
+	if err != nil {
+		glog.Warningf("Error extracting list %s: %v", k8sStore.resourceName, err)
+	}
+	k8sStore.AddResourceList(lst)
+}
+
 func (r *resourceWatcher) pollResource(ctx context.Context,
 	cfg watchConfig, k8sStore K8sStore) {
 	glog.V(4).Infof("Start poller for %s on namespace %s", k8sStore.resourceName, r.namespace)
@@ -89,17 +106,14 @@ func (r *resourceWatcher) pollResource(ctx context.Context,
 	}
 	watchlist := cache.NewListWatchFromClient(cfg.getter,
 		k8sStore.resourceName, namespace, fields.Everything())
-	for {
-		obj, err := watchlist.List(metav1.ListOptions{})
-		if err != nil {
-			glog.Warningf("Error on listing %s: %v", k8sStore.resourceName, err)
-		}
-		lst, err := apimeta.ExtractList(obj)
-		if err != nil {
-			glog.Warningf("Error extracting list %s: %v", k8sStore.resourceName, err)
-		}
-		k8sStore.AddResourceList(lst)
-		time.Sleep(cfg.pollingPeriod)
+
+	r.doPoll(watchlist, k8sStore)
+	timer := time.NewTimer(cfg.pollingPeriod)
+	select {
+	case <-ctx.Done():
+		return
+	case <-timer.C:
+		r.doPoll(watchlist, k8sStore)
 	}
 }
 
