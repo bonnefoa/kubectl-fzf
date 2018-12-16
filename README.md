@@ -69,7 +69,7 @@ To create cache files necessary for `kubectl_fzf`, just run
 cache_builder
 ```
 
-It will watch the cluster in the current context.
+It will watch the cluster in the current context. You can keep it running in a screen or a tmux.
 
 ### Watch a specific namespace
 
