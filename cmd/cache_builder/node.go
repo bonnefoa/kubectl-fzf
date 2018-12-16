@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -53,7 +54,7 @@ func (n *Node) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (n *Node) ToString() string {
 	line := strings.Join([]string{n.name,
-		JoinSlicesOrNone(n.roles, ","),
+		util.JoinSlicesOrNone(n.roles, ","),
 		n.instanceType,
 		n.zone,
 		n.internalIP,

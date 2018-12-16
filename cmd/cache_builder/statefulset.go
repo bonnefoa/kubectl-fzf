@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -30,7 +31,7 @@ func (s *StatefulSet) FromRuntime(obj interface{}) {
 	s.FromObjectMeta(statefulset.ObjectMeta)
 	s.currentReplicas = int(statefulset.Status.CurrentReplicas)
 	s.replicas = int(statefulset.Status.Replicas)
-	s.selectors = JoinStringMap(statefulset.Spec.Selector.MatchLabels, ExcludedLabels, "=")
+	s.selectors = util.JoinStringMap(statefulset.Spec.Selector.MatchLabels, ExcludedLabels, "=")
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
@@ -38,13 +39,13 @@ func (s *StatefulSet) HasChanged(k K8sResource) bool {
 	oldSts := k.(*StatefulSet)
 	return (s.currentReplicas != oldSts.currentReplicas ||
 		s.replicas != oldSts.replicas ||
-		StringSlicesEqual(s.selectors, oldSts.selectors) ||
-		StringMapsEqual(s.labels, oldSts.labels))
+		util.StringSlicesEqual(s.selectors, oldSts.selectors) ||
+		util.StringMapsEqual(s.labels, oldSts.labels))
 }
 
 // ToString serializes the object to strings
 func (s *StatefulSet) ToString() string {
-	selectorList := JoinSlicesOrNone(s.selectors, ",")
+	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
 	line := strings.Join([]string{s.namespace,
 		s.name,
 		fmt.Sprintf("%d/%d", s.currentReplicas, s.replicas),

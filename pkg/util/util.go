@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"fmt"
@@ -81,7 +81,7 @@ func ExcludeFromSlice(sl []string, exclude map[string]string) []string {
 	res := make([]string, len(sl))
 	i := 0
 	for k, v := range sl {
-		_, isExcluded := ExcludedLabels[v]
+		_, isExcluded := exclude[v]
 		if isExcluded {
 			continue
 		}

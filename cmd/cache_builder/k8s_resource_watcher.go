@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,13 +34,13 @@ type watchConfig struct {
 
 func NewResourceWatcher(namespace string) resourceWatcher {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	FatalIf(err)
+	util.FatalIf(err)
 
 	resourceWatcher := resourceWatcher{}
 	resourceWatcher.namespace = namespace
 	resourceWatcher.clientset, err = kubernetes.NewForConfig(config)
 
-	FatalIf(err)
+	util.FatalIf(err)
 	return resourceWatcher
 }
 

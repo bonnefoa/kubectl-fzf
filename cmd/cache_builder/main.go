@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +74,7 @@ func main() {
 
 	for _, watchConfig := range storeConfigs {
 		store, err := NewK8sStore(watchConfig.resourceCtor, watchConfig.resourceName, watchConfig.header, cacheDir)
-		FatalIf(err)
+		util.FatalIf(err)
 		if watchConfig.pollingPeriod > 0 {
 			go resourceWatcher.pollResource(ctx, watchConfig, store)
 		} else {

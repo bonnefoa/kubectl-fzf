@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -39,21 +40,21 @@ func (s *Service) FromRuntime(obj interface{}) {
 			s.ports[k] = fmt.Sprintf("%s:%d", v.Name, v.Port)
 		}
 	}
-	s.selectors = JoinStringMap(service.Spec.Selector, ExcludedLabels, "=")
+	s.selectors = util.JoinStringMap(service.Spec.Selector, ExcludedLabels, "=")
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (s *Service) HasChanged(k K8sResource) bool {
 	oldService := k.(*Service)
-	return (StringSlicesEqual(s.ports, oldService.ports) ||
-		StringSlicesEqual(s.selectors, oldService.selectors) ||
-		StringMapsEqual(s.labels, oldService.labels))
+	return (util.StringSlicesEqual(s.ports, oldService.ports) ||
+		util.StringSlicesEqual(s.selectors, oldService.selectors) ||
+		util.StringMapsEqual(s.labels, oldService.labels))
 }
 
 // ToString serializes the object to strings
 func (s *Service) ToString() string {
-	portList := JoinSlicesOrNone(s.ports, ",")
-	selectorList := JoinSlicesOrNone(s.selectors, ",")
+	portList := util.JoinSlicesOrNone(s.ports, ",")
+	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
 	line := strings.Join([]string{s.namespace,
 		s.name,
 		s.serviceType,

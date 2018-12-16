@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -58,6 +59,6 @@ func (r *ResourceMeta) labelsString() string {
 	if len(r.labels) == 0 {
 		return "None"
 	}
-	els := JoinStringMap(r.labels, ExcludedLabels, "=")
-	return JoinSlicesOrNone(els, ",")
+	els := util.JoinStringMap(r.labels, ExcludedLabels, "=")
+	return util.JoinSlicesOrNone(els, ",")
 }

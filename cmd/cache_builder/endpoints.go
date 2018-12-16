@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -48,10 +49,10 @@ func (e *Endpoints) FromRuntime(obj interface{}) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (e *Endpoints) HasChanged(k K8sResource) bool {
 	oldE := k.(*Endpoints)
-	return (StringSlicesEqual(e.readyIps, oldE.readyIps) ||
-		StringSlicesEqual(e.readyPods, oldE.readyPods) ||
-		StringSlicesEqual(e.notReadyIps, oldE.notReadyIps) ||
-		StringSlicesEqual(e.notReadyIps, oldE.notReadyIps))
+	return (util.StringSlicesEqual(e.readyIps, oldE.readyIps) ||
+		util.StringSlicesEqual(e.readyPods, oldE.readyPods) ||
+		util.StringSlicesEqual(e.notReadyIps, oldE.notReadyIps) ||
+		util.StringSlicesEqual(e.notReadyIps, oldE.notReadyIps))
 }
 
 // ToString serializes the object to strings
@@ -59,10 +60,10 @@ func (e *Endpoints) ToString() string {
 	line := strings.Join([]string{e.namespace,
 		e.name,
 		e.resourceAge(),
-		JoinSlicesWithMaxOrNone(e.readyIps, 20, ","),
-		JoinSlicesWithMaxOrNone(e.readyPods, 20, ","),
-		JoinSlicesWithMaxOrNone(e.notReadyIps, 20, ","),
-		JoinSlicesWithMaxOrNone(e.notReadyPods, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.readyIps, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.readyPods, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.notReadyIps, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.notReadyPods, 20, ","),
 		e.labelsString(),
 	}, " ")
 	return fmt.Sprintf("%s\n", line)

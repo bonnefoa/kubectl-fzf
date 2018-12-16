@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -33,7 +34,7 @@ func (r *ReplicaSet) FromRuntime(obj interface{}) {
 	r.replicas = strconv.Itoa(int(replicaSet.Status.Replicas))
 	r.readyReplicas = strconv.Itoa(int(replicaSet.Status.ReadyReplicas))
 	r.availableReplicas = strconv.Itoa(int(replicaSet.Status.AvailableReplicas))
-	r.selectors = JoinStringMap(replicaSet.Spec.Selector.MatchLabels,
+	r.selectors = util.JoinStringMap(replicaSet.Spec.Selector.MatchLabels,
 		ExcludedLabels, "=")
 }
 
@@ -43,13 +44,13 @@ func (r *ReplicaSet) HasChanged(k K8sResource) bool {
 	return (r.replicas != oldRs.replicas ||
 		r.readyReplicas != oldRs.readyReplicas ||
 		r.availableReplicas != oldRs.availableReplicas ||
-		StringSlicesEqual(r.selectors, oldRs.selectors) ||
-		StringMapsEqual(r.labels, oldRs.labels))
+		util.StringSlicesEqual(r.selectors, oldRs.selectors) ||
+		util.StringMapsEqual(r.labels, oldRs.labels))
 }
 
 // ToString serializes the object to strings
 func (r *ReplicaSet) ToString() string {
-	selectorList := JoinSlicesOrNone(r.selectors, ",")
+	selectorList := util.JoinSlicesOrNone(r.selectors, ",")
 	line := strings.Join([]string{r.namespace,
 		r.name,
 		r.replicas,

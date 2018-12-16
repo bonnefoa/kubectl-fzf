@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -56,5 +57,5 @@ func (pv *PersistentVolume) ToString() string {
 		pv.resourceAge(),
 		pv.labelsString(),
 	}
-	return DumpLine(lst)
+	return util.DumpLine(lst)
 }

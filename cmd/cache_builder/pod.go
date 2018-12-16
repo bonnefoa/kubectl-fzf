@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -56,7 +57,7 @@ func (p *Pod) HasChanged(k K8sResource) bool {
 	oldPod := k.(*Pod)
 	return (p.podIP != oldPod.podIP ||
 		p.phase != oldPod.phase ||
-		StringMapsEqual(p.labels, oldPod.labels) ||
+		util.StringMapsEqual(p.labels, oldPod.labels) ||
 		p.nodeName != oldPod.nodeName)
 }
 
@@ -69,9 +70,9 @@ func (p *Pod) ToString() string {
 		p.hostIP,
 		p.nodeName,
 		p.phase,
-		JoinSlicesOrNone(p.containers, ","),
+		util.JoinSlicesOrNone(p.containers, ","),
 		p.resourceAge(),
 		p.labelsString(),
 	}
-	return DumpLine(lst)
+	return util.DumpLine(lst)
 }
