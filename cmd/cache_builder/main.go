@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -18,9 +19,11 @@ import (
 var (
 	version                = "1.0"
 	displayVersion         bool
+	cpuProfile             bool
 	kubeconfig             string
 	namespace              string
 	cacheDir               string
+	timeBetweenFullDump    time.Duration
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
 )
@@ -33,8 +36,10 @@ func init() {
 	}
 
 	flag.BoolVar(&displayVersion, "version", false, "Display version and exit")
+	flag.BoolVar(&cpuProfile, "cpu-profile", false, "Start with cpu profiling")
 	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
 	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
+	flag.DurationVar(&timeBetweenFullDump, "time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
 	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 600*time.Second, "Polling period for namespaces")
 }
@@ -58,6 +63,14 @@ func main() {
 		fmt.Printf("%s", version)
 		os.Exit(0)
 	}
+
+	if cpuProfile {
+		f, err := os.Create("cpu.pprof")
+		util.FatalIf(err)
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
@@ -65,7 +78,7 @@ func main() {
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 
 	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig, cacheDir)
+		err := watcher.Start(ctx, watchConfig, cacheDir, timeBetweenFullDump)
 		util.FatalIf(err)
 	}
 

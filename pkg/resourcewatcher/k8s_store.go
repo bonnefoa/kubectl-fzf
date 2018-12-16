@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/golang/glog"
@@ -15,16 +16,18 @@ import (
 
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
-	data         map[string]k8sresources.K8sResource
-	resourceCtor func(obj interface{}) k8sresources.K8sResource
-	header       string
-	resourceName string
-	destFile     string
-	currentFile  *os.File
+	data                map[string]k8sresources.K8sResource
+	resourceCtor        func(obj interface{}) k8sresources.K8sResource
+	header              string
+	resourceName        string
+	destFile            string
+	currentFile         *os.File
+	lastFullDump        time.Time
+	timeBetweenFullDump time.Duration
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg watchConfig, cacheDir string) (K8sStore, error) {
+func NewK8sStore(cfg watchConfig, timeBetweenFullDump time.Duration, cacheDir string) (K8sStore, error) {
 	k := K8sStore{}
 	destFile := path.Join(cacheDir, cfg.resourceName)
 	err := os.MkdirAll(cacheDir, os.ModePerm)
@@ -41,6 +44,8 @@ func NewK8sStore(cfg watchConfig, cacheDir string) (K8sStore, error) {
 	k.header = cfg.header
 	k.destFile = destFile
 	k.currentFile = currentFile
+	k.lastFullDump = time.Time{}
+	k.timeBetweenFullDump = timeBetweenFullDump
 	currentFile.WriteString(k.header)
 	return k, nil
 }
@@ -69,7 +74,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 func (k *K8sStore) AddResource(obj interface{}) {
 	key := resourceKey(obj)
 	newObj := k.resourceCtor(obj)
-	glog.V(9).Infof("%s added: %s", k.resourceName, key)
+	glog.V(11).Infof("%s added: %s", k.resourceName, key)
 	k.data[key] = newObj
 
 	err := k.AppendNewObject(newObj)
@@ -81,7 +86,7 @@ func (k *K8sStore) AddResource(obj interface{}) {
 // DeleteResource removes an existing k8s object to the store
 func (k *K8sStore) DeleteResource(obj interface{}) {
 	key := resourceKey(obj)
-	glog.V(9).Infof("%s deleted: %s", k.resourceName, key)
+	glog.V(11).Infof("%s deleted: %s", k.resourceName, key)
 	delete(k.data, key)
 
 	err := k.DumpFullState()
@@ -95,7 +100,7 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	key := resourceKey(newObj)
 	k8sObj := k.resourceCtor(newObj)
 	if k8sObj.HasChanged(k.data[key]) {
-		glog.V(9).Infof("%s changed: %s", k.resourceName, key)
+		glog.V(11).Infof("%s changed: %s", k.resourceName, key)
 		k.data[key] = k8sObj
 		err := k.DumpFullState()
 		if err != nil {
@@ -116,6 +121,13 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
+	now := time.Now()
+	delta := now.Sub(k.lastFullDump)
+	if delta < k.timeBetweenFullDump {
+		glog.V(8).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceName, delta)
+		return nil
+	}
+	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
 	tempFilePath := fmt.Sprintf("%s_", k.destFile)
 	tempFile, err := os.Create(tempFilePath)

@@ -47,8 +47,8 @@ func NewResourceWatcher(namespace string, kubeconfig string) resourceWatcher {
 	return resourceWatcher
 }
 
-func (r *resourceWatcher) Start(ctx context.Context, cfg watchConfig, cacheDir string) error {
-	store, err := NewK8sStore(cfg, cacheDir)
+func (r *resourceWatcher) Start(ctx context.Context, cfg watchConfig, cacheDir string, timeBetweenFullDump time.Duration) error {
+	store, err := NewK8sStore(cfg, timeBetweenFullDump, cacheDir)
 	if err != nil {
 		return err
 	}
