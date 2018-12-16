@@ -1,4 +1,4 @@
-package main
+package resourcewatcher
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -33,7 +35,7 @@ type watchConfig struct {
 	pollingPeriod time.Duration
 }
 
-func NewResourceWatcher(namespace string) resourceWatcher {
+func NewResourceWatcher(namespace string, kubeconfig string) resourceWatcher {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	util.FatalIf(err)
 
@@ -43,6 +45,39 @@ func NewResourceWatcher(namespace string) resourceWatcher {
 
 	util.FatalIf(err)
 	return resourceWatcher
+}
+
+func (r *resourceWatcher) Start(ctx context.Context, cfg watchConfig, cacheDir string) error {
+	store, err := NewK8sStore(cfg, cacheDir)
+	if err != nil {
+		return err
+	}
+	if cfg.pollingPeriod > 0 {
+		go r.pollResource(ctx, cfg, store)
+	} else {
+		go r.watchResource(ctx, cfg, store)
+	}
+	return nil
+}
+
+func (r *resourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
+	coreGetter := r.clientset.Core().RESTClient()
+	appsGetter := r.clientset.Apps().RESTClient()
+
+	watchConfigs := []watchConfig{
+		watchConfig{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
+		watchConfig{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
+		watchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
+		watchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
+		watchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
+		watchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
+		watchConfig{k8sresources.NewEndpointsFromRuntime, k8sresources.EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
+		watchConfig{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
+		watchConfig{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
+		watchConfig{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
+		watchConfig{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
+	}
+	return watchConfigs
 }
 
 func (r *resourceWatcher) pollResource(ctx context.Context,

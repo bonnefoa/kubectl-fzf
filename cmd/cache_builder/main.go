@@ -9,11 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
+	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -34,7 +32,7 @@ func init() {
 	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
 	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
-	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 300*time.Second, "Polling period for namespaces")
+	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 600*time.Second, "Polling period for namespaces")
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -55,32 +53,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	resourceWatcher := NewResourceWatcher(namespace)
-	coreGetter := resourceWatcher.clientset.Core().RESTClient()
-	appsGetter := resourceWatcher.clientset.Apps().RESTClient()
+	watcher := resourcewatcher.NewResourceWatcher(namespace, kubeconfig)
+	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 
-	storeConfigs := []watchConfig{
-		watchConfig{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
-		watchConfig{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
-		watchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
-		watchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
-		watchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
-		watchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
-		watchConfig{k8sresources.NewEndpointsFromRuntime, k8sresources.EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
-		watchConfig{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
-		watchConfig{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
-		watchConfig{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
-		watchConfig{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
-	}
-
-	for _, watchConfig := range storeConfigs {
-		store, err := NewK8sStore(watchConfig.resourceCtor, watchConfig.resourceName, watchConfig.header, cacheDir)
+	for _, watchConfig := range watchConfigs {
+		err := watcher.Start(ctx, watchConfig, cacheDir)
 		util.FatalIf(err)
-		if watchConfig.pollingPeriod > 0 {
-			go resourceWatcher.pollResource(ctx, watchConfig, store)
-		} else {
-			go resourceWatcher.watchResource(ctx, watchConfig, store)
-		}
 	}
 
 	<-ctx.Done()

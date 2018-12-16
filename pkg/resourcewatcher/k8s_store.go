@@ -1,4 +1,4 @@
-package main
+package resourcewatcher
 
 import (
 	"bufio"
@@ -24,10 +24,9 @@ type K8sStore struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(resourceCtor func(obj interface{}) k8sresources.K8sResource, resourceName string,
-	header string, cacheDir string) (K8sStore, error) {
+func NewK8sStore(cfg watchConfig, cacheDir string) (K8sStore, error) {
 	k := K8sStore{}
-	destFile := path.Join(cacheDir, resourceName)
+	destFile := path.Join(cacheDir, cfg.resourceName)
 	err := os.MkdirAll(cacheDir, os.ModePerm)
 	if err != nil {
 		return k, errors.Wrapf(err, "Error creating directory %s", cacheDir)
@@ -37,9 +36,9 @@ func NewK8sStore(resourceCtor func(obj interface{}) k8sresources.K8sResource, re
 		return k, errors.Wrapf(err, "Error creating file %s", destFile)
 	}
 	k.data = make(map[string]k8sresources.K8sResource, 0)
-	k.resourceCtor = resourceCtor
-	k.resourceName = resourceName
-	k.header = header
+	k.resourceCtor = cfg.resourceCtor
+	k.resourceName = cfg.resourceName
+	k.header = cfg.header
 	k.destFile = destFile
 	k.currentFile = currentFile
 	currentFile.WriteString(k.header)
