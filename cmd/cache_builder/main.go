@@ -74,7 +74,7 @@ func main() {
 		if watchConfig.pollingPeriod > 0 {
 			go resourceWatcher.pollResource(ctx, watchConfig, store)
 		} else {
-			//go resourceWatcher.watchResource(ctx, watchConfig, store)
+			go resourceWatcher.watchResource(ctx, watchConfig, store)
 		}
 	}
 
