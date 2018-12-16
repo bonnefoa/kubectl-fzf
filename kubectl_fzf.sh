@@ -102,8 +102,8 @@ __kubectl_parse_get()
 			filename="statefulsets"
 			autocomplete_fun=_fzf_with_namespace
 			;;
-		pv )
-			filename="pvs"
+		persistentvolumes | pv )
+			filename="persistentvolumes"
 			autocomplete_fun=_fzf_without_namespace
 			;;
 		persistentvolumeclaims | pvc )

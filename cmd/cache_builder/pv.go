@@ -4,6 +4,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const PersistentVolumeHeader = "Name Status StorageClass Zone Claim Age Labels\n"
+
 // PersistentVolume is the summary of a kubernetes physical volume
 type PersistentVolume struct {
 	ResourceMeta
@@ -12,6 +14,13 @@ type PersistentVolume struct {
 	zone         string
 	spec         string
 	storageClass string
+}
+
+// NewPersistentVolumetime builds a pod from informer result
+func NewPersistentVolumeFromRuntime(obj interface{}) K8sResource {
+	p := &PersistentVolume{}
+	p.FromRuntime(obj)
+	return p
 }
 
 // FromRuntime builds object from the informer's result
@@ -34,11 +43,6 @@ func (pv *PersistentVolume) FromRuntime(obj interface{}) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (pv *PersistentVolume) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// Header generates the csv header for the resource
-func (pv *PersistentVolume) Header() string {
-	return "Name Status StorageClass Zone Claim Age Labels\n"
 }
 
 // ToString serializes the object to strings

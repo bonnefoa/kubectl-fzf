@@ -65,6 +65,7 @@ func main() {
 		watchConfig{NewStatefulSetFromRuntime, StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
 		watchConfig{NewDeploymentFromRuntime, DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
 		watchConfig{NewEndpointsFromRuntime, EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
+		watchConfig{NewPersistentVolumeFromRuntime, PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
 		watchConfig{NewPersistentVolumeClaimFromRuntime, PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
 		watchConfig{NewNodeFromRuntime, NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
 		watchConfig{NewNamespaceFromRuntime, NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
