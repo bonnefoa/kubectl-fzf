@@ -4,4 +4,3 @@
 *.zip
 *.egg-info
 tags
-cache_builder

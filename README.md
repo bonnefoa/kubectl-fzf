@@ -21,17 +21,17 @@ Table of Contents
 
 # Pros
 
-- Seamless integration
+- Seamless integration with kubectl autocomplete
 - Scale with clusters > 1K pods
-- Provide label autocompletion
+- Label autocompletion
+- Automatic namespace switch
 
 # Installation
 
-Install `kubectl_fzf_cache_builder` script
+Install `cache_builder` script
 
 ```
-git clone --depth 1 https://github.com/bonnefoa/kubectl-fzf
-pip2 install -U kubectl-fzf/
+go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
 ```
 
 Source the autocompletion functions
@@ -57,38 +57,45 @@ zplug "bonnefoa/kubectl-fzf", defer:3
 
 # Usage
 
-## `kubectl_fzf_cache_builder`
+## `cache_builder`
 
-`kubectl_fzf_cache_builder` will watch cluster resources and keep the current state of the cluster in local files.
+`cache_builder` will watch cluster resources and keep the current state of the cluster in local files.
 
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
 
 To create cache files necessary for `kubectl_fzf`, just run
 
 ```
-kubectl_fzf_cache_builder
+cache_builder
 ```
 
-It will watch the cluster and namespace in the current context.
+It will watch the cluster in the current context.
 
-### Watch all namespaces
+### Watch a specific namespace
 
-To create cache for all namespaces of the current cluster, just run
-
-```
-kubectl_fzf_cache_builder --all-namespaces
-```
-
-### Refresh
-
-If you have a custom login script, you can use
+To create cache for a specific namespace, just run
 
 ```
-kubectl_fzf_cache_builder --refresh-command <script>
+cache_builder -n mynamespace
 ```
-
-The script will be called to refresh oidc token when necessary.
 
 ## `kubectl_fzf`
 
 `kubectl_fzf.sh` overloads autocompletion function defined by `kubectl completion zsh` (or `kubectl completion bash`) to fzf with the local files to power autocompletion.
+
+### fzf options
+
+You can control used options for fzf with `KUBECTL_FZF_OPTIONS` variable.
+
+For example, to force exact match in search, set the variable to the following value
+```
+export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
+```
+
+# Debugging
+
+If files are not empty, you can activate debugging logs with
+
+```
+cache_builder -logtostderr -v 10
+```
