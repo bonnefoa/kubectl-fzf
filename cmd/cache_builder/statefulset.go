@@ -7,12 +7,21 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
+const StatefulSetHeader = "Namespace Name Replicas Selector Age Labels\n"
+
 // StatefulSet is the summary of a kubernetes statefulset
 type StatefulSet struct {
 	ResourceMeta
 	currentReplicas int
 	replicas        int
 	selectors       []string
+}
+
+// NewStatefulSetFromRuntime builds a k8sresource from informer result
+func NewStatefulSetFromRuntime(obj interface{}) K8sResource {
+	p := &StatefulSet{}
+	p.FromRuntime(obj)
+	return p
 }
 
 // FromRuntime builds object from the informer's result
@@ -31,11 +40,6 @@ func (s *StatefulSet) HasChanged(k K8sResource) bool {
 		s.replicas != oldSts.replicas ||
 		StringSlicesEqual(s.selectors, oldSts.selectors) ||
 		StringMapsEqual(s.labels, oldSts.labels))
-}
-
-// Header generates the csv header for the resource
-func (s *StatefulSet) Header() string {
-	return "Namespace Name Replicas Selector Age Labels\n"
 }
 
 // ToString serializes the object to strings

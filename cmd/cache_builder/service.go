@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 )
+
+const ServiceHeader = "Namespace Name Type ClusterIp Ports Selector Age Labels\n"
 
 // Service is the summary of a kubernetes service
 type Service struct {
@@ -17,10 +18,16 @@ type Service struct {
 	selectors   []string
 }
 
+// NewServiceFromRuntime builds a pod from informer result
+func NewServiceFromRuntime(obj interface{}) K8sResource {
+	s := &Service{}
+	s.FromRuntime(obj)
+	return s
+}
+
 // FromRuntime builds object from the informer's result
 func (s *Service) FromRuntime(obj interface{}) {
 	service := obj.(*corev1.Service)
-	glog.V(19).Infof("Reading meta %#v", service)
 	s.FromObjectMeta(service.ObjectMeta)
 	s.serviceType = string(service.Spec.Type)
 	s.clusterIP = service.Spec.ClusterIP
@@ -41,11 +48,6 @@ func (s *Service) HasChanged(k K8sResource) bool {
 	return (StringSlicesEqual(s.ports, oldService.ports) ||
 		StringSlicesEqual(s.selectors, oldService.selectors) ||
 		StringMapsEqual(s.labels, oldService.labels))
-}
-
-// Header generates the csv header for the resource
-func (s *Service) Header() string {
-	return "Namespace Name Type ClusterIp Ports Selector Age Labels\n"
 }
 
 // ToString serializes the object to strings

@@ -7,9 +7,18 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
+const DeploymentHeader = "Namespace Name Age Labels\n"
+
 // Deployment is the summary of a kubernetes deployment
 type Deployment struct {
 	ResourceMeta
+}
+
+// NewDeploymentFromRuntime builds a k8sresource from informer result
+func NewDeploymentFromRuntime(obj interface{}) K8sResource {
+	d := &Deployment{}
+	d.FromRuntime(obj)
+	return d
 }
 
 // FromRuntime builds object from the informer's result
@@ -21,11 +30,6 @@ func (s *Deployment) FromRuntime(obj interface{}) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (s *Deployment) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// Header generates the csv header for the resource
-func (s *Deployment) Header() string {
-	return "Namespace Name Age Labels\n"
 }
 
 // ToString serializes the object to strings

@@ -8,20 +8,22 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
 	data         map[string]K8sResource
-	resourceCtor func() K8sResource
+	resourceCtor func(obj interface{}) K8sResource
+	header       string
 	resourceName string
 	destFile     string
 	currentFile  *os.File
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(resourceCtor func() K8sResource,
-	resourceName string, cacheDir string) (K8sStore, error) {
+func NewK8sStore(resourceCtor func(obj interface{}) K8sResource, resourceName string,
+	header string, cacheDir string) (K8sStore, error) {
 	k := K8sStore{}
 	destFile := path.Join(cacheDir, resourceName)
 	err := os.MkdirAll(cacheDir, os.ModePerm)
@@ -35,17 +37,32 @@ func NewK8sStore(resourceCtor func() K8sResource,
 	k.data = make(map[string]K8sResource, 0)
 	k.resourceCtor = resourceCtor
 	k.resourceName = resourceName
+	k.header = header
 	k.destFile = destFile
 	k.currentFile = currentFile
-	currentFile.WriteString(k.resourceCtor().Header())
+	currentFile.WriteString(k.header)
 	return k, nil
+}
+
+// AddResourceList clears current state add the objects to the store.
+// It will trigger a full dump
+func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
+	k.data = make(map[string]K8sResource, 0)
+	for _, runtimeObject := range lstRuntime {
+		key := resourceKey(runtimeObject)
+		resource := k.resourceCtor(runtimeObject)
+		k.data[key] = resource
+	}
+	err := k.DumpFullState()
+	if err != nil {
+		glog.Warningf("Error when dumping state: %v", err)
+	}
 }
 
 // AddResource adds a new k8s object to the store
 func (k *K8sStore) AddResource(obj interface{}) {
 	key := resourceKey(obj)
-	newObj := k.resourceCtor()
-	newObj.FromRuntime(obj)
+	newObj := k.resourceCtor(obj)
 	glog.V(9).Infof("%s added: %s", k.resourceName, key)
 	k.data[key] = newObj
 
@@ -70,8 +87,7 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 // UpdateResource update an existing k8s object
 func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	key := resourceKey(newObj)
-	k8sObj := k.resourceCtor()
-	k8sObj.FromRuntime(newObj)
+	k8sObj := k.resourceCtor(newObj)
 	if k8sObj.HasChanged(k.data[key]) {
 		glog.V(9).Infof("%s changed: %s", k.resourceName, key)
 		k.data[key] = k8sObj
@@ -102,7 +118,7 @@ func (k *K8sStore) DumpFullState() error {
 		return errors.Wrapf(err, "Error creating temp file %s", tempFilePath)
 	}
 	w := bufio.NewWriter(tempFile)
-	w.WriteString(k.resourceCtor().Header())
+	w.WriteString(k.header)
 	for _, v := range k.data {
 		_, err := w.WriteString(v.ToString())
 		if err != nil {

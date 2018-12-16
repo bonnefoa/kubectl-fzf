@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -88,6 +89,14 @@ func ExcludeFromSlice(sl []string, exclude map[string]string) []string {
 		i++
 	}
 	return res[:i]
+}
+
+// FatalIf exits if the error is not nil
+func FatalIf(err error) {
+	if err != nil {
+		fmt.Printf("Fatal error: %s\n", err)
+		os.Exit(-1)
+	}
 }
 
 // JoinIntSlice creates a string of joined int with a separator character

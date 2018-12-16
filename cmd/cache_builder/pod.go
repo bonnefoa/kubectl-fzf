@@ -5,6 +5,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Age Labels\n"
+
 // Pod is the summary of a kubernetes pod
 type Pod struct {
 	ResourceMeta
@@ -22,6 +24,13 @@ func getPhase(p *corev1.Pod) string {
 		}
 	}
 	return string(p.Status.Phase)
+}
+
+// NewPodFromRuntime builds a pod from informer result
+func NewPodFromRuntime(obj interface{}) K8sResource {
+	p := &Pod{}
+	p.FromRuntime(obj)
+	return p
 }
 
 // FromRuntime builds object from the informer's result
@@ -49,11 +58,6 @@ func (p *Pod) HasChanged(k K8sResource) bool {
 		p.phase != oldPod.phase ||
 		StringMapsEqual(p.labels, oldPod.labels) ||
 		p.nodeName != oldPod.nodeName)
-}
-
-// Header generates the csv header for the resource
-func (p *Pod) Header() string {
-	return "Namespace Name PodIp HostIp NodeName Phase Containers Age Labels\n"
 }
 
 // ToString serializes the object to strings

@@ -11,7 +11,6 @@ import (
 type K8sResource interface {
 	HasChanged(k K8sResource) bool
 	ToString() string
-	Header() string
 	FromRuntime(obj interface{})
 }
 

@@ -7,6 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const EndpointsHeader = "Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
+
 // Endpoints is the summary of a kubernetes endpoints
 type Endpoints struct {
 	ResourceMeta
@@ -14,6 +16,13 @@ type Endpoints struct {
 	readyPods    []string
 	notReadyIps  []string
 	notReadyPods []string
+}
+
+// NewEndpointsFromRuntime builds a k8s resource from informer result
+func NewEndpointsFromRuntime(obj interface{}) K8sResource {
+	e := &Endpoints{}
+	e.FromRuntime(obj)
+	return e
 }
 
 // FromRuntime builds object from the informer's result
@@ -43,11 +52,6 @@ func (e *Endpoints) HasChanged(k K8sResource) bool {
 		StringSlicesEqual(e.readyPods, oldE.readyPods) ||
 		StringSlicesEqual(e.notReadyIps, oldE.notReadyIps) ||
 		StringSlicesEqual(e.notReadyIps, oldE.notReadyIps))
-}
-
-// Header generates the csv header for the resource
-func (e *Endpoints) Header() string {
-	return "Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
 }
 
 // ToString serializes the object to strings

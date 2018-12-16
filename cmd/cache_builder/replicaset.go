@@ -8,6 +8,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
+const ReplicaSetHeader = "Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels\n"
+
 // ReplicaSet is the summary of a kubernetes replicaSet
 type ReplicaSet struct {
 	ResourceMeta
@@ -15,6 +17,13 @@ type ReplicaSet struct {
 	readyReplicas     string
 	availableReplicas string
 	selectors         []string
+}
+
+// NewReplicaSetFromRuntime builds a k8sresource from informer result
+func NewReplicaSetFromRuntime(obj interface{}) K8sResource {
+	p := &ReplicaSet{}
+	p.FromRuntime(obj)
+	return p
 }
 
 // FromRuntime builds object from the informer's result
@@ -36,11 +45,6 @@ func (r *ReplicaSet) HasChanged(k K8sResource) bool {
 		r.availableReplicas != oldRs.availableReplicas ||
 		StringSlicesEqual(r.selectors, oldRs.selectors) ||
 		StringMapsEqual(r.labels, oldRs.labels))
-}
-
-// Header generates the csv header for the resource
-func (r *ReplicaSet) Header() string {
-	return "Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels\n"
 }
 
 // ToString serializes the object to strings
