@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,6 +16,8 @@ import (
 )
 
 var (
+	version                = "1.0"
+	displayVersion         bool
 	kubeconfig             string
 	namespace              string
 	cacheDir               string
@@ -29,6 +32,7 @@ func init() {
 		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
+	flag.BoolVar(&displayVersion, "version", false, "Display version and exit")
 	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
 	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
@@ -50,6 +54,10 @@ func handleSignals(cancel context.CancelFunc) {
 func main() {
 	flag.Parse()
 
+	if displayVersion {
+		fmt.Printf("%s", version)
+		os.Exit(0)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
