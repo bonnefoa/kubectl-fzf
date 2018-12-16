@@ -27,12 +27,9 @@ func init() {
 	} else {
 		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
 	}
-	flag.StringVar(&namespace, "namespace", "",
-		"Namespace to watch, empty for all namespaces")
-	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"),
-		"Cache dir location. Default to KUBECTL_FZF_CACHE env var")
-	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 120*time.Second,
-		"Polling period for nodes")
+	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
+	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
+	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
 }
 
 func handleSignals(cancel context.CancelFunc) {
