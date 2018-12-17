@@ -1,7 +1,7 @@
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
-KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
+KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
 # $1 is awk end print command

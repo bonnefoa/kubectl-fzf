@@ -87,9 +87,10 @@ cache_builder -n mynamespace
 
 You can control used options for fzf with `KUBECTL_FZF_OPTIONS` variable.
 
-For example, to force exact match in search, set the variable to the following value
+For example, to turn down exact match in search, set the variable to the following value
+
 ```shell
-export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
+export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
 ```
 
 # Debugging
