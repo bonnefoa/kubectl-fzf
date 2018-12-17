@@ -4,6 +4,9 @@ eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
+# $1 is awk end print command
+# $2 is filename
+# $3 is query
 _fzf_kubectl_complete()
 {
     local end_print=$1
@@ -18,25 +21,42 @@ _fzf_kubectl_complete()
         | awk "$end_print"
 }
 
+# $1 is filename
+# $2 is query
 _fzf_with_namespace()
 {
     _fzf_kubectl_complete '{print $1 " " $2}' $1 $2
 }
 
+# $1 is filename
+# $2 is query
 _fzf_without_namespace()
 {
     _fzf_kubectl_complete '{print $1}' $1 $2
 }
 
-_flag_selector()
+# $1 is filename
+# $2 is query
+_flag_selector_with_namespace()
 {
 	local file="${KUBECTL_FZF_CACHE}/$1"
-    awk '{print $NF}' "$file" \
-        | paste -sd ',' - \
-        | tr ',' '\n' \
-        | grep -v None \
+    awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" \
         | sort \
         | uniq \
+        | column -t \
+        | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
+        | awk '{print $1 " " $2}'
+}
+
+# $1 is filename
+# $2 is query
+_flag_selector_without_namespace()
+{
+	local file="${KUBECTL_FZF_CACHE}/$1"
+    awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" \
+        | sort \
+        | uniq \
+        | column -t \
         | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
         | awk '{print $1}'
 }
@@ -60,6 +80,28 @@ __get_current_namespace()
     echo "${namespace:-default}"
 }
 
+# $1 is result
+__build_namespaced_compreply()
+{
+    local result=("$@")
+    result=($(echo $result | tr " " "\n"))
+    echo $result > /tmp/_debug
+    echo ${result[@]} >> /tmp/_debug
+    echo ${#result[@]} >> /tmp/_debug
+    if [[ ${#result[@]} -eq 2 ]]; then
+        # We have namespace in first position
+        local current_namespace=$(__get_current_namespace)
+        local namespace=${result[0]}
+        if [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
+            COMPREPLY=( "${result[1]} -n ${result[0]}" )
+        else
+            COMPREPLY=( ${result[1]} )
+        fi
+    else
+        COMPREPLY=( $result )
+    fi
+}
+
 # $1 is the type of resource to get
 __kubectl_parse_get()
 {
@@ -68,6 +110,7 @@ __kubectl_parse_get()
 
 	local filename
 	local autocomplete_fun
+	local flag_autocomplete_fun
     local resource_name=$1
 
 	case $resource_name in
@@ -77,46 +120,57 @@ __kubectl_parse_get()
 		pod | pods )
 			filename="pods"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
 		rs | resplicaset | replicasets )
 			filename="replicasets"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
         configmap | configmaps )
 			filename="configmaps"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
         ns | namespace | namespaces )
 			filename="namespaces"
 			autocomplete_fun=_fzf_without_namespace
+			flag_autocomplete_fun=_flag_selector_without_namespace
 			;;
 		node | nodes )
 			filename="nodes"
 			autocomplete_fun=_fzf_without_namespace
+			flag_autocomplete_fun=_flag_selector_without_namespace
 			;;
         deployment | deployments | deployments. | deployments.apps | deployments.extensions  )
 			filename="deployments"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
 		sts | statefulset | statefulsets | statefulsets.apps  )
 			filename="statefulsets"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
 		persistentvolumes | pv )
 			filename="persistentvolumes"
 			autocomplete_fun=_fzf_without_namespace
+			flag_autocomplete_fun=_flag_selector_without_namespace
 			;;
 		persistentvolumeclaims | pvc )
 			filename="persistentvolumeclaims"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
 		endpoints )
 			filename="endpoints"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
 		svc | service | services )
 			filename="services"
 			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
 		* )
 			___kubectl_parse_get $*
@@ -131,10 +185,8 @@ __kubectl_parse_get()
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
-		flags=$(_flag_selector $filename $query)
-		if [[ -n $flags ]]; then
-			COMPREPLY=( "$flags" )
-		fi
+		result=$($flag_autocomplete_fun $filename $query)
+        __build_namespaced_compreply "${result[@]}"
 		return
 	fi
 
@@ -163,17 +215,5 @@ __kubectl_parse_get()
         return
 	fi
 
-    result=($result)
-    if [[ ${#result[@]} -eq 2 ]]; then
-        # We have namespace in first position
-        local current_namespace=$(__get_current_namespace)
-        local namespace=${result[0]}
-        if [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
-            COMPREPLY=( "-n ${result[0]} ${result[1]}" )
-        else
-            COMPREPLY=( ${result[1]} )
-        fi
-    else
-        COMPREPLY=( $result )
-    fi
+    __build_namespaced_compreply "${result[@]}"
 }
