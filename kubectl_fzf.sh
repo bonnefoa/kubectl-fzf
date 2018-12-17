@@ -7,14 +7,19 @@ KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -
 # $1 is awk end print command
 # $2 is filename
 # $3 is query
+# $4 is an optional filter
 _fzf_kubectl_complete()
 {
     local end_print=$1
     local file="${KUBECTL_FZF_CACHE}/$2"
     local query=$3
+    local filter=$4
     local end_field=$(awk 'NR==1{ for(i = 1; i <= NF; i++){ if ($i == "Labels") {print i - 1; } } } ' $file)
     local header=$(head -n1 "$file" | cut -d ' ' -f 1-$end_field)
     local rest=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort)
+    if [[ -n $filter ]]; then
+        rest=$(echo "$rest" | grep -w $filter)
+    fi
     printf "$header\n$rest\n" \
         | column -t \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
@@ -25,14 +30,15 @@ _fzf_kubectl_complete()
 # $2 is query
 _fzf_with_namespace()
 {
-    _fzf_kubectl_complete '{print $1 " " $2}' $1 $2
+    local namespace_in_query=$(__get_namespace_in_query)
+    _fzf_kubectl_complete '{print $1 " " $2}' $1 "$2" "$namespace_in_query"
 }
 
 # $1 is filename
 # $2 is query
 _fzf_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' $1 $2
+    _fzf_kubectl_complete '{print $1}' $1 "$2"
 }
 
 # $1 is filename
@@ -78,6 +84,19 @@ __get_current_namespace()
 {
     local namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}')
     echo "${namespace:-default}"
+}
+
+__get_namespace_in_query()
+{
+    local i=0
+    for word in ${COMP_WORDS[@]} ; do
+        if [[ $word == "-n" || $word == "--namespace" ]]; then
+            if [[ ${#COMP_WORDS[@]} -gt $i && -n ${COMP_WORDS[$i + 1]} ]]; then
+                echo ${COMP_WORDS[$i + 1]}
+            fi
+        fi
+        ((i++))
+    done
 }
 
 # $1 is result
