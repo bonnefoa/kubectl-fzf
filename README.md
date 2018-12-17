@@ -30,12 +30,12 @@ Table of Contents
 
 Install `cache_builder`
 
-```
+```shell
 go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
 ```
 
 Source the autocompletion functions
-```
+```shell
 # kubectl_fzf.sh needs to be sourced after kubectl completion.
 
 # bash version
@@ -50,7 +50,7 @@ echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.sh" >> ~/.z
 ## Using zplug
 
 You can use zplug to install the autocompletion functions
-```
+```shell
 zplug "plugins/kubectl", from:oh-my-zsh, defer:2
 zplug "bonnefoa/kubectl-fzf", defer:3
 ```
@@ -65,7 +65,7 @@ By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_F
 
 To create cache files necessary for `kubectl_fzf`, just run
 
-```
+```shell
 cache_builder
 ```
 
@@ -75,7 +75,7 @@ It will watch the cluster in the current context. You can keep it running in a s
 
 To create cache for a specific namespace, just run
 
-```
+```shell
 cache_builder -n mynamespace
 ```
 
@@ -88,7 +88,7 @@ cache_builder -n mynamespace
 You can control used options for fzf with `KUBECTL_FZF_OPTIONS` variable.
 
 For example, to force exact match in search, set the variable to the following value
-```
+```shell
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
 ```
 
@@ -96,6 +96,14 @@ export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
 
 If files are not empty, you can activate debugging logs with
 
-```
+```shell
 cache_builder -logtostderr -v 10
+```
+
+# Caveat
+
+With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
+```shell
+k get pod pr<TAB>
+# result needs to starts with pr, otherwise, it will fail
 ```
