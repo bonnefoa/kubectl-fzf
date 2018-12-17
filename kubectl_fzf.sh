@@ -85,9 +85,6 @@ __build_namespaced_compreply()
 {
     local result=("$@")
     result=($(echo $result | tr " " "\n"))
-    echo $result > /tmp/_debug
-    echo ${result[@]} >> /tmp/_debug
-    echo ${#result[@]} >> /tmp/_debug
     if [[ ${#result[@]} -eq 2 ]]; then
         # We have namespace in first position
         local current_namespace=$(__get_current_namespace)
@@ -210,7 +207,7 @@ __kubectl_parse_get()
             fi
     esac
 
-	result=$( $autocomplete_fun $filename $query)
+	result=$($autocomplete_fun $filename $query)
 	if [[ -z "$result" ]]; then
         return
 	fi
