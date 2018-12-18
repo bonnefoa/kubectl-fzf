@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 )
 
 // K8sStore stores the current state of k8s resources
@@ -85,7 +86,15 @@ func (k *K8sStore) AddResource(obj interface{}) {
 
 // DeleteResource removes an existing k8s object to the store
 func (k *K8sStore) DeleteResource(obj interface{}) {
-	key := resourceKey(obj)
+	key := "Unknown"
+	switch v := obj.(type) {
+	case cache.DeletedFinalStateUnknown:
+		key = resourceKey(v.Obj)
+	case metav1.ObjectMetaAccessor:
+		key = resourceKey(obj)
+	default:
+		glog.V(6).Infof("Unknown object type %v", obj)
+	}
 	glog.V(11).Infof("%s deleted: %s", k.resourceName, key)
 	delete(k.data, key)
 
