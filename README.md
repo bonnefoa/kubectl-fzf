@@ -35,6 +35,7 @@ go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
 ```
 
 Source the autocompletion functions
+
 ```shell
 # kubectl_fzf.sh needs to be sourced after kubectl completion.
 
@@ -69,7 +70,8 @@ To create cache files necessary for `kubectl_fzf`, just run
 cache_builder
 ```
 
-It will watch the cluster in the current context. You can keep it running in a screen or a tmux.
+It will watch the cluster in the current context.
+You can keep it running in a screen or a tmux.
 
 ### Watch a specific namespace
 
@@ -95,7 +97,7 @@ export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
 
 # Debugging
 
-If files are not empty, you can activate debugging logs with
+If files are empty, you can activate debugging logs with
 
 ```shell
 cache_builder -logtostderr -v 10
@@ -104,6 +106,7 @@ cache_builder -logtostderr -v 10
 # Caveat
 
 With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
+
 ```shell
 k get pod pr<TAB>
 # result needs to starts with pr, otherwise, it will fail
