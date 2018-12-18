@@ -1,10 +1,14 @@
-kubectl-fzf provides a fast kubectl autocompletion with fzf.
+# Kubectl-fzf
+
+kubectl-fzf provides a fast and powerful fzf autocompletion for kubectl.
+
+[![asciicast](https://asciinema.org/a/yHKY5vQ40ZaOwMQnhLfYJ5Pja)](https://asciinema.org/a/yHKY5vQ40ZaOwMQnhLfYJ5Pja?t=01)
 
 Table of Contents
 =================
 
+   * [Features](#features)
    * [Requirements](#requirements)
-   * [Pros](#pros)
    * [Installation](#installation)
       * [Using zplug](#using-zplug)
    * [Usage](#usage)
@@ -14,17 +18,16 @@ Table of Contents
          * [fzf options](#fzf-options)
    * [Debugging](#debugging)
 
-# Requirements
+# Features
 
-- [fzf](https://github.com/junegunn/fzf)
-- [kubectl shell autocompletion](https://kubernetes.io/docs/tasks/tools/install-kubectl/#enabling-shell-autocompletion)
-
-# Pros
-
-- Seamless integration with kubectl autocomplete
-- Scale with clusters > 1K pods
+- Seamless integration with kubectl autocompletion
+- Sub second completion even with clusters > 1K pods
 - Label autocompletion
 - Automatic namespace switch
+
+# Requirements
+
+[fzf](https://github.com/junegunn/fzf) needs to be installed
 
 # Installation
 
@@ -89,7 +92,7 @@ cache_builder -n mynamespace
 
 You can control used options for fzf with `KUBECTL_FZF_OPTIONS` variable.
 
-For example, to turn down exact match in search, set the variable to the following value
+To turn down exact match in search, set the variable to the following value
 
 ```shell
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
