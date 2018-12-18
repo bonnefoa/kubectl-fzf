@@ -67,14 +67,15 @@ zplug "bonnefoa/kubectl-fzf", defer:3
 
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
 
-To create cache files necessary for `kubectl_fzf`, just run
+To create cache files necessary for `kubectl_fzf`, just run in a tmux or a screen
 
 ```shell
 cache_builder
 ```
 
-It will watch the cluster in the current context.
-You can keep it running in a screen or a tmux.
+It will watch the cluster in the current context. If you switch context, `cache_builder` will detect and start watching the new cluster.
+
+The initial resource listing can be long  on big clusters and autocompletion might need 30s+.
 
 ### Watch a specific namespace
 
@@ -90,9 +91,9 @@ cache_builder -n mynamespace
 
 ### fzf options
 
-You can control used options for fzf with `KUBECTL_FZF_OPTIONS` variable.
+You can control the options used for fzf with `KUBECTL_FZF_OPTIONS` variable.
 
-To turn down exact match in search, set the variable to the following value
+For example, to turn down exact match in search:
 
 ```shell
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
@@ -100,10 +101,10 @@ export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
 
 # Debugging
 
-If files are empty, you can activate debugging logs with
+If cache files are empty in `/tmp/kubectl_fzf_cache`, you can activate debugging logs with
 
 ```shell
-cache_builder -logtostderr -v 10
+cache_builder -logtostderr -v 14
 ```
 
 # Caveat
