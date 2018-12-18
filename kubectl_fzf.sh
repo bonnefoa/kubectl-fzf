@@ -233,3 +233,7 @@ __kubectl_parse_get()
 
     __build_namespaced_compreply "${result[@]}"
 }
+
+# Reregister complete function without '-o default' as we don't want to
+# fallback to files and dir completion
+complete -o nospace -F __start_kubectl kubectl
