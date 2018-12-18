@@ -87,7 +87,11 @@ cache_builder -n mynamespace
 
 ## `kubectl_fzf`
 
-`kubectl_fzf.sh` overloads autocompletion function defined by `kubectl completion zsh` (or `kubectl completion bash`) to fzf with the local files to power autocompletion.
+Once `cache_builder` is running, you will be able to use `kubectl_fzf` by calling the kubectl completion
+
+```shell
+kubectl get pod <TAB>
+```
 
 ### fzf options
 
