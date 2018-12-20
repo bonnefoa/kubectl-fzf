@@ -5,13 +5,13 @@ KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
 # $1 is awk end print command
-# $2 is filename
+# $2 is filepath
 # $3 is query
 # $4 is an optional filter
 _fzf_kubectl_complete()
 {
     local end_print=$1
-    local file="${KUBECTL_FZF_CACHE}/$2"
+    local file="$2"
     local query=$3
     local filter=$4
     local end_field=$(awk 'NR==1{ for(i = 1; i <= NF; i++){ if ($i == "Labels") {print i - 1; } } } ' $file)
@@ -26,7 +26,7 @@ _fzf_kubectl_complete()
         | awk "$end_print"
 }
 
-# $1 is filename
+# $1 is filepath
 # $2 is query
 _fzf_with_namespace()
 {
@@ -34,18 +34,18 @@ _fzf_with_namespace()
     _fzf_kubectl_complete '{print $1 " " $2}' $1 "$2" "$namespace_in_query"
 }
 
-# $1 is filename
+# $1 is filepath
 # $2 is query
 _fzf_without_namespace()
 {
     _fzf_kubectl_complete '{print $1}' $1 "$2"
 }
 
-# $1 is filename
+# $1 is filepath
 # $2 is query
 _flag_selector_with_namespace()
 {
-	local file="${KUBECTL_FZF_CACHE}/$1"
+	local file="$1"
     awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" \
         | sort \
         | uniq \
@@ -54,11 +54,11 @@ _flag_selector_with_namespace()
         | awk '{print $1 " " $2}'
 }
 
-# $1 is filename
+# $1 is filepath
 # $2 is query
 _flag_selector_without_namespace()
 {
-	local file="${KUBECTL_FZF_CACHE}/$1"
+	local file="$1"
     awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" \
         | sort \
         | uniq \
@@ -70,7 +70,8 @@ _flag_selector_without_namespace()
 __kubectl_get_containers()
 {
 	local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
-    containers=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/pods \
+    local current_context=$(kubectl config current-context)
+    containers=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
         | tr ',' '\n' \
         | sort)
     if [[ $containers == "" ]]; then
@@ -123,6 +124,7 @@ __kubectl_parse_get()
 {
 	local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
 	local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
+    local current_context=$(kubectl config current-context)
 
 	local filename
 	local autocomplete_fun
@@ -194,6 +196,7 @@ __kubectl_parse_get()
 			;;
 	esac
 
+    filepath="${KUBECTL_FZF_CACHE}/${current_context}/${filename}"
 	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
         if [[ ($penultimate == "--selector" || $penultimate == "-l") && ${COMP_LINE: -1} == " " ]]; then
             return
@@ -201,7 +204,7 @@ __kubectl_parse_get()
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
-		result=$($flag_autocomplete_fun $filename $query)
+		result=$($flag_autocomplete_fun $filepath $query)
         __build_namespaced_compreply "${result[@]}"
 		return
 	fi
@@ -226,7 +229,7 @@ __kubectl_parse_get()
             fi
     esac
 
-	result=$($autocomplete_fun $filename $query)
+	result=$($autocomplete_fun $filepath $query)
 	if [[ -z "$result" ]]; then
         return
 	fi
