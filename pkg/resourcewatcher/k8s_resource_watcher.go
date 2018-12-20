@@ -46,8 +46,8 @@ func NewResourceWatcher(namespace string, config *restclient.Config) ResourceWat
 	return resourceWatcher
 }
 
-func (r *ResourceWatcher) Start(parentCtx context.Context, cfg watchConfig, cacheDir string, timeBetweenFullDump time.Duration) error {
-	store, err := NewK8sStore(cfg, timeBetweenFullDump, cacheDir)
+func (r *ResourceWatcher) Start(parentCtx context.Context, cfg watchConfig, storeConfig StoreConfig) error {
+	store, err := NewK8sStore(cfg, storeConfig)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -97,6 +98,16 @@ func FatalIf(err error) {
 		fmt.Printf("Fatal error: %s\n", err)
 		os.Exit(-1)
 	}
+}
+
+// ExtractClusterFromHost gets the cluster name from the rest configuration
+func ExtractClusterFromHost(host string) (string, error) {
+	parsedURL, err := url.ParseRequestURI(host)
+	if err != nil {
+		return "", err
+	}
+	res := strings.TrimPrefix(parsedURL.Host, "kubernetes.")
+	return res, nil
 }
 
 // JoinIntSlice creates a string of joined int with a separator character

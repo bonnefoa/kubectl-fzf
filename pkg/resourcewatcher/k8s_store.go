@@ -17,27 +17,37 @@ import (
 
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
-	data                map[string]k8sresources.K8sResource
-	resourceCtor        func(obj interface{}) k8sresources.K8sResource
-	header              string
-	resourceName        string
-	destFile            string
-	currentFile         *os.File
-	lastFullDump        time.Time
-	timeBetweenFullDump time.Duration
+	data         map[string]k8sresources.K8sResource
+	resourceCtor func(obj interface{}) k8sresources.K8sResource
+	header       string
+	resourceName string
+	destFile     string
+	tempFileName string
+	currentFile  *os.File
+	lastFullDump time.Time
+	storeConfig  StoreConfig
+	firstWrite   bool
+}
+
+type StoreConfig struct {
+	Cluster             string
+	CacheDir            string
+	TimeBetweenFullDump time.Duration
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg watchConfig, timeBetweenFullDump time.Duration, cacheDir string) (K8sStore, error) {
+func NewK8sStore(cfg watchConfig, storeConfig StoreConfig) (K8sStore, error) {
 	k := K8sStore{}
-	destFile := path.Join(cacheDir, cfg.resourceName)
-	err := os.MkdirAll(cacheDir, os.ModePerm)
+	destDir := path.Join(storeConfig.CacheDir, storeConfig.Cluster)
+	destFile := path.Join(destDir, cfg.resourceName)
+	err := os.MkdirAll(destDir, os.ModePerm)
 	if err != nil {
-		return k, errors.Wrapf(err, "Error creating directory %s", cacheDir)
+		return k, errors.Wrapf(err, "Error creating directory %s", destDir)
 	}
-	currentFile, err := os.Create(destFile)
+	k.tempFileName = fmt.Sprintf("%s_", destFile)
+	currentFile, err := os.Create(k.tempFileName)
 	if err != nil {
-		return k, errors.Wrapf(err, "Error creating file %s", destFile)
+		return k, errors.Wrapf(err, "Error creating file %s", k.tempFileName)
 	}
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = cfg.resourceCtor
@@ -46,8 +56,8 @@ func NewK8sStore(cfg watchConfig, timeBetweenFullDump time.Duration, cacheDir st
 	k.destFile = destFile
 	k.currentFile = currentFile
 	k.lastFullDump = time.Time{}
-	k.timeBetweenFullDump = timeBetweenFullDump
-	currentFile.WriteString(k.header)
+	k.storeConfig = storeConfig
+	k.firstWrite = true
 	return k, nil
 }
 
@@ -120,36 +130,42 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
+	if k.firstWrite {
+		k.currentFile.WriteString(k.header)
+		k.firstWrite = false
+		err := os.Rename(k.tempFileName, k.destFile)
+		if err != nil {
+			return err
+		}
+	}
 	_, err := k.currentFile.WriteString(resource.ToString())
 	if err != nil {
 		return err
 	}
-	err = k.currentFile.Sync()
-	return err
+	return nil
 }
 
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
 	now := time.Now()
 	delta := now.Sub(k.lastFullDump)
-	if delta < k.timeBetweenFullDump {
+	if delta < k.storeConfig.TimeBetweenFullDump {
 		glog.V(10).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceName, delta)
 		return nil
 	}
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
-	tempFilePath := fmt.Sprintf("%s_", k.destFile)
-	tempFile, err := os.Create(tempFilePath)
-	glog.V(12).Infof("Creating temp file for full state %s", tempFile.Name())
+	tempFileName, err := os.Create(k.tempFileName)
+	glog.V(12).Infof("Creating temp file for full state %s", tempFileName.Name())
 	if err != nil {
-		return errors.Wrapf(err, "Error creating temp file %s", tempFilePath)
+		return errors.Wrapf(err, "Error creating temp file %s", k.tempFileName)
 	}
-	w := bufio.NewWriter(tempFile)
+	w := bufio.NewWriter(tempFileName)
 	w.WriteString(k.header)
 	for _, v := range k.data {
 		_, err := w.WriteString(v.ToString())
 		if err != nil {
-			return errors.Wrapf(err, "Error writing bytes to file %s", tempFilePath)
+			return errors.Wrapf(err, "Error writing bytes to file %s", k.tempFileName)
 		}
 	}
 	err = w.Flush()
@@ -157,18 +173,18 @@ func (k *K8sStore) DumpFullState() error {
 		return errors.Wrapf(err, "Error flushing buffer")
 	}
 
-	err = tempFile.Sync()
+	err = tempFileName.Sync()
 	if err != nil {
 		return errors.Wrapf(err, "Error syncing file")
 	}
 
 	glog.V(17).Infof("Closing file %s", k.currentFile.Name())
 	k.currentFile.Close()
-	err = os.Rename(tempFilePath, k.destFile)
+	err = os.Rename(k.tempFileName, k.destFile)
 	if err != nil {
 		return errors.Wrapf(err, "Error moving file from %s to %s",
-			tempFilePath, k.destFile)
+			k.tempFileName, k.destFile)
 	}
-	k.currentFile = tempFile
+	k.currentFile = tempFileName
 	return nil
 }

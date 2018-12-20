@@ -61,10 +61,17 @@ func handleSignals(cancel context.CancelFunc) {
 func startWatchOnCluster(ctx context.Context, config *restclient.Config) resourcewatcher.ResourceWatcher {
 	watcher := resourcewatcher.NewResourceWatcher(namespace, config)
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
+	cluster, err := util.ExtractClusterFromHost(config.Host)
+	util.FatalIf(err)
+	storeConfig := resourcewatcher.StoreConfig{
+		CacheDir:            cacheDir,
+		Cluster:             cluster,
+		TimeBetweenFullDump: timeBetweenFullDump,
+	}
 
 	glog.Infof("Start cache build on cluster %s", config.Host)
 	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig, cacheDir, timeBetweenFullDump)
+		err := watcher.Start(ctx, watchConfig, storeConfig)
 		util.FatalIf(err)
 	}
 	return watcher
