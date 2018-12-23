@@ -63,7 +63,7 @@ _fzf_kubectl_complete()
 # $3 is query
 _fzf_with_namespace()
 {
-    local namespace_in_query=$(__get_namespace_in_query)
+    local namespace_in_query=$(__get_parameter_in_query "--namespace -n")
     _fzf_kubectl_complete '{print $1 " " $2}' "false" $1 "$2" "$3" "$namespace_in_query"
 }
 
@@ -80,7 +80,7 @@ _fzf_without_namespace()
 # $3 is query
 _flag_selector_with_namespace()
 {
-    local namespace_in_query=$(__get_namespace_in_query)
+    local namespace_in_query=$(__get_parameter_in_query "--namespace -n")
     _fzf_kubectl_complete '{print $1 " " $2}' "true" $1 "$2" "$3" "$namespace_in_query"
 }
 
@@ -112,15 +112,18 @@ __get_current_namespace()
     echo "${namespace:-default}"
 }
 
-__get_namespace_in_query()
+__get_parameter_in_query()
 {
+    local parameter_names="$1"
     local i=0
     for word in ${COMP_WORDS[@]} ; do
-        if [[ $word == "-n" || $word == "--namespace" ]]; then
-            if [[ ${#COMP_WORDS[@]} -gt $i && -n ${COMP_WORDS[$i + 1]} ]]; then
-                echo ${COMP_WORDS[$i + 1]}
+        for parameter in $parameter_names ; do
+            if [[ $word == $parameter ]]; then
+                if [[ ${#COMP_WORDS[@]} -gt $i && -n ${COMP_WORDS[$i + 1]} ]]; then
+                    echo ${COMP_WORDS[$i + 1]}
+                fi
             fi
-        fi
+        done
         ((i++))
     done
 }
