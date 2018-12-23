@@ -1,70 +1,95 @@
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
-KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e)
+KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
+# $1 is filename
+_fzf_get_label_field()
+{
+    awk 'NR==1{ for(i = 1; i <= NF; i++){ if ($i == "Labels") {print i; } } } ' $1
+}
+
+# $1 is context
+# $2 is namespace
+_fzf_get_main_header()
+{
+    local context="$1"
+    local namespace="$2"
+    local main_header="Context:$context"
+    if [[ -n $namespace ]]; then
+        main_header="$main_header, Namespace:$namespace"
+    fi
+    echo $main_header
+}
+
 # $1 is awk end print command
-# $2 is filepath
-# $3 is query
-# $4 is an optional filter
+# $2 isFlag
+# $3 is filepath
+# $4 is context
+# $5 is query
+# $6 optional namespace
 _fzf_kubectl_complete()
 {
     local end_print=$1
-    local file="$2"
-    local query=$3
-    local filter=$4
-    local end_field=$(awk 'NR==1{ for(i = 1; i <= NF; i++){ if ($i == "Labels") {print i - 1; } } } ' $file)
-    local header=$(head -n1 "$file" | cut -d ' ' -f 1-$end_field)
-    local rest=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort)
-    if [[ -n $filter ]]; then
-        rest=$(echo "$rest" | grep -w $filter)
+    local is_flag="$2"
+    local file="$3"
+    local context="$4"
+    local query=$5
+    local namespace="$6"
+    local label_field=$(_fzf_get_label_field $file)
+    local end_field=$((label_field - 1))
+    local main_header=$(_fzf_get_main_header $context $namespace)
+
+    if [[ $is_flag == "true" ]]; then
+        local header=$(head -n1 "$file" | cut -d ' ' -f 1,$label_field)
+        local data=$(tail -n +2 "$file" | awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' | sort | uniq)
+    else
+        local header=$(head -n1 "$file" | cut -d ' ' -f 1-$end_field)
+        local data=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort | uniq)
     fi
-    printf "$header\n$rest\n" \
-        | column -t \
+    if [[ -n $namespace ]]; then
+        data=$(echo "$data" | grep -w $namespace)
+    fi
+    data=$(printf "$header\n$data\n" | column -t)
+
+    printf "${main_header}\n$data" \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
         | awk "$end_print"
 }
 
 # $1 is filepath
-# $2 is query
+# $2 is context
+# $3 is query
 _fzf_with_namespace()
 {
     local namespace_in_query=$(__get_namespace_in_query)
-    _fzf_kubectl_complete '{print $1 " " $2}' $1 "$2" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1 " " $2}' "false" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
-# $2 is query
+# $2 is context
+# $3 is query
 _fzf_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' $1 "$2"
+    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3"
 }
 
 # $1 is filepath
-# $2 is query
+# $2 is context
+# $3 is query
 _flag_selector_with_namespace()
 {
-	local file="$1"
-    awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" \
-        | sort \
-        | uniq \
-        | column -t \
-        | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1 " " $2}'
+    local namespace_in_query=$(__get_namespace_in_query)
+    _fzf_kubectl_complete '{print $1 " " $2}' "true" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is query
+# $3 is context
 _flag_selector_without_namespace()
 {
-	local file="$1"
-    awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" \
-        | sort \
-        | uniq \
-        | column -t \
-        | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$2" \
-        | awk '{print $1}'
+    _fzf_kubectl_complete '{print $2}' "true" $1 "$2" "$3"
 }
 
 __kubectl_get_containers()
@@ -204,7 +229,7 @@ __kubectl_parse_get()
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
-		result=$($flag_autocomplete_fun $filepath $query)
+		result=$($flag_autocomplete_fun $filepath $current_context $query)
         __build_namespaced_compreply "${result[@]}"
 		return
 	fi
@@ -229,7 +254,7 @@ __kubectl_parse_get()
             fi
     esac
 
-	result=$($autocomplete_fun $filepath $query)
+	result=$($autocomplete_fun $filepath $current_context $query)
 	if [[ -z "$result" ]]; then
         return
 	fi
