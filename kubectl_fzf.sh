@@ -49,7 +49,7 @@ _fzf_kubectl_complete()
         local data=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort | uniq)
     fi
     if [[ -n $namespace ]]; then
-        data=$(echo "$data" | grep -w $namespace)
+        data=$(echo "$data" | grep -w "^$namespace")
     fi
     data=$(printf "$header\n$data\n" | column -t)
 
