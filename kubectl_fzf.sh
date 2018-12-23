@@ -224,7 +224,12 @@ __kubectl_parse_get()
 			;;
 	esac
 
-    filepath="${KUBECTL_FZF_CACHE}/${current_context}/${filename}"
+    local query_context=$(__get_parameter_in_query "--context")
+    local context=$current_context
+    if [[ -n $query_context && $query_context != $current_context ]]; then
+        context=$query_context
+    fi
+    filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
 	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
         if [[ ($penultimate == "--selector" || $penultimate == "-l") && ${COMP_LINE: -1} == " " ]]; then
             return
@@ -232,7 +237,7 @@ __kubectl_parse_get()
 		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
 			query=$last_part
 		fi
-		result=$($flag_autocomplete_fun $filepath $current_context $query)
+		result=$($flag_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
 		return
 	fi
@@ -257,7 +262,7 @@ __kubectl_parse_get()
             fi
     esac
 
-	result=$($autocomplete_fun $filepath $current_context $query)
+	result=$($autocomplete_fun $filepath $context $query)
 	if [[ -z "$result" ]]; then
         return
 	fi
