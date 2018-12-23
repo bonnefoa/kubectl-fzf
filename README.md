@@ -103,7 +103,7 @@ You can control the options used for fzf with `KUBECTL_FZF_OPTIONS` variable.
 For example, to turn down exact match in search:
 
 ```shell
-export KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse)
+export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse)
 ```
 
 # Caveat
