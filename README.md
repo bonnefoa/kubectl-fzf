@@ -21,7 +21,7 @@ Table of Contents
 # Features
 
 - Seamless integration with kubectl autocompletion
-- Sub second completion even with clusters > 1K pods
+- Sub second completion
 - Label autocompletion
 - Automatic namespace switch
 
