@@ -96,14 +96,16 @@ __kubectl_get_containers()
 {
 	local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
-    containers=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
+    local main_header=$(_fzf_get_main_header $current_context "")
+    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
         | tr ',' '\n' \
         | sort)
-    if [[ $containers == "" ]]; then
+    if [[ $data == "" ]]; then
         ___kubectl_get_containers $*
         return
     fi
-    { echo "ContainerName"; echo "$containers"; } | fzf ${KUBECTL_FZF_OPTIONS[@]}
+    printf "ContainerName\n${main_header}\n${data}" \
+        | fzf ${KUBECTL_FZF_OPTIONS[@]}
 }
 
 __get_current_namespace()
