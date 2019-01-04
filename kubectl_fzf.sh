@@ -1,6 +1,7 @@
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
+KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
 KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | fold -w \$COLUMNS")
 
@@ -51,6 +52,9 @@ _fzf_kubectl_complete()
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
     fi
+    for pattern in ${KUBECTL_FZF_EXCLUDE[@]}; do
+        data=$(echo "$data" | grep -v "$pattern")
+    done
     data=$(printf "$header\n$data\n" | column -t)
 
     printf "${main_header}\n$data" \
