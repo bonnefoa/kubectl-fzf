@@ -179,6 +179,11 @@ __kubectl_parse_get()
 			autocomplete_fun=_fzf_with_namespace
 			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
+        ingress | ingresses | ingresses. | ingresses.extensions )
+			filename="ingresses"
+			autocomplete_fun=_fzf_with_namespace
+			flag_autocomplete_fun=_flag_selector_with_namespace
+			;;
         configmap | configmaps )
 			filename="configmaps"
 			autocomplete_fun=_fzf_with_namespace
