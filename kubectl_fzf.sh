@@ -47,7 +47,7 @@ _fzf_kubectl_complete()
         local data=$(tail -n +2 "$file" | awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' | sort | uniq)
     else
         local header=$(head -n1 "$file" | cut -d ' ' -f 1-$end_field)
-        local data=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort | uniq)
+        local data=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort)
     fi
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
