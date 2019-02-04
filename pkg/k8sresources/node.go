@@ -2,6 +2,7 @@ package k8sresources
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
@@ -30,7 +31,7 @@ func NewNodeFromRuntime(obj interface{}) K8sResource {
 func (n *Node) FromRuntime(obj interface{}) {
 	node := obj.(*corev1.Node)
 	n.FromObjectMeta(node.ObjectMeta)
-	for k, _ := range n.labels {
+	for k := range n.labels {
 		nodePrefix := "node-role.kubernetes.io/"
 		if strings.HasPrefix(k, nodePrefix) {
 			role := strings.Replace(k, nodePrefix, "", 1)
@@ -44,6 +45,7 @@ func (n *Node) FromRuntime(obj interface{}) {
 			n.internalIP = v.Address
 		}
 	}
+	sort.Strings(n.roles)
 }
 
 // HasChanged returns true if the resource's dump needs to be updated

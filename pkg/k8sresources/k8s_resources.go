@@ -2,6 +2,7 @@ package k8sresources
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
@@ -55,5 +56,6 @@ func (r *ResourceMeta) labelsString() string {
 		return "None"
 	}
 	els := util.JoinStringMap(r.labels, ExcludedLabels, "=")
+	sort.Strings(els)
 	return util.JoinSlicesOrNone(els, ",")
 }
