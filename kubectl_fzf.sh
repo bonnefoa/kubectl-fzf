@@ -35,19 +35,20 @@ _fzf_kubectl_complete()
     local end_print=$1
     local is_flag="$2"
     local file="$3"
+    local header_file="$3_header"
     local context="$4"
     local query=$5
     local namespace="$6"
-    local label_field=$(_fzf_get_label_field $file)
+    local label_field=$(_fzf_get_label_field $header_file)
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
     if [[ $is_flag == "true" ]]; then
-        local header=$(head -n1 "$file" | cut -d ' ' -f 1,$label_field)
-        local data=$(tail -n +2 "$file" | awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' | sort | uniq)
+        local header=$(cat "$header_file" | cut -d ' ' -f 1,$label_field)
+        local data=$(cat "$file" | awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' | sort | uniq)
     else
-        local header=$(head -n1 "$file" | cut -d ' ' -f 1-$end_field)
-        local data=$(tail -n +2 "$file" | cut -d ' ' -f 1-$end_field | sort)
+        local header=$(cat "$header_file" | cut -d ' ' -f 1-$end_field)
+        local data=$(cat "$file" | cut -d ' ' -f 1-$end_field | sort)
     fi
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")

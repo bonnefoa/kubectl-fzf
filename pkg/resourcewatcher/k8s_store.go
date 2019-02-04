@@ -19,7 +19,6 @@ import (
 type K8sStore struct {
 	data         map[string]k8sresources.K8sResource
 	resourceCtor func(obj interface{}) k8sresources.K8sResource
-	header       string
 	resourceName string
 	destFile     string
 	tempFileName string
@@ -52,13 +51,29 @@ func NewK8sStore(cfg watchConfig, storeConfig StoreConfig) (K8sStore, error) {
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
-	k.header = cfg.header
 	k.destFile = destFile
 	k.currentFile = currentFile
 	k.lastFullDump = time.Time{}
 	k.storeConfig = storeConfig
 	k.firstWrite = true
+
+	writeHeaderFile(cfg.header, destFile)
+
 	return k, nil
+}
+
+func writeHeaderFile(header string, destFile string) error {
+	headerFileName := fmt.Sprintf("%s_header", destFile)
+	headerFile, err := os.Create(headerFileName)
+	if err != nil {
+		return errors.Wrapf(err, "Error creating header file %s", headerFileName)
+	}
+	headerFile.WriteString(header)
+	err = headerFile.Close()
+	if err != nil {
+		return errors.Wrapf(err, "Error closing header file %s", headerFileName)
+	}
+	return nil
 }
 
 func resourceKey(obj interface{}) string {
@@ -131,7 +146,6 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	if k.firstWrite {
-		k.currentFile.WriteString(k.header)
 		k.firstWrite = false
 		err := os.Rename(k.tempFileName, k.destFile)
 		if err != nil {
@@ -161,7 +175,6 @@ func (k *K8sStore) DumpFullState() error {
 		return errors.Wrapf(err, "Error creating temp file %s", k.tempFileName)
 	}
 	w := bufio.NewWriter(tempFileName)
-	w.WriteString(k.header)
 	for _, v := range k.data {
 		_, err := w.WriteString(v.ToString())
 		if err != nil {
