@@ -3,6 +3,7 @@ package resourcewatcher
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -20,8 +21,7 @@ type K8sStore struct {
 	data         map[string]k8sresources.K8sResource
 	resourceCtor func(obj interface{}) k8sresources.K8sResource
 	resourceName string
-	destFile     string
-	tempFileName string
+	destFileName string
 	currentFile  *os.File
 	lastFullDump time.Time
 	storeConfig  StoreConfig
@@ -38,32 +38,31 @@ type StoreConfig struct {
 func NewK8sStore(cfg watchConfig, storeConfig StoreConfig) (K8sStore, error) {
 	k := K8sStore{}
 	destDir := path.Join(storeConfig.CacheDir, storeConfig.Cluster)
-	destFile := path.Join(destDir, cfg.resourceName)
+	destFileName := path.Join(destDir, cfg.resourceName)
 	err := os.MkdirAll(destDir, os.ModePerm)
 	if err != nil {
 		return k, errors.Wrapf(err, "Error creating directory %s", destDir)
 	}
-	k.tempFileName = fmt.Sprintf("%s_", destFile)
-	currentFile, err := os.Create(k.tempFileName)
+	currentFile, err := ioutil.TempFile("", k.resourceName)
 	if err != nil {
-		return k, errors.Wrapf(err, "Error creating file %s", k.tempFileName)
+		return k, errors.Wrapf(err, "Error creating file for %s", k.resourceName)
 	}
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
-	k.destFile = destFile
+	k.destFileName = destFileName
 	k.currentFile = currentFile
 	k.lastFullDump = time.Time{}
 	k.storeConfig = storeConfig
 	k.firstWrite = true
 
-	writeHeaderFile(cfg.header, destFile)
+	writeHeaderFile(cfg.header, destFileName)
 
 	return k, nil
 }
 
-func writeHeaderFile(header string, destFile string) error {
-	headerFileName := fmt.Sprintf("%s_header", destFile)
+func writeHeaderFile(header string, destFileName string) error {
+	headerFileName := fmt.Sprintf("%s_header", destFileName)
 	headerFile, err := os.Create(headerFileName)
 	if err != nil {
 		return errors.Wrapf(err, "Error creating header file %s", headerFileName)
@@ -147,7 +146,7 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	if k.firstWrite {
 		k.firstWrite = false
-		err := os.Rename(k.tempFileName, k.destFile)
+		err := os.Rename(k.currentFile.Name(), k.destFileName)
 		if err != nil {
 			return err
 		}
@@ -169,16 +168,18 @@ func (k *K8sStore) DumpFullState() error {
 	}
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
-	tempFileName, err := os.Create(k.tempFileName)
-	glog.V(12).Infof("Creating temp file for full state %s", tempFileName.Name())
+	tempFile, err := ioutil.TempFile("", k.resourceName)
 	if err != nil {
-		return errors.Wrapf(err, "Error creating temp file %s", k.tempFileName)
+		return errors.Wrapf(err, "Error creating temp file for resource %s",
+			k.resourceName)
 	}
-	w := bufio.NewWriter(tempFileName)
+	glog.V(12).Infof("Created temp file for full state %s", tempFile.Name())
+	w := bufio.NewWriter(tempFile)
 	for _, v := range k.data {
 		_, err := w.WriteString(v.ToString())
 		if err != nil {
-			return errors.Wrapf(err, "Error writing bytes to file %s", k.tempFileName)
+			return errors.Wrapf(err, "Error writing bytes to file %s",
+				tempFile.Name())
 		}
 	}
 	err = w.Flush()
@@ -186,18 +187,18 @@ func (k *K8sStore) DumpFullState() error {
 		return errors.Wrapf(err, "Error flushing buffer")
 	}
 
-	err = tempFileName.Sync()
+	err = tempFile.Sync()
 	if err != nil {
 		return errors.Wrapf(err, "Error syncing file")
 	}
 
 	glog.V(17).Infof("Closing file %s", k.currentFile.Name())
 	k.currentFile.Close()
-	err = os.Rename(k.tempFileName, k.destFile)
+	err = os.Rename(tempFile.Name(), k.destFileName)
 	if err != nil {
 		return errors.Wrapf(err, "Error moving file from %s to %s",
-			k.tempFileName, k.destFile)
+			tempFile.Name(), k.destFileName)
 	}
-	k.currentFile = tempFileName
+	k.currentFile = tempFile
 	return nil
 }
