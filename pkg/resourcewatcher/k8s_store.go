@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
@@ -28,6 +29,7 @@ type K8sStore struct {
 	firstWrite   bool
 }
 
+// StoreConfig defines parameters used for the cache location
 type StoreConfig struct {
 	Cluster             string
 	CacheDir            string
@@ -158,6 +160,34 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	return nil
 }
 
+func (k *K8sStore) writeDataInFile(tempFile *os.File) error {
+	w := bufio.NewWriter(tempFile)
+	keys := make([]string, len(k.data))
+	i := 0
+	for key := range k.data {
+		keys[i] = key
+		i = i + 1
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		v := k.data[key]
+		_, err := w.WriteString(v.ToString())
+		if err != nil {
+			return errors.Wrapf(err, "Error writing bytes to file %s",
+				tempFile.Name())
+		}
+	}
+	err := w.Flush()
+	if err != nil {
+		return errors.Wrapf(err, "Error flushing buffer")
+	}
+	err = tempFile.Sync()
+	if err != nil {
+		return errors.Wrapf(err, "Error syncing file")
+	}
+	return nil
+}
+
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
 	now := time.Now()
@@ -174,22 +204,9 @@ func (k *K8sStore) DumpFullState() error {
 			k.resourceName)
 	}
 	glog.V(12).Infof("Created temp file for full state %s", tempFile.Name())
-	w := bufio.NewWriter(tempFile)
-	for _, v := range k.data {
-		_, err := w.WriteString(v.ToString())
-		if err != nil {
-			return errors.Wrapf(err, "Error writing bytes to file %s",
-				tempFile.Name())
-		}
-	}
-	err = w.Flush()
+	err = k.writeDataInFile(tempFile)
 	if err != nil {
-		return errors.Wrapf(err, "Error flushing buffer")
-	}
-
-	err = tempFile.Sync()
-	if err != nil {
-		return errors.Wrapf(err, "Error syncing file")
+		return err
 	}
 
 	glog.V(17).Infof("Closing file %s", k.currentFile.Name())
