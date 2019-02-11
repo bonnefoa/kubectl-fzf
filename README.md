@@ -16,7 +16,7 @@ Table of Contents
          * [Watch a specific namespace](#watch-a-specific-namespace)
       * [kubectl_fzf](#kubectl_fzf)
          * [fzf options](#fzf-options)
-   * [Caveat](#caveat)
+   * [Caveats](#caveats)
 
 # Features
 
@@ -106,11 +106,17 @@ For example, to turn down exact match in search:
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse)
 ```
 
-# Caveat
-
+# Caveats
+ 
 With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
 
 ```shell
 k get pod pr<TAB>
 # result needs to starts with pr, otherwise, it will fail
 ```
+
+---
+
+If you're using an out-of-the-box `oh-my-zsh` configuration, the default `matcher-list` zstyle (`zstyle ':completion:*' matcher-list 'r:|=*' 'l:|=* r:|=*'`) will interfere with the search. If fzf does not find any match, or if you interrupt it by pressing `Esc` or `Ctrl-C/Cmd-C`, zsh will see it as a failed completion and will restart it again.
+
+Changing the zstyle to `zstyle ':completion:*' matcher-list 'r:|=*'` fixes the issue.
