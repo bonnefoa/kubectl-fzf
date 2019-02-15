@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	// Import for oidc auth
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -37,6 +38,7 @@ type watchConfig struct {
 	pollingPeriod time.Duration
 }
 
+// NewResourceWatcher creates a new resource watcher on a given cluster
 func NewResourceWatcher(namespace string, config *restclient.Config) ResourceWatcher {
 	var err error
 	resourceWatcher := ResourceWatcher{}
@@ -47,6 +49,7 @@ func NewResourceWatcher(namespace string, config *restclient.Config) ResourceWat
 	return resourceWatcher
 }
 
+// Start begins the watch/poll of a given k8s resource
 func (r *ResourceWatcher) Start(parentCtx context.Context, cfg watchConfig, storeConfig StoreConfig) error {
 	store, err := NewK8sStore(cfg, storeConfig)
 	if err != nil {
@@ -62,6 +65,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg watchConfig, stor
 	return nil
 }
 
+// Stop closes the watch/poll process of a k8s resource
 func (r *ResourceWatcher) Stop() {
 	glog.Infof("Stopping %d resource watcher", len(r.cancelFuncs))
 	for _, cancel := range r.cancelFuncs {
@@ -69,6 +73,7 @@ func (r *ResourceWatcher) Stop() {
 	}
 }
 
+// GetWatchConfigs creates the list of k8s to watch
 func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
 	coreGetter := r.clientset.Core().RESTClient()
 	appsGetter := r.clientset.Apps().RESTClient()
@@ -78,6 +83,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 		watchConfig{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
 		watchConfig{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
 		watchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
+		watchConfig{k8sresources.NewDaemonSetFromRuntime, k8sresources.DaemonSetHeader, "daemonsets", betaGetter, &betav1.DaemonSet{}, true, 0},
 		watchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
 		watchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
 		watchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
