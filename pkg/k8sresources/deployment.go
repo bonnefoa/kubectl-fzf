@@ -1,17 +1,22 @@
 package k8sresources
 
 import (
-	"fmt"
-	"strings"
+	"strconv"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-const DeploymentHeader = "Namespace Name Age Labels\n"
+// DeploymentHeader is the header file for deployment
+const DeploymentHeader = "Namespace Name Desired Current Up-to-date Available Age Labels\n"
 
 // Deployment is the summary of a kubernetes deployment
 type Deployment struct {
 	ResourceMeta
+	desiredReplicas   string
+	availableReplicas string
+	updatedReplicas   string
+	currentReplicas   string
 }
 
 // NewDeploymentFromRuntime builds a k8sresource from informer result
@@ -22,22 +27,35 @@ func NewDeploymentFromRuntime(obj interface{}) K8sResource {
 }
 
 // FromRuntime builds object from the informer's result
-func (s *Deployment) FromRuntime(obj interface{}) {
+func (d *Deployment) FromRuntime(obj interface{}) {
 	deployment := obj.(*appsv1.Deployment)
-	s.FromObjectMeta(deployment.ObjectMeta)
+	d.FromObjectMeta(deployment.ObjectMeta)
+
+	status := deployment.Status
+	d.desiredReplicas = "1"
+	if deployment.Spec.Replicas != nil {
+		d.desiredReplicas = strconv.Itoa(int(*deployment.Spec.Replicas))
+	}
+	d.currentReplicas = strconv.Itoa(int(status.Replicas))
+	d.updatedReplicas = strconv.Itoa(int(status.UpdatedReplicas))
+	d.availableReplicas = strconv.Itoa(int(status.AvailableReplicas))
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
-func (s *Deployment) HasChanged(k K8sResource) bool {
+func (d *Deployment) HasChanged(k K8sResource) bool {
 	return true
 }
 
 // ToString serializes the object to strings
-func (s *Deployment) ToString() string {
-	line := strings.Join([]string{s.namespace,
-		s.name,
-		s.resourceAge(),
-		s.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
+func (d *Deployment) ToString() string {
+	line := []string{d.namespace,
+		d.name,
+		d.desiredReplicas,
+		d.currentReplicas,
+		d.updatedReplicas,
+		d.availableReplicas,
+		d.resourceAge(),
+		d.labelsString(),
+	}
+	return util.DumpLine(line)
 }
