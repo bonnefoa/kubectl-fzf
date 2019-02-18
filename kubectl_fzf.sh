@@ -190,7 +190,7 @@ __kubectl_parse_get()
 			autocomplete_fun=_fzf_with_namespace
 			flag_autocomplete_fun=_flag_selector_with_namespace
 			;;
-        configmap | configmaps )
+        cm | configmap | configmaps )
 			filename="configmaps"
 			autocomplete_fun=_fzf_with_namespace
 			flag_autocomplete_fun=_flag_selector_with_namespace
