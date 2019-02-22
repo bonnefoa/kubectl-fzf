@@ -3,7 +3,7 @@ eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
-KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | tr -s '\t' | fold -s -w \$COLUMNS")
+KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | tr -s '\t ' | fold -s -w \$COLUMNS")
 
 # $1 is filename
 _fzf_get_label_field()
