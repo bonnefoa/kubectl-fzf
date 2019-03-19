@@ -75,8 +75,8 @@ func (r *ResourceWatcher) Stop() {
 
 // GetWatchConfigs creates the list of k8s to watch
 func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
-	coreGetter := r.clientset.Core().RESTClient()
-	appsGetter := r.clientset.Apps().RESTClient()
+	coreGetter := r.clientset.CoreV1().RESTClient()
+	appsGetter := r.clientset.AppsV1().RESTClient()
 	betaGetter := r.clientset.ExtensionsV1beta1().RESTClient()
 
 	watchConfigs := []watchConfig{
