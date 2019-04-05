@@ -78,6 +78,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config) resourc
 }
 
 func main() {
+	flag.Set("logtostderr", "true")
 	flag.Parse()
 
 	if displayVersion {
