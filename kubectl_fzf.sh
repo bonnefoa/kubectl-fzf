@@ -246,7 +246,14 @@ __kubectl_parse_get()
     if [[ -n $query_context && $query_context != $current_context ]]; then
         context=$query_context
     fi
+
     filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
+
+    if [[ ! -f $filepath ]]; then
+        ___kubectl_parse_get $*
+        return
+    fi
+
 	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
         if [[ ($penultimate == "--selector" || $penultimate == "-l") && ${COMP_LINE: -1} == " " ]]; then
             return
