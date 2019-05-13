@@ -99,7 +99,7 @@ _flag_selector_without_namespace()
 
 __kubectl_get_containers()
 {
-	local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
+    local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
     local main_header=$(_fzf_get_main_header $current_context "")
     local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
@@ -157,89 +157,89 @@ __build_namespaced_compreply()
 # $1 is the type of resource to get
 __kubectl_parse_get()
 {
-	local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
-	local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
+    local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
+    local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
 
-	local filename
-	local autocomplete_fun
-	local flag_autocomplete_fun
+    local filename
+    local autocomplete_fun
+    local flag_autocomplete_fun
     local resource_name=$1
 
-	case $resource_name in
-		all )
-			filename="pods"
+    case $resource_name in
+        all )
+            filename="pods"
             ;;
-		pod | pods )
-			filename="pods"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		ds | daemonset | daemonsets | daemonsets.apps | daemonsets.extensions | daemonsets. )
-			filename="daemonsets"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		rs | resplicaset | replicasets )
-			filename="replicasets"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
+        pod | pods )
+            filename="pods"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        ds | daemonset | daemonsets | daemonsets.apps | daemonsets.extensions | daemonsets. )
+            filename="daemonsets"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        rs | resplicaset | replicasets )
+            filename="replicasets"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
         ingress | ingresses | ingresses. | ingresses.extensions )
-			filename="ingresses"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
+            filename="ingresses"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
         cm | configmap | configmaps )
-			filename="configmaps"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
+            filename="configmaps"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
         ns | namespace | namespaces )
-			filename="namespaces"
-			autocomplete_fun=_fzf_without_namespace
-			flag_autocomplete_fun=_flag_selector_without_namespace
-			;;
-		node | nodes )
-			filename="nodes"
-			autocomplete_fun=_fzf_without_namespace
-			flag_autocomplete_fun=_flag_selector_without_namespace
-			;;
+            filename="namespaces"
+            autocomplete_fun=_fzf_without_namespace
+            flag_autocomplete_fun=_flag_selector_without_namespace
+            ;;
+        node | nodes )
+            filename="nodes"
+            autocomplete_fun=_fzf_without_namespace
+            flag_autocomplete_fun=_flag_selector_without_namespace
+            ;;
         deployment | deployments | deployments. | deployments.apps | deployments.extensions  )
-			filename="deployments"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		sts | statefulset | statefulsets | statefulsets.apps  )
-			filename="statefulsets"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		persistentvolumes | pv )
-			filename="persistentvolumes"
-			autocomplete_fun=_fzf_without_namespace
-			flag_autocomplete_fun=_flag_selector_without_namespace
-			;;
-		persistentvolumeclaims | pvc )
-			filename="persistentvolumeclaims"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		endpoints )
-			filename="endpoints"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		svc | service | services )
-			filename="services"
-			autocomplete_fun=_fzf_with_namespace
-			flag_autocomplete_fun=_flag_selector_with_namespace
-			;;
-		* )
-			___kubectl_parse_get $*
-			return
-			;;
-	esac
+            filename="deployments"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        sts | statefulset | statefulsets | statefulsets.apps  )
+            filename="statefulsets"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        persistentvolumes | pv )
+            filename="persistentvolumes"
+            autocomplete_fun=_fzf_without_namespace
+            flag_autocomplete_fun=_flag_selector_without_namespace
+            ;;
+        persistentvolumeclaims | pvc )
+            filename="persistentvolumeclaims"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        endpoints )
+            filename="endpoints"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        svc | service | services )
+            filename="services"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        * )
+            ___kubectl_parse_get $*
+            return
+            ;;
+    esac
 
     local query_context=$(__get_parameter_in_query "--context")
     local context=$current_context
@@ -254,31 +254,31 @@ __kubectl_parse_get()
         return
     fi
 
-	if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
+    if [[ $penultimate == "--selector" || $penultimate == "-l" || $last_part == "--selector" || $last_part == "-l" ]]; then
         if [[ ($penultimate == "--selector" || $penultimate == "-l") && ${COMP_LINE: -1} == " " ]]; then
             return
         fi
-		if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
-			query=$last_part
-		fi
-		result=$($flag_autocomplete_fun $filepath $context $query)
+        if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
+            query=$last_part
+        fi
+        result=$($flag_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
-		return
-	fi
+        return
+    fi
 
     if [[ -z $autocomplete_fun ]]; then
         ___kubectl_parse_get $*
         return
     fi
 
-	local query=""
-	case $last_part in
+    local query=""
+    case $last_part in
         # Special cases: Sometime the last word doesn't match the resource name, don't put them in the query
-		exec )
+        exec )
             ;;
-		cp )
+        cp )
             ;;
-		logs | log )
+        logs | log )
             ;;
         *)
             if [[ $resource_name != $last_part && $last_part != -* && ${COMP_LINE: -1} != " " ]]; then
@@ -286,10 +286,10 @@ __kubectl_parse_get()
             fi
     esac
 
-	result=$($autocomplete_fun $filepath $context $query)
-	if [[ -z "$result" ]]; then
+    result=$($autocomplete_fun $filepath $context $query)
+    if [[ -z "$result" ]]; then
         return
-	fi
+    fi
 
     __build_namespaced_compreply "${result[@]}"
 }
