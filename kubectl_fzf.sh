@@ -50,15 +50,25 @@ _fzf_kubectl_complete()
         local header=$(cat "$header_file" | cut -d ' ' -f 1-$end_field)
         local data=$(cat "$file" | cut -d ' ' -f 1-$end_field)
     fi
+
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
     fi
-    for pattern in ${KUBECTL_FZF_EXCLUDE[@]}; do
-        data=$(echo "$data" | grep -v "$pattern")
-    done
-    data=$(printf "$header\n$data\n" | column -t)
 
-    printf "${main_header}\n$data" \
+    local grep_exclude=""
+    for pattern in ${KUBECTL_FZF_EXCLUDE[@]}; do
+        if [[ -z $grep_exclude ]]; then
+            grep_exclude=$pattern
+        else
+            grep_exclude="$grep_exclude\|$pattern"
+        fi
+    done
+    if [[ -n $grep_exclude ]]; then
+        data=$(echo "$data" | grep -v $grep_exclude)
+    fi
+
+    printf "${main_header}\n${header}\n${data}\n" \
+        | column -t \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
         | awk "$end_print"
 }
@@ -68,7 +78,7 @@ _fzf_kubectl_complete()
 # $3 is query
 _fzf_with_namespace()
 {
-    local namespace_in_query=$(__get_parameter_in_query "--namespace -n")
+    local namespace_in_query=$(__get_parameter_in_query --namespace -n)
     _fzf_kubectl_complete '{print $1 " " $2}' "false" $1 "$2" "$3" "$namespace_in_query"
 }
 
@@ -85,7 +95,7 @@ _fzf_without_namespace()
 # $3 is query
 _flag_selector_with_namespace()
 {
-    local namespace_in_query=$(__get_parameter_in_query "--namespace -n")
+    local namespace_in_query=$(__get_parameter_in_query --namespace -n)
     _fzf_kubectl_complete '{print $1 " " $2}' "true" $1 "$2" "$3" "$namespace_in_query"
 }
 
@@ -121,10 +131,9 @@ __get_current_namespace()
 
 __get_parameter_in_query()
 {
-    local parameter_names="$1"
     local i=0
     for word in ${COMP_WORDS[@]} ; do
-        for parameter in $parameter_names ; do
+        for parameter in $* ; do
             if [[ $word == $parameter ]]; then
                 if [[ ${#COMP_WORDS[@]} -gt $i && -n ${COMP_WORDS[$i + 1]} ]]; then
                     echo ${COMP_WORDS[$i + 1]}
@@ -241,7 +250,7 @@ __kubectl_parse_get()
             ;;
     esac
 
-    local query_context=$(__get_parameter_in_query "--context")
+    local query_context=$(__get_parameter_in_query --context)
     local context=$current_context
     if [[ -n $query_context && $query_context != $current_context ]]; then
         context=$query_context
