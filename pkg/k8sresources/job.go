@@ -1,7 +1,7 @@
 package k8sresources
 
 import (
-	"strconv"
+	"fmt"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
@@ -9,14 +9,13 @@ import (
 )
 
 // JobHeader is the headers for job files
-const JobHeader = "Namespace Name Schedule LastSchedule Containers Age Labels\n"
+const JobHeader = "Namespace Name Completions Containers Age Labels\n"
 
 // Job is the summary of a kubernetes Job
 type Job struct {
 	ResourceMeta
-	desired    string
-	successful string
-	containers []string
+	completions string
+	containers  []string
 }
 
 // NewJobFromRuntime builds a Job from informer result
@@ -31,8 +30,9 @@ func (j *Job) FromRuntime(obj interface{}) {
 	job := obj.(*batchv1.Job)
 	glog.V(19).Infof("Reading meta %#v", job)
 	j.FromObjectMeta(job.ObjectMeta)
-	j.desired = strconv.Itoa(int(*job.Spec.Completions))
-	j.successful = strconv.Itoa(int(job.Status.Succeeded))
+	desired := int(*job.Spec.Completions)
+	successful := int(job.Status.Succeeded)
+	j.completions = fmt.Sprintf("%d/%d", successful, desired)
 
 	spec := job.Spec.Template.Spec
 	containers := spec.Containers
@@ -53,8 +53,7 @@ func (j *Job) ToString() string {
 	lst := []string{
 		j.namespace,
 		j.name,
-		j.desired,
-		j.successful,
+		j.completions,
 		util.JoinSlicesOrNone(j.containers, ","),
 		j.resourceAge(),
 		j.labelsString(),
