@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // JoinStringMap generates a list of map element separated by string excluding keys in excluded maps
@@ -120,4 +121,17 @@ func JoinIntSlice(a []int, sep string) string {
 		b[i] = strconv.Itoa(v)
 	}
 	return strings.Join(b, sep)
+}
+
+// TimeToAge converts a time to a age string
+func TimeToAge(t time.Time) string {
+	duration := time.Now().Sub(t)
+	duration = duration.Round(time.Minute)
+	if duration.Hours() > 30 {
+		return fmt.Sprintf("%dd", int(duration.Hours()/24))
+	}
+	hour := duration / time.Hour
+	duration -= hour * time.Hour
+	minute := duration / time.Minute
+	return fmt.Sprintf("%02d:%02d", hour, minute)
 }

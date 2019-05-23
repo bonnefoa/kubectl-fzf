@@ -194,7 +194,12 @@ __kubectl_parse_get()
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
-        ingress | ingresses | ingresses. | ingresses.extensions )
+        cronjob | cronjobs | cronjob. | cronjobs. | cronjobs.batch )
+            filename="cronjobs"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
+        ingress | ingresses | ingress. | ingresses. | ingresses.extensions )
             filename="ingresses"
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace

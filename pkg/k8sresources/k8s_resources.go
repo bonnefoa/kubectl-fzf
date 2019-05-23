@@ -1,7 +1,6 @@
 package k8sresources
 
 import (
-	"fmt"
 	"sort"
 	"time"
 
@@ -33,15 +32,7 @@ func (r *ResourceMeta) FromObjectMeta(meta metav1.ObjectMeta) {
 }
 
 func (r *ResourceMeta) resourceAge() string {
-	duration := time.Now().Sub(r.creationTime)
-	duration = duration.Round(time.Minute)
-	if duration.Hours() > 30 {
-		return fmt.Sprintf("%dd", int(duration.Hours()/24))
-	}
-	hour := duration / time.Hour
-	duration -= hour * time.Hour
-	minute := duration / time.Minute
-	return fmt.Sprintf("%02d:%02d", hour, minute)
+	return util.TimeToAge(r.creationTime)
 }
 
 // ExcludedLabels is a list of excluded label/selector from the dump
