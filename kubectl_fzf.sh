@@ -198,6 +198,11 @@ __kubectl_parse_get()
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
+        job | job.batch | jobs | jobs. | jobs.batch )
+            filename="jobs"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
         ingress | ingresses | ingress. | ingresses. | ingresses.extensions )
             filename="ingresses"
             autocomplete_fun=_fzf_with_namespace
