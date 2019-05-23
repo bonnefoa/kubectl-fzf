@@ -67,8 +67,7 @@ _fzf_kubectl_complete()
         data=$(echo "$data" | grep -v $grep_exclude)
     fi
 
-    printf "${main_header}\n${header}\n${data}\n" \
-        | column -t \
+    (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
         | awk "$end_print"
 }
