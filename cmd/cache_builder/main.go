@@ -88,7 +88,7 @@ func getClientConfigAndCluster() (*restclient.Config, string) {
 	util.FatalIf(err)
 	cluster := rawConfig.CurrentContext
 
-	restConfig, err := clientConfig.ClientConfig()
+	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	util.FatalIf(err)
 	return restConfig, cluster
 }
