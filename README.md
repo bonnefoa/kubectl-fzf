@@ -34,7 +34,7 @@ Table of Contents
 Install `cache_builder`
 
 ```shell
-go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
+go get github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
 ```
 
 Source the autocompletion functions
