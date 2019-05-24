@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -58,11 +60,9 @@ func handleSignals(cancel context.CancelFunc) {
 	}
 }
 
-func startWatchOnCluster(ctx context.Context, config *restclient.Config) resourcewatcher.ResourceWatcher {
+func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
 	watcher := resourcewatcher.NewResourceWatcher(namespace, config)
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
-	cluster, err := util.ExtractClusterFromHost(config.Host)
-	util.FatalIf(err)
 	storeConfig := resourcewatcher.StoreConfig{
 		CacheDir:            cacheDir,
 		Cluster:             cluster,
@@ -75,6 +75,22 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config) resourc
 		util.FatalIf(err)
 	}
 	return watcher
+}
+
+func getClientConfigAndCluster() (*restclient.Config, string) {
+	configInBytes, err := ioutil.ReadFile(kubeconfig)
+	util.FatalIf(err)
+
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(configInBytes)
+	util.FatalIf(err)
+
+	rawConfig, err := clientConfig.RawConfig()
+	util.FatalIf(err)
+	cluster := rawConfig.CurrentContext
+
+	restConfig, err := clientConfig.ClientConfig()
+	util.FatalIf(err)
+	return restConfig, cluster
 }
 
 func main() {
@@ -96,24 +112,22 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	currentConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	util.FatalIf(err)
-
-	watcher := startWatchOnCluster(ctx, currentConfig)
+	currentRestConfig, currentCluster := getClientConfigAndCluster()
+	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster)
 	ticker := time.NewTicker(time.Second * 5)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-			glog.V(7).Infof("Checking config %s %s ", config.Host, currentConfig.Host)
-			util.FatalIf(err)
-			if config.Host != currentConfig.Host {
-				glog.Infof("Detected cluster change %s != %s", config.Host, currentConfig.Host)
+			restConfig, cluster := getClientConfigAndCluster()
+			glog.V(7).Infof("Checking config %s %s ", restConfig.Host, currentRestConfig.Host)
+			if restConfig.Host != currentRestConfig.Host {
+				glog.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
-				watcher = startWatchOnCluster(ctx, config)
-				currentConfig = config
+				watcher = startWatchOnCluster(ctx, restConfig, cluster)
+				currentRestConfig = restConfig
+				currentCluster = cluster
 			}
 		}
 	}
