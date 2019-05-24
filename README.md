@@ -107,7 +107,7 @@ export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse)
 ```
 
 # Caveats
- 
+
 With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
 
 ```shell
@@ -120,3 +120,23 @@ k get pod pr<TAB>
 If you're using an out-of-the-box `oh-my-zsh` configuration, the default `matcher-list` zstyle (`zstyle ':completion:*' matcher-list 'r:|=*' 'l:|=* r:|=*'`) will interfere with the search. If fzf does not find any match, or if you interrupt it by pressing `Esc` or `Ctrl-C/Cmd-C`, zsh will see it as a failed completion and will restart it again.
 
 Changing the zstyle to `zstyle ':completion:*' matcher-list 'r:|=*'` fixes the issue.
+
+# Troubleshooting
+
+## The normal autocompletion is used
+
+First, check if cache files are correctly generated in `/tmp/kubectl_fzf_cache`. The autocompletion will fallback to normal method if cache files are absent.
+
+If the files are present, check that the `__kubectl_get_containers` is correctly overloaded
+
+```
+# Incorrect type
+type __kubectl_get_containers
+__kubectl_get_containers is a shell function from /dev/fd/15
+
+# Expected output
+type __kubectl_get_containers
+__kubectl_get_containers is a shell function from .../kubectl-fzf/kubectl_fzf.plugin.zsh
+```
+
+Be sure that `kubectl_fzf.plugin` is loaded after `kubectl completion zsh` in your bashrc/zshrc.
