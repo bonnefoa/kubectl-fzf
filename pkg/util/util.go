@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -96,6 +97,7 @@ func ExcludeFromSlice(sl []string, exclude map[string]string) []string {
 // FatalIf exits if the error is not nil
 func FatalIf(err error) {
 	if err != nil {
+		debug.PrintStack()
 		fmt.Printf("Fatal error: %s\n", err)
 		os.Exit(-1)
 	}
