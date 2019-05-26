@@ -183,6 +183,11 @@ __kubectl_parse_get()
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
+        sa | serviceaccount | serviceaccounts )
+            filename="serviceaccounts"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
         ds | daemonset | daemonsets | daemonsets.apps | daemonsets.extensions | daemonsets. )
             filename="daemonsets"
             autocomplete_fun=_fzf_with_namespace
