@@ -270,7 +270,7 @@ __kubectl_parse_get()
         context=$query_context
     fi
 
-    filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
+    local filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
 
     if [[ ! -f $filepath ]]; then
         ___kubectl_parse_get $*
