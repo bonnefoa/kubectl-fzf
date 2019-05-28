@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const NodeHeader = "Name Roles InstanceType Zone InternalIp Age Labels\n"
+const NodeHeader = "Name InstanceID Roles InstanceType Zone InternalIp Age Labels\n"
 
 // Node is the summary of a kubernetes node
 type Node struct {
@@ -17,6 +17,7 @@ type Node struct {
 	roles        []string
 	instanceType string
 	zone         string
+	InstanceID   string
 	internalIP   string
 }
 
@@ -38,6 +39,12 @@ func (n *Node) FromRuntime(obj interface{}) {
 			n.roles = append(n.roles, role)
 		}
 	}
+	n.InstanceID = "Unknown"
+	if node.Spec.ProviderID != "" {
+		fullID := strings.Split(node.Spec.ProviderID, "/")
+		n.InstanceID = fullID[len(fullID)-1]
+	}
+
 	n.instanceType = n.labels["beta.kubernetes.io/instance-type"]
 	n.zone = n.labels["failure-domain.beta.kubernetes.io/zone"]
 	for _, v := range node.Status.Addresses {
@@ -56,6 +63,7 @@ func (n *Node) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (n *Node) ToString() string {
 	line := strings.Join([]string{n.name,
+		n.InstanceID,
 		util.JoinSlicesOrNone(n.roles, ","),
 		n.instanceType,
 		n.zone,
