@@ -121,7 +121,7 @@ With zsh, if the suggested completion doesn't match the start of the query, the 
 
 ```shell
 k get pod pr<TAB>
-# result needs to starts with pr, otherwise, it will fail
+# result needs to start with `pr` otherwise autocompletion will fail
 ```
 
 ---
@@ -134,7 +134,8 @@ Changing the zstyle to `zstyle ':completion:*' matcher-list 'r:|=*'` fixes the i
 
 ## The normal autocompletion is used
 
-First, check if cache files are correctly generated in `/tmp/kubectl_fzf_cache`. The autocompletion will fallback to normal method if cache files are absent.
+First, check if cache files are correctly generated in `/tmp/kubectl_fzf_cache`.
+The autocompletion will fallback to normal method if cache files are absent.
 
 If the files are present, check that the `__kubectl_get_containers` is correctly overloaded
 
