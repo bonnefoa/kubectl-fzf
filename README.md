@@ -27,18 +27,16 @@ Table of Contents
 
 # Requirements
 
-[fzf](https://github.com/junegunn/fzf) needs to be installed
+[fzf](https://github.com/junegunn/fzf)
 
 # Installation
 
-Install `cache_builder`
-
+Install `cache_builder`:
 ```shell
 go get github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
 ```
 
-Source the autocompletion functions
-
+Source the autocompletion functions:
 ```shell
 # kubectl_fzf.sh needs to be sourced after kubectl completion.
 
@@ -65,6 +63,7 @@ zplug "bonnefoa/kubectl-fzf", defer:3
 
 `cache_builder` will watch cluster resources and keep the current state of the cluster in local files.
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
+
 To create cache files necessary for `kubectl_fzf`, just run in a tmux or a screen
 
 ```shell
@@ -72,18 +71,20 @@ cache_builder
 ```
 
 It will watch the cluster in the current context. If you switch context, `cache_builder` will detect and start watching the new cluster.
-The initial resource listing can be long  on big clusters and autocompletion might need 30s+.
+The initial resource listing can be long on big clusters and autocompletion might need 30s+.
+
+`connect: connection refused` or similar messages are expected if there's network issues/interuptions and `cache_builder` will automatically reconnect.
+
+### Troubleshooting
 
 To launch with debug logs activated
-
 ```shell
 cache_builder -logtostderr -v 14
 ```
 
 ### Watch a specific namespace
 
-To create cache for a specific namespace, just run
-
+By default, all namespaces are watched. If you want to build the cache for a specific namespace, run
 ```shell
 cache_builder -n mynamespace
 ```
@@ -91,19 +92,26 @@ cache_builder -n mynamespace
 ## kubectl_fzf
 
 Once `cache_builder` is running, you will be able to use `kubectl_fzf` by calling the kubectl completion
-
 ```shell
 kubectl get pod <TAB>
 ```
 
-### fzf options
+### Options
 
-You can control the options used for fzf with `KUBECTL_FZF_OPTIONS` variable.
+| Environment variable | Description | Default |
+| KUBECTL_FZF_CACHE | Cache files location | `/tmp/kubectl_fzf_cache` |
+| KUBECTL_FZF_EXCLUDE | Exclusion patterns passed to the autocompletion | |
+| KUBECTL_FZF_OPTIONS | fzf parameters | `-1 --header-lines=2 --layout reverse -e` |
+| KUBECTL_FZF_PREVIEW_OPTIONS | fzf Preview parameters | `--preview-window=down:3 --preview "echo {} | tr -s '\t ' | fold -s -w \$COLUMNS"` |
 
-For example, to turn down exact match in search:
-
+To turn down exact match in search:
 ```shell
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse)
+```
+
+To exclude all namespaces starting with "dev" and consul-agent resources:
+```shell
+export KUBECTL_FZF_EXCLUDE="^dev consul-agent"
 ```
 
 # Caveats
