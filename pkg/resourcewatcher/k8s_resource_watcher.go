@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// ResourceWatcher contains rest clients for a given kubernetes context
 type ResourceWatcher struct {
 	clientset   *kubernetes.Clientset
 	namespace   string
@@ -30,8 +31,9 @@ type ResourceWatcher struct {
 	cancelFuncs []context.CancelFunc
 }
 
-type watchConfig struct {
-	resourceCtor  func(obj interface{}) k8sresources.K8sResource
+// WatchConfig provides the configuration to watch a specific kubernetes resource
+type WatchConfig struct {
+	resourceCtor  func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
 	header        string
 	resourceName  string
 	getter        cache.Getter
@@ -52,8 +54,8 @@ func NewResourceWatcher(namespace string, config *restclient.Config) ResourceWat
 }
 
 // Start begins the watch/poll of a given k8s resource
-func (r *ResourceWatcher) Start(parentCtx context.Context, cfg watchConfig, storeConfig StoreConfig) error {
-	store, err := NewK8sStore(cfg, storeConfig)
+func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) error {
+	store, err := NewK8sStore(cfg, storeConfig, ctorConfig)
 	if err != nil {
 		return err
 	}
@@ -76,30 +78,30 @@ func (r *ResourceWatcher) Stop() {
 }
 
 // GetWatchConfigs creates the list of k8s to watch
-func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []watchConfig {
+func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []WatchConfig {
 	coreGetter := r.clientset.CoreV1().RESTClient()
 	appsGetter := r.clientset.AppsV1().RESTClient()
 	betaGetter := r.clientset.ExtensionsV1beta1().RESTClient()
 	batchGetterV1Beta := r.clientset.BatchV1beta1().RESTClient()
 	batchGetter := r.clientset.BatchV1().RESTClient()
 
-	watchConfigs := []watchConfig{
-		watchConfig{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
-		watchConfig{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
-		watchConfig{k8sresources.NewServiceAccountFromRuntime, k8sresources.ServiceAccountHeader, "serviceaccounts", coreGetter, &corev1.Service{}, true, 0},
-		watchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
-		watchConfig{k8sresources.NewDaemonSetFromRuntime, k8sresources.DaemonSetHeader, "daemonsets", betaGetter, &betav1.DaemonSet{}, true, 0},
-		watchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
-		watchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
-		watchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
-		watchConfig{k8sresources.NewEndpointsFromRuntime, k8sresources.EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
-		watchConfig{k8sresources.NewIngressFromRuntime, k8sresources.IngressHeader, "ingresses", betaGetter, &betav1.Ingress{}, true, 0},
-		watchConfig{k8sresources.NewCronJobFromRuntime, k8sresources.CronJobHeader, "cronjobs", batchGetterV1Beta, &batchbetav1.CronJob{}, true, 0},
-		watchConfig{k8sresources.NewJobFromRuntime, k8sresources.JobHeader, "jobs", batchGetter, &batchv1.Job{}, true, 0},
-		watchConfig{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
-		watchConfig{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
-		watchConfig{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
-		watchConfig{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
+	watchConfigs := []WatchConfig{
+		WatchConfig{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, 0},
+		WatchConfig{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, 0},
+		WatchConfig{k8sresources.NewServiceAccountFromRuntime, k8sresources.ServiceAccountHeader, "serviceaccounts", coreGetter, &corev1.Service{}, true, 0},
+		WatchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
+		WatchConfig{k8sresources.NewDaemonSetFromRuntime, k8sresources.DaemonSetHeader, "daemonsets", betaGetter, &betav1.DaemonSet{}, true, 0},
+		WatchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
+		WatchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
+		WatchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
+		WatchConfig{k8sresources.NewEndpointsFromRuntime, k8sresources.EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, 0},
+		WatchConfig{k8sresources.NewIngressFromRuntime, k8sresources.IngressHeader, "ingresses", betaGetter, &betav1.Ingress{}, true, 0},
+		WatchConfig{k8sresources.NewCronJobFromRuntime, k8sresources.CronJobHeader, "cronjobs", batchGetterV1Beta, &batchbetav1.CronJob{}, true, 0},
+		WatchConfig{k8sresources.NewJobFromRuntime, k8sresources.JobHeader, "jobs", batchGetter, &batchv1.Job{}, true, 0},
+		WatchConfig{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
+		WatchConfig{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
+		WatchConfig{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
+		WatchConfig{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, namespacePollingPeriod},
 	}
 	return watchConfigs
 }
@@ -117,7 +119,7 @@ func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) 
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,
-	cfg watchConfig, k8sStore K8sStore) {
+	cfg WatchConfig, k8sStore K8sStore) {
 	glog.V(4).Infof("Start poller for %s on namespace %s", k8sStore.resourceName, r.namespace)
 	namespace := ""
 	if cfg.hasNamespace {
@@ -138,7 +140,7 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 }
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
-	cfg watchConfig, k8sStore K8sStore) {
+	cfg WatchConfig, k8sStore K8sStore) {
 	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, r.namespace)
 	namespace := ""
 	if cfg.hasNamespace {

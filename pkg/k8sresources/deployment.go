@@ -20,14 +20,14 @@ type Deployment struct {
 }
 
 // NewDeploymentFromRuntime builds a k8sresource from informer result
-func NewDeploymentFromRuntime(obj interface{}) K8sResource {
+func NewDeploymentFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	d := &Deployment{}
-	d.FromRuntime(obj)
+	d.FromRuntime(obj, config)
 	return d
 }
 
 // FromRuntime builds object from the informer's result
-func (d *Deployment) FromRuntime(obj interface{}) {
+func (d *Deployment) FromRuntime(obj interface{}, config CtorConfig) {
 	deployment := obj.(*appsv1.Deployment)
 	d.FromObjectMeta(deployment.ObjectMeta)
 

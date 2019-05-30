@@ -20,14 +20,14 @@ type Endpoints struct {
 }
 
 // NewEndpointsFromRuntime builds a k8s resource from informer result
-func NewEndpointsFromRuntime(obj interface{}) K8sResource {
+func NewEndpointsFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	e := &Endpoints{}
-	e.FromRuntime(obj)
+	e.FromRuntime(obj, config)
 	return e
 }
 
 // FromRuntime builds object from the informer's result
-func (e *Endpoints) FromRuntime(obj interface{}) {
+func (e *Endpoints) FromRuntime(obj interface{}, config CtorConfig) {
 	endpoints := obj.(*corev1.Endpoints)
 	e.FromObjectMeta(endpoints.ObjectMeta)
 	for _, subsets := range endpoints.Subsets {

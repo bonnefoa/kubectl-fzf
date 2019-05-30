@@ -14,14 +14,14 @@ type Ingress struct {
 }
 
 // NewIngressFromRuntime builds a pod from informer result
-func NewIngressFromRuntime(obj interface{}) K8sResource {
+func NewIngressFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	p := &Ingress{}
-	p.FromRuntime(obj)
+	p.FromRuntime(obj, config)
 	return p
 }
 
 // FromRuntime builds object from the informer's result
-func (ingress *Ingress) FromRuntime(obj interface{}) {
+func (ingress *Ingress) FromRuntime(obj interface{}, config CtorConfig) {
 	ingressFromRuntime := obj.(*betav1.Ingress)
 	ingress.FromObjectMeta(ingressFromRuntime.ObjectMeta)
 	for _, lb := range ingressFromRuntime.Status.LoadBalancer.Ingress {

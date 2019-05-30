@@ -20,7 +20,8 @@ import (
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
 	data         map[string]k8sresources.K8sResource
-	resourceCtor func(obj interface{}) k8sresources.K8sResource
+	resourceCtor func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
+	ctorConfig   k8sresources.CtorConfig
 	resourceName string
 	destFileName string
 	currentFile  *os.File
@@ -37,7 +38,7 @@ type StoreConfig struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg watchConfig, storeConfig StoreConfig) (K8sStore, error) {
+func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) (K8sStore, error) {
 	k := K8sStore{}
 	destDir := path.Join(storeConfig.CacheDir, storeConfig.Cluster)
 	destFileName := path.Join(destDir, cfg.resourceName)
@@ -57,6 +58,7 @@ func NewK8sStore(cfg watchConfig, storeConfig StoreConfig) (K8sStore, error) {
 	k.lastFullDump = time.Time{}
 	k.storeConfig = storeConfig
 	k.firstWrite = true
+	k.ctorConfig = ctorConfig
 
 	writeHeaderFile(cfg.header, destFileName)
 
@@ -88,7 +90,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	for _, runtimeObject := range lstRuntime {
 		key := resourceKey(runtimeObject)
-		resource := k.resourceCtor(runtimeObject)
+		resource := k.resourceCtor(runtimeObject, k.ctorConfig)
 		k.data[key] = resource
 	}
 	err := k.DumpFullState()
@@ -100,7 +102,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 // AddResource adds a new k8s object to the store
 func (k *K8sStore) AddResource(obj interface{}) {
 	key := resourceKey(obj)
-	newObj := k.resourceCtor(obj)
+	newObj := k.resourceCtor(obj, k.ctorConfig)
 	glog.V(11).Infof("%s added: %s", k.resourceName, key)
 	k.data[key] = newObj
 
@@ -133,7 +135,7 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 // UpdateResource update an existing k8s object
 func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	key := resourceKey(newObj)
-	k8sObj := k.resourceCtor(newObj)
+	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
 	if k8sObj.HasChanged(k.data[key]) {
 		glog.V(11).Infof("%s changed: %s", k.resourceName, key)
 		k.data[key] = k8sObj

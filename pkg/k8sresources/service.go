@@ -20,14 +20,14 @@ type Service struct {
 }
 
 // NewServiceFromRuntime builds a pod from informer result
-func NewServiceFromRuntime(obj interface{}) K8sResource {
+func NewServiceFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	s := &Service{}
-	s.FromRuntime(obj)
+	s.FromRuntime(obj, config)
 	return s
 }
 
 // FromRuntime builds object from the informer's result
-func (s *Service) FromRuntime(obj interface{}) {
+func (s *Service) FromRuntime(obj interface{}, config CtorConfig) {
 	service := obj.(*corev1.Service)
 	s.FromObjectMeta(service.ObjectMeta)
 	s.serviceType = string(service.Spec.Type)

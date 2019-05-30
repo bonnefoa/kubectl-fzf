@@ -19,14 +19,14 @@ type StatefulSet struct {
 }
 
 // NewStatefulSetFromRuntime builds a k8sresource from informer result
-func NewStatefulSetFromRuntime(obj interface{}) K8sResource {
+func NewStatefulSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	p := &StatefulSet{}
-	p.FromRuntime(obj)
+	p.FromRuntime(obj, config)
 	return p
 }
 
 // FromRuntime builds object from the informer's result
-func (s *StatefulSet) FromRuntime(obj interface{}) {
+func (s *StatefulSet) FromRuntime(obj interface{}, config CtorConfig) {
 	statefulset := obj.(*appsv1.StatefulSet)
 	s.FromObjectMeta(statefulset.ObjectMeta)
 	s.currentReplicas = int(statefulset.Status.CurrentReplicas)

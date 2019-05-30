@@ -19,14 +19,14 @@ type CronJob struct {
 }
 
 // NewCronJobFromRuntime builds a cronJob from informer result
-func NewCronJobFromRuntime(obj interface{}) K8sResource {
+func NewCronJobFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	c := &CronJob{}
-	c.FromRuntime(obj)
+	c.FromRuntime(obj, config)
 	return c
 }
 
 // FromRuntime builds object from the informer's result
-func (c *CronJob) FromRuntime(obj interface{}) {
+func (c *CronJob) FromRuntime(obj interface{}, config CtorConfig) {
 	cronJob := obj.(*batchbetav1.CronJob)
 	glog.V(19).Infof("Reading meta %#v", cronJob)
 	c.FromObjectMeta(cronJob.ObjectMeta)

@@ -23,20 +23,23 @@ type Node struct {
 }
 
 // NewNodeFromRuntime builds a k8sresoutce from informer result
-func NewNodeFromRuntime(obj interface{}) K8sResource {
+func NewNodeFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	n := &Node{}
-	n.FromRuntime(obj)
+	n.FromRuntime(obj, config)
 	return n
 }
 
 // FromRuntime builds object from the informer's result
-func (n *Node) FromRuntime(obj interface{}) {
+func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 	node := obj.(*corev1.Node)
 	n.FromObjectMeta(node.ObjectMeta)
 	for k := range n.labels {
 		nodePrefix := "node-role.kubernetes.io/"
 		if strings.HasPrefix(k, nodePrefix) {
 			role := strings.Replace(k, nodePrefix, "", 1)
+			if _, ok := config.RoleBlacklist[role]; ok {
+				continue
+			}
 			n.roles = append(n.roles, role)
 		}
 	}

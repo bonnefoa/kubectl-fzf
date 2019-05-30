@@ -23,14 +23,14 @@ type DaemonSet struct {
 }
 
 // NewDaemonSetFromRuntime builds a daemonset from informer result
-func NewDaemonSetFromRuntime(obj interface{}) K8sResource {
+func NewDaemonSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	d := &DaemonSet{}
-	d.FromRuntime(obj)
+	d.FromRuntime(obj, config)
 	return d
 }
 
 // FromRuntime builds object from the informer's result
-func (d *DaemonSet) FromRuntime(obj interface{}) {
+func (d *DaemonSet) FromRuntime(obj interface{}, config CtorConfig) {
 	daemonset := obj.(*betav1.DaemonSet)
 	glog.V(19).Infof("Reading meta %#v", daemonset)
 	d.FromObjectMeta(daemonset.ObjectMeta)

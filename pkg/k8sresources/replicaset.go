@@ -21,14 +21,14 @@ type ReplicaSet struct {
 }
 
 // NewReplicaSetFromRuntime builds a k8sresource from informer result
-func NewReplicaSetFromRuntime(obj interface{}) K8sResource {
+func NewReplicaSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	p := &ReplicaSet{}
-	p.FromRuntime(obj)
+	p.FromRuntime(obj, config)
 	return p
 }
 
 // FromRuntime builds object from the informer's result
-func (r *ReplicaSet) FromRuntime(obj interface{}) {
+func (r *ReplicaSet) FromRuntime(obj interface{}, config CtorConfig) {
 	replicaSet := obj.(*appsv1.ReplicaSet)
 	r.FromObjectMeta(replicaSet.ObjectMeta)
 	r.replicas = strconv.Itoa(int(replicaSet.Status.Replicas))

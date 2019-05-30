@@ -19,14 +19,14 @@ type Job struct {
 }
 
 // NewJobFromRuntime builds a Job from informer result
-func NewJobFromRuntime(obj interface{}) K8sResource {
+func NewJobFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	j := &Job{}
-	j.FromRuntime(obj)
+	j.FromRuntime(obj, config)
 	return j
 }
 
 // FromRuntime builds object from the informer's result
-func (j *Job) FromRuntime(obj interface{}) {
+func (j *Job) FromRuntime(obj interface{}, config CtorConfig) {
 	job := obj.(*batchv1.Job)
 	glog.V(19).Infof("Reading meta %#v", job)
 	j.FromObjectMeta(job.ObjectMeta)

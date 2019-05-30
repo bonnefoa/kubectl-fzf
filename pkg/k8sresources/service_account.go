@@ -17,14 +17,14 @@ type ServiceAccount struct {
 }
 
 // NewServiceAccountFromRuntime builds a pod from informer result
-func NewServiceAccountFromRuntime(obj interface{}) K8sResource {
+func NewServiceAccountFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	s := &ServiceAccount{}
-	s.FromRuntime(obj)
+	s.FromRuntime(obj, config)
 	return s
 }
 
 // FromRuntime builds object from the informer's result
-func (s *ServiceAccount) FromRuntime(obj interface{}) {
+func (s *ServiceAccount) FromRuntime(obj interface{}, config CtorConfig) {
 	serviceAccount := obj.(*corev1.ServiceAccount)
 	s.FromObjectMeta(serviceAccount.ObjectMeta)
 	s.numberSecrets = strconv.Itoa(len(serviceAccount.Secrets))

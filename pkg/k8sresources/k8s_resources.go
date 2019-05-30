@@ -12,7 +12,7 @@ import (
 type K8sResource interface {
 	HasChanged(k K8sResource) bool
 	ToString() string
-	FromRuntime(obj interface{})
+	FromRuntime(obj interface{}, config CtorConfig)
 }
 
 // ResourceMeta is the generic information of a k8s entity

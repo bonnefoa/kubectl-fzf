@@ -15,14 +15,14 @@ type Namespace struct {
 }
 
 // NewNamespaceFromRuntime builds a pod from informer result
-func NewNamespaceFromRuntime(obj interface{}) K8sResource {
+func NewNamespaceFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	c := &Namespace{}
-	c.FromRuntime(obj)
+	c.FromRuntime(obj, config)
 	return c
 }
 
 // FromRuntime builds object from the informer's result
-func (c *Namespace) FromRuntime(obj interface{}) {
+func (c *Namespace) FromRuntime(obj interface{}, config CtorConfig) {
 	configMap := obj.(*corev1.Namespace)
 	c.FromObjectMeta(configMap.ObjectMeta)
 }

@@ -15,14 +15,14 @@ type ConfigMap struct {
 }
 
 // NewConfigMapFromRuntime builds a pod from informer result
-func NewConfigMapFromRuntime(obj interface{}) K8sResource {
+func NewConfigMapFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	c := &ConfigMap{}
-	c.FromRuntime(obj)
+	c.FromRuntime(obj, config)
 	return c
 }
 
 // FromRuntime builds object from the informer's result
-func (c *ConfigMap) FromRuntime(obj interface{}) {
+func (c *ConfigMap) FromRuntime(obj interface{}, config CtorConfig) {
 	configMap := obj.(*corev1.ConfigMap)
 	c.FromObjectMeta(configMap.ObjectMeta)
 }

@@ -9,9 +9,11 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
@@ -27,6 +29,8 @@ var (
 	kubeconfig             string
 	namespace              string
 	cacheDir               string
+	roleBlacklistStr       string
+	roleBlacklist          map[string]bool
 	timeBetweenFullDump    time.Duration
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
@@ -43,6 +47,7 @@ func init() {
 	flag.BoolVar(&cpuProfile, "cpu-profile", false, "Start with cpu profiling")
 	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
 	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
+	flag.StringVar(&roleBlacklistStr, "role-blacklist", os.Getenv("KUBECTL_FZF_ROLE_BLACKLIST"), "List of roles to hide from node list, separated by commas")
 	flag.DurationVar(&timeBetweenFullDump, "time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
 	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 600*time.Second, "Polling period for namespaces")
@@ -68,10 +73,13 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 		Cluster:             cluster,
 		TimeBetweenFullDump: timeBetweenFullDump,
 	}
+	ctorConfig := k8sresources.CtorConfig{
+		RoleBlacklist: roleBlacklist,
+	}
 
 	glog.Infof("Start cache build on cluster %s", config.Host)
 	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig, storeConfig)
+		err := watcher.Start(ctx, watchConfig, storeConfig, ctorConfig)
 		util.FatalIf(err)
 	}
 	return watcher
@@ -93,9 +101,17 @@ func getClientConfigAndCluster() (*restclient.Config, string) {
 	return restConfig, cluster
 }
 
+func processArgs() {
+	roleBlacklist = make(map[string]bool)
+	for _, role := range strings.Split(roleBlacklistStr, ",") {
+		roleBlacklist[role] = true
+	}
+}
+
 func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
+	processArgs()
 
 	if displayVersion {
 		fmt.Printf("%s", version)

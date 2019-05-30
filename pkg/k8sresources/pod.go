@@ -28,14 +28,14 @@ func getPhase(p *corev1.Pod) string {
 }
 
 // NewPodFromRuntime builds a pod from informer result
-func NewPodFromRuntime(obj interface{}) K8sResource {
+func NewPodFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	p := &Pod{}
-	p.FromRuntime(obj)
+	p.FromRuntime(obj, config)
 	return p
 }
 
 // FromRuntime builds object from the informer's result
-func (p *Pod) FromRuntime(obj interface{}) {
+func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	pod := obj.(*corev1.Pod)
 	glog.V(19).Infof("Reading meta %#v", pod)
 	p.FromObjectMeta(pod.ObjectMeta)

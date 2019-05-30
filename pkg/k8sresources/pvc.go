@@ -17,14 +17,14 @@ type PersistentVolumeClaim struct {
 }
 
 // NewPersistentVolumeClaimFromRuntime builds a pod from informer result
-func NewPersistentVolumeClaimFromRuntime(obj interface{}) K8sResource {
+func NewPersistentVolumeClaimFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	p := &PersistentVolumeClaim{}
-	p.FromRuntime(obj)
+	p.FromRuntime(obj, config)
 	return p
 }
 
 // FromRuntime builds object from the informer's result
-func (pvc *PersistentVolumeClaim) FromRuntime(obj interface{}) {
+func (pvc *PersistentVolumeClaim) FromRuntime(obj interface{}, config CtorConfig) {
 	pvcFromRuntime := obj.(*corev1.PersistentVolumeClaim)
 	pvc.FromObjectMeta(pvcFromRuntime.ObjectMeta)
 	pvc.status = string(pvcFromRuntime.Status.Phase)
