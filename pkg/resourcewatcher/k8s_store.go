@@ -154,6 +154,7 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 		if err != nil {
 			return err
 		}
+		glog.Infof("Initial write of %s", k.destFileName)
 	}
 	_, err := k.currentFile.WriteString(resource.ToString())
 	if err != nil {
