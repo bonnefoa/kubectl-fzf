@@ -10,7 +10,7 @@ import (
 )
 
 // NodeHeader is the header line of csv result
-const NodeHeader = "Name InstanceID Roles InstanceType Zone InternalIp Taints Age Labels\n"
+const NodeHeader = "Name Roles InstanceType Zone InternalIp Taints InstanceID Age Labels\n"
 
 // Node is the summary of a kubernetes node
 type Node struct {
@@ -79,12 +79,12 @@ func (n *Node) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (n *Node) ToString() string {
 	line := strings.Join([]string{n.name,
-		n.instanceID,
 		util.JoinSlicesOrNone(n.roles, ","),
 		n.instanceType,
 		n.zone,
 		n.internalIP,
 		util.JoinSlicesOrNone(n.taints, ","),
+		n.instanceID,
 		n.resourceAge(),
 		n.labelsString(),
 	}, " ")
