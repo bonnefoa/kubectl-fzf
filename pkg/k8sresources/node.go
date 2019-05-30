@@ -10,7 +10,7 @@ import (
 )
 
 // NodeHeader is the header line of csv result
-const NodeHeader = "Name InstanceID Roles InstanceType Zone InternalIp Age Labels\n"
+const NodeHeader = "Name InstanceID Roles InstanceType Zone InternalIp Taints Age Labels\n"
 
 // Node is the summary of a kubernetes node
 type Node struct {
@@ -18,8 +18,9 @@ type Node struct {
 	roles        []string
 	instanceType string
 	zone         string
-	InstanceID   string
+	instanceID   string
 	internalIP   string
+	taints       []string
 }
 
 // NewNodeFromRuntime builds a k8sresoutce from informer result
@@ -43,10 +44,21 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 			n.roles = append(n.roles, role)
 		}
 	}
-	n.InstanceID = "Unknown"
+	n.instanceID = "Unknown"
 	if node.Spec.ProviderID != "" {
 		fullID := strings.Split(node.Spec.ProviderID, "/")
-		n.InstanceID = fullID[len(fullID)-1]
+		n.instanceID = fullID[len(fullID)-1]
+	}
+
+	n.taints = make([]string, 0)
+	for _, t := range node.Spec.Taints {
+		var taint string
+		if t.Value == "" {
+			taint = fmt.Sprintf("%s:%s", t.Key, t.Effect)
+		} else {
+			taint = fmt.Sprintf("%s=%s:%s", t.Key, t.Value, t.Effect)
+		}
+		n.taints = append(n.taints, taint)
 	}
 
 	n.instanceType = n.labels["beta.kubernetes.io/instance-type"]
@@ -67,11 +79,12 @@ func (n *Node) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (n *Node) ToString() string {
 	line := strings.Join([]string{n.name,
-		n.InstanceID,
+		n.instanceID,
 		util.JoinSlicesOrNone(n.roles, ","),
 		n.instanceType,
 		n.zone,
 		n.internalIP,
+		util.JoinSlicesOrNone(n.taints, ","),
 		n.resourceAge(),
 		n.labelsString(),
 	}, " ")
