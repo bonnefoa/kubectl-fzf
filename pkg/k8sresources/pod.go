@@ -1,21 +1,26 @@
 package k8sresources
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 )
 
-const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Age Labels\n"
+// PodHeader is the header for pod files
+const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Age Labels\n"
 
 // Pod is the summary of a kubernetes pod
 type Pod struct {
 	ResourceMeta
-	hostIP     string
-	podIP      string
-	nodeName   string
-	containers []string
-	phase      string
+	hostIP      string
+	podIP       string
+	nodeName    string
+	tolerations []string
+	containers  []string
+	phase       string
 }
 
 func getPhase(p *corev1.Pod) string {
@@ -50,6 +55,23 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	for k, v := range containers {
 		p.containers[k] = v.Name
 	}
+
+	tolerations := pod.Spec.Tolerations
+	p.tolerations = make([]string, 0)
+	for _, v := range tolerations {
+		if strings.HasPrefix(v.Key, "node.kubernetes.io") {
+			continue
+		}
+		var toleration string
+		if v.Operator == "Equal" {
+			toleration = fmt.Sprintf("%s=%s:%s", v.Key, v.Value, v.Effect)
+		} else if v.Key == "" {
+			toleration = "Exists"
+		} else {
+			toleration = fmt.Sprintf("%s:%s", v.Key, v.Effect)
+		}
+		p.tolerations = append(p.tolerations, toleration)
+	}
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
@@ -71,6 +93,7 @@ func (p *Pod) ToString() string {
 		p.nodeName,
 		p.phase,
 		util.JoinSlicesOrNone(p.containers, ","),
+		util.JoinSlicesOrNone(p.tolerations, ","),
 		p.resourceAge(),
 		p.labelsString(),
 	}
