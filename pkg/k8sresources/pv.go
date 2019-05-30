@@ -17,7 +17,7 @@ type PersistentVolume struct {
 	storageClass string
 }
 
-// NewPersistentVolumetime builds a pod from informer result
+// NewPersistentVolumeFromRuntime builds a pod from informer result
 func NewPersistentVolumeFromRuntime(obj interface{}) K8sResource {
 	p := &PersistentVolume{}
 	p.FromRuntime(obj)

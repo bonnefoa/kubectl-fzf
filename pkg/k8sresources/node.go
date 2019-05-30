@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// NodeHeader is the header line of csv result
 const NodeHeader = "Name InstanceID Roles InstanceType Zone InternalIp Age Labels\n"
 
 // Node is the summary of a kubernetes node
