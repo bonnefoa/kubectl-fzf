@@ -24,6 +24,45 @@ _fzf_get_main_header()
     echo $main_header
 }
 
+_fzf_get_exclude_pattern()
+{
+    local grep_exclude=""
+    for pattern in ${KUBECTL_FZF_EXCLUDE[@]}; do
+        if [[ -z $grep_exclude ]]; then
+            grep_exclude=$pattern
+        else
+            grep_exclude="$grep_exclude\|$pattern"
+        fi
+    done
+    echo "$grep_exclude"
+}
+
+_fzf_kubectl_node_complete()
+{
+    local node_file="$1"
+    local context="$2"
+    local query="$3"
+
+    local main_header=$(_fzf_get_main_header $context $namespace)
+    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
+    local header_file="${node_file}_header"
+    local label_field=$(_fzf_get_label_field $header_file)
+    local end_field=$((label_field - 1))
+
+    local grep_exclude=$(_fzf_get_exclude_pattern)
+    if [[ -n $grep_exclude ]]; then
+        data=$(echo "$data" | grep -v $grep_exclude)
+    fi
+
+    local node_to_pods=$(grep -v $grep_exclude $pod_file | awk '{a[$5][length(a[$5])+1]=$2} END { for (i in a) { printf i " "; k=0; for (j in a[i]) { printf (k>1?",":"") a[i][j]; k=2 } printf "\n" } } ' | sort)
+    local data=$(join <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
+
+    local header=$(cut -d ' ' -f 1-$end_field "$header_file")
+    (printf "${main_header}\n"; printf "${header} Pods\n${data}\n" | column -t) \
+        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+        | awk '{print $1}'
+}
+
 # $1 is awk end print command
 # $2 isFlag
 # $3 is filepath
@@ -44,25 +83,18 @@ _fzf_kubectl_complete()
     local main_header=$(_fzf_get_main_header $context $namespace)
 
     if [[ $is_flag == "true" ]]; then
-        local header=$(cat "$header_file" | cut -d ' ' -f 1,$label_field)
-        local data=$(cat "$file" | awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' | sort | uniq)
+        local header=$(cut -d ' ' -f 1,$label_field "$header_file")
+        local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq)
     else
-        local header=$(cat "$header_file" | cut -d ' ' -f 1-$end_field)
-        local data=$(cat "$file" | cut -d ' ' -f 1-$end_field)
+        local header=$(cut -d ' ' -f 1-$end_field "$header_file")
+        local data=$(cut -d ' ' -f 1-$end_field "$file")
     fi
 
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
     fi
 
-    local grep_exclude=""
-    for pattern in ${KUBECTL_FZF_EXCLUDE[@]}; do
-        if [[ -z $grep_exclude ]]; then
-            grep_exclude=$pattern
-        else
-            grep_exclude="$grep_exclude\|$pattern"
-        fi
-    done
+    local grep_exclude=$(_fzf_get_exclude_pattern)
     if [[ -n $grep_exclude ]]; then
         data=$(echo "$data" | grep -v $grep_exclude)
     fi
@@ -225,7 +257,7 @@ __kubectl_parse_get()
             ;;
         node | nodes )
             filename="nodes"
-            autocomplete_fun=_fzf_without_namespace
+            autocomplete_fun=_fzf_kubectl_node_complete
             flag_autocomplete_fun=_flag_selector_without_namespace
             ;;
         deployment | deployments | deployments. | deployments.apps | deployments.extensions  )
