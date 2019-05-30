@@ -93,7 +93,8 @@ _fzf_kubectl_complete()
 
     if [[ $is_flag == "true" ]]; then
         local header=$(cut -d ' ' -f 1,$label_field "$header_file")
-        local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq)
+        local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq -c | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        header="$header Occurrences"
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
         local data=$(cut -d ' ' -f 1-$end_field "$file")
