@@ -3,7 +3,6 @@ eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
-KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:3 --preview "echo {} | tr -s '\t ' | fold -s -w \$COLUMNS")
 
 # $1 is filename
 _fzf_get_label_field()
@@ -45,12 +44,13 @@ _fzf_kubectl_node_complete()
 
     local main_header=$(_fzf_get_main_header $context $namespace)
     local header_file="${node_file}_header"
+    local label_field=$(_fzf_get_label_field $header_file)
+    local end_field=$((label_field - 1))
     local header=$(cut -d ' ' -f 1-$end_field "$header_file")
+    header="$header Pods"
 
     local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
     local daemonsets_file="${KUBECTL_FZF_CACHE}/${current_context}/daemonsets"
-    local label_field=$(_fzf_get_label_field $header_file)
-    local end_field=$((label_field - 1))
 
     local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
     local exclude_pods=""
@@ -66,9 +66,11 @@ _fzf_kubectl_node_complete()
         | awk '{a[$5][length(a[$5])+1]=$2} END { for (i in a) { printf i " "; k=0; for (j in a[i]) { printf (k>1?",":"") a[i][j]; k=2 } printf "\n" } } ' \
         | sort)
     local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
+    local num_fields=$(echo $header | wc -w)
 
-    (printf "${main_header}\n"; printf "${header} Pods\n${data}\n" | column -t) \
-        | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+    KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$FZF_PREVIEW_COLUMNS" )
+    (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
+        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
         | cut -d' ' -f1
 }
 
@@ -91,9 +93,13 @@ _fzf_kubectl_complete()
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
-    if [[ $is_flag == "true" ]]; then
+    if [[ $is_flag == "with_namespace" ]]; then
         local header=$(cut -d ' ' -f 1,$label_field "$header_file")
         local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq -c | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        header="$header Occurrences"
+    elif [[ $is_flag == "without_namespace" ]]; then
+        local header=$(cut -d ' ' -f $label_field "$header_file")
+        local data=$(awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" | sort | uniq -c | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
         header="$header Occurrences"
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
@@ -108,7 +114,9 @@ _fzf_kubectl_complete()
     if [[ -n $grep_exclude ]]; then
         data=$(echo "$data" | grep -v $grep_exclude)
     fi
+    local num_fields=$(echo $header | wc -w)
 
+    KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$FZF_PREVIEW_COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
         | awk "$end_print"
@@ -137,7 +145,7 @@ _fzf_without_namespace()
 _flag_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1 " " $2}' "true" $1 "$2" "$3" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1 " " $2}' "with_namespace" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
@@ -145,7 +153,7 @@ _flag_selector_with_namespace()
 # $3 is context
 _flag_selector_without_namespace()
 {
-    _fzf_kubectl_complete '{print $2}' "true" $1 "$2" "$3"
+    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3"
 }
 
 __kubectl_get_containers()

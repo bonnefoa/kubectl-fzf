@@ -104,7 +104,6 @@ kubectl get pod <TAB>
 | KUBECTL_FZF_ROLE_BLACKLIST  | List of roles to hide from node list (comma separated) | ""                                          |
 | KUBECTL_FZF_EXCLUDE         | Exclusion patterns passed to the autocompletion        | ""                                          |
 | KUBECTL_FZF_OPTIONS         | fzf parameters                                         | `-1 --header-lines=2 --layout reverse -e`   |
-| KUBECTL_FZF_PREVIEW_OPTIONS | fzf Preview parameters                                 | `--preview-window=down:3 --preview "echo {} \| tr -s '\t ' \| fold -s -w \$COLUMNS"` |
 
 To turn down exact match in search:
 ```shell
