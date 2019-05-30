@@ -44,23 +44,32 @@ _fzf_kubectl_node_complete()
     local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
-    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
     local header_file="${node_file}_header"
+    local header=$(cut -d ' ' -f 1-$end_field "$header_file")
+
+    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
+    local daemonsets_file="${KUBECTL_FZF_CACHE}/${current_context}/daemonsets"
     local label_field=$(_fzf_get_label_field $header_file)
     local end_field=$((label_field - 1))
 
-    local grep_exclude=$(_fzf_get_exclude_pattern)
-    if [[ -n $grep_exclude ]]; then
-        data=$(echo "$data" | grep -v $grep_exclude)
-    fi
+    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
+    local exclude_pods=""
+    for daemonset in $daemonsets ; do
+        if [[ -z $exclude_pods ]]; then
+            exclude_pods=$daemonset
+        else
+            exclude_pods="$exclude_pods\|$daemonset"
+        fi
+    done
 
-    local node_to_pods=$(grep -v $grep_exclude $pod_file | awk '{a[$5][length(a[$5])+1]=$2} END { for (i in a) { printf i " "; k=0; for (j in a[i]) { printf (k>1?",":"") a[i][j]; k=2 } printf "\n" } } ' | sort)
-    local data=$(join <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
+    local node_to_pods=$(grep -v $exclude_pods $pod_file \
+        | awk '{a[$5][length(a[$5])+1]=$2} END { for (i in a) { printf i " "; k=0; for (j in a[i]) { printf (k>1?",":"") a[i][j]; k=2 } printf "\n" } } ' \
+        | sort)
+    local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
 
-    local header=$(cut -d ' ' -f 1-$end_field "$header_file")
     (printf "${main_header}\n"; printf "${header} Pods\n${data}\n" | column -t) \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
-        | awk '{print $1}'
+        | cut -d' ' -f1
 }
 
 # $1 is awk end print command
