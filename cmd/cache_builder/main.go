@@ -102,6 +102,7 @@ func getClientConfigAndCluster() (*restclient.Config, string) {
 }
 
 func processArgs() {
+	glog.Infof("Building role blacklist from \"%s\"", roleBlacklistStr)
 	roleBlacklist = make(map[string]bool)
 	for _, role := range strings.Split(roleBlacklistStr, ",") {
 		roleBlacklist[role] = true
