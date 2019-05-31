@@ -115,6 +115,11 @@ To exclude all namespaces starting with "dev" and consul-agent resources:
 export KUBECTL_FZF_EXCLUDE=("^dev" "consul-agent")
 ```
 
+To hide `common_node` from the node's role list
+```shell
+export KUBECTL_FZF_ROLE_BLACKLIST="common_node"
+```
+
 # Caveats
 
 With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
