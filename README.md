@@ -68,6 +68,8 @@ To create cache files necessary for `kubectl_fzf`, just run in a tmux or a scree
 
 ```shell
 cache_builder
+# If $GOPATH/bin is not in you $PATH
+$GOPATH/bin/cache_builder
 ```
 
 It will watch the cluster in the current context. If you switch context, `cache_builder` will detect and start watching the new cluster.
