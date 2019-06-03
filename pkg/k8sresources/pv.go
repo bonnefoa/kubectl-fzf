@@ -5,13 +5,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const PersistentVolumeHeader = "Name Status StorageClass Zone Claim Age Labels\n"
+// PersistentVolumeHeader is the header for pvc csv
+const PersistentVolumeHeader = "Name Status StorageClass Zone Claim Volume Age Labels\n"
 
 // PersistentVolume is the summary of a kubernetes physical volume
 type PersistentVolume struct {
 	ResourceMeta
 	status       string
 	claim        string
+	volume       string
 	zone         string
 	spec         string
 	storageClass string
@@ -34,10 +36,16 @@ func (pv *PersistentVolume) FromRuntime(obj interface{}, config CtorConfig) {
 	if !ok {
 		pv.zone = "None"
 	}
-	pv.storageClass = pvFromRuntime.Spec.StorageClassName
+	spec := pvFromRuntime.Spec
+	if spec.AWSElasticBlockStore != nil {
+		pv.volume = util.LastURLPart(spec.AWSElasticBlockStore.VolumeID)
+	} else if spec.GCEPersistentDisk != nil {
+		pv.volume = spec.GCEPersistentDisk.PDName
+	}
+	pv.storageClass = spec.StorageClassName
 	pv.claim = "None"
 	if pvFromRuntime.Spec.ClaimRef != nil {
-		pv.claim = pvFromRuntime.Spec.ClaimRef.Name
+		pv.claim = spec.ClaimRef.Name
 	}
 }
 
@@ -54,6 +62,7 @@ func (pv *PersistentVolume) ToString() string {
 		pv.storageClass,
 		pv.zone,
 		pv.claim,
+		pv.volume,
 		pv.resourceAge(),
 		pv.labelsString(),
 	}

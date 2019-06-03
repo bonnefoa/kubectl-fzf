@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -103,16 +102,6 @@ func FatalIf(err error) {
 	}
 }
 
-// ExtractClusterFromHost gets the cluster name from the rest configuration
-func ExtractClusterFromHost(host string) (string, error) {
-	parsedURL, err := url.ParseRequestURI(host)
-	if err != nil {
-		return "", err
-	}
-	res := strings.TrimPrefix(parsedURL.Host, "kubernetes.")
-	return res, nil
-}
-
 // JoinIntSlice creates a string of joined int with a separator character
 func JoinIntSlice(a []int, sep string) string {
 	if len(a) == 0 {
@@ -123,6 +112,12 @@ func JoinIntSlice(a []int, sep string) string {
 		b[i] = strconv.Itoa(v)
 	}
 	return strings.Join(b, sep)
+}
+
+// LastURLPart extracts the last part of the url
+func LastURLPart(url string) string {
+	urlArray := strings.Split(url, "/")
+	return urlArray[len(urlArray)-1]
 }
 
 // TimeToAge converts a time to a age string

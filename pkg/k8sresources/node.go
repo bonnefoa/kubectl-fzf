@@ -46,8 +46,7 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 	}
 	n.instanceID = "Unknown"
 	if node.Spec.ProviderID != "" {
-		fullID := strings.Split(node.Spec.ProviderID, "/")
-		n.instanceID = fullID[len(fullID)-1]
+		n.instanceID = util.LastURLPart(node.Spec.ProviderID)
 	}
 
 	n.taints = make([]string, 0)
