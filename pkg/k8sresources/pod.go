@@ -10,7 +10,7 @@ import (
 )
 
 // PodHeader is the header for pod files
-const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Age Labels\n"
+const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels\n"
 
 // Pod is the summary of a kubernetes pod
 type Pod struct {
@@ -20,6 +20,7 @@ type Pod struct {
 	nodeName    string
 	tolerations []string
 	containers  []string
+	claims      []string
 	phase       string
 }
 
@@ -46,17 +47,24 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	p.FromObjectMeta(pod.ObjectMeta)
 	p.hostIP = pod.Status.HostIP
 	p.podIP = pod.Status.PodIP
-	p.nodeName = pod.Spec.NodeName
+	spec := pod.Spec
+	p.nodeName = spec.NodeName
 	p.phase = getPhase(pod)
 
-	containers := pod.Spec.Containers
-	containers = append(containers, pod.Spec.InitContainers...)
+	containers := spec.Containers
+	containers = append(containers, spec.InitContainers...)
 	p.containers = make([]string, len(containers))
 	for k, v := range containers {
 		p.containers[k] = v.Name
 	}
 
-	tolerations := pod.Spec.Tolerations
+	volumes := spec.Volumes
+	for _, v := range volumes {
+		if v.PersistentVolumeClaim != nil {
+			p.claims = append(p.claims, v.PersistentVolumeClaim.ClaimName)
+		}
+	}
+	tolerations := spec.Tolerations
 	p.tolerations = make([]string, 0)
 	for _, v := range tolerations {
 		if strings.HasPrefix(v.Key, "node.kubernetes.io") {
@@ -94,6 +102,7 @@ func (p *Pod) ToString() string {
 		p.phase,
 		util.JoinSlicesOrNone(p.containers, ","),
 		util.JoinSlicesOrNone(p.tolerations, ","),
+		util.JoinSlicesOrNone(p.claims, ","),
 		p.resourceAge(),
 		p.labelsString(),
 	}
