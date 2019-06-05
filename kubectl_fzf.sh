@@ -5,9 +5,10 @@ KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
 
 # $1 is filename
-_fzf_get_label_field()
+# $2 is header
+_fzf_get_header_position()
 {
-    awk 'NR==1{ for(i = 1; i <= NF; i++){ if ($i == "Labels") {print i; } } } ' $1
+    awk "NR==1{ for(i = 1; i <= NF; i++){ if (\$i == \"$2\") {print i; } } } " $1
 }
 
 # $1 is context
@@ -36,6 +37,37 @@ _fzf_get_exclude_pattern()
     echo "$grep_exclude"
 }
 
+_fzf_kubectl_pv_complete()
+{
+    local pv_file="$1"
+    local context="$2"
+    local query="$3"
+
+    local main_header=$(_fzf_get_main_header $context $namespace)
+
+    local pv_header_file="${pv_file}_header"
+    local label_field=$(_fzf_get_header_position $pv_header_file "Labels")
+    local claim_field_pv_file=$(_fzf_get_header_position $pv_header_file "Claim")
+    local end_field=$((label_field - 1))
+    local header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
+    header="$header MountedBy"
+
+    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
+    local pod_header_file="${pod_file}_header"
+    local claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
+    local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
+    local pod_namespace_field=$(_fzf_get_header_position $pod_header_file "Namespace")
+
+    local claim_to_pods=$(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_file | sort)
+    local data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,2.2' -1 $claim_field_pv_file -2 1 -e None <(cut -d ' ' -f 1-$end_field "$pv_file" | sort -k $claim_field_pv_file) <(echo "$claim_to_pods"))
+    local num_fields=$(echo $header | wc -w)
+
+    KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
+    (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
+        | fzf ${KUBECTL_FZF_PREVIEW_OPTIONS[@]} ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+        | cut -d' ' -f1
+}
+
 _fzf_kubectl_node_complete()
 {
     local node_file="$1"
@@ -43,15 +75,18 @@ _fzf_kubectl_node_complete()
     local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
-    local header_file="${node_file}_header"
-    local label_field=$(_fzf_get_label_field $header_file)
+    local node_header_file="${node_file}_header"
+    local label_field=$(_fzf_get_header_position $node_header_file "Labels")
     local end_field=$((label_field - 1))
-    local header=$(cut -d ' ' -f 1-$end_field "$header_file")
+    local header=$(cut -d ' ' -f 1-$end_field "$node_header_file")
     header="$header Pods"
 
     local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
-    local daemonsets_file="${KUBECTL_FZF_CACHE}/${current_context}/daemonsets"
+    local pod_header_file="${pod_file}_header"
+    local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
+    local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
 
+    local daemonsets_file="${KUBECTL_FZF_CACHE}/${current_context}/daemonsets"
     local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
     local exclude_pods=""
     for daemonset in $daemonsets ; do
@@ -63,7 +98,7 @@ _fzf_kubectl_node_complete()
     done
 
     local node_to_pods=$(grep -v $exclude_pods $pod_file \
-        | awk '{a[$5][length(a[$5])+1]=$2} END { for (i in a) { printf i " "; k=0; for (j in a[i]) { printf (k>1?",":"") a[i][j]; k=2 } printf "\n" } } ' \
+        | awk "{a[\$$node_name_field][length(a[\$$node_name_field])+1]=\$$pod_name_field} END { for (i in a) { printf i \" \"; k=0; for (j in a[i]) { printf (k>1?\",\":\"\") a[i][j]; k=2 } printf \"\n\" } } " \
         | sort)
     local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
     local num_fields=$(echo $header | wc -w)
@@ -89,7 +124,7 @@ _fzf_kubectl_complete()
     local context="$4"
     local query=$5
     local namespace="$6"
-    local label_field=$(_fzf_get_label_field $header_file)
+    local label_field=$(_fzf_get_header_position $header_file "Labels")
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
@@ -290,7 +325,7 @@ __kubectl_parse_get()
             ;;
         persistentvolumes | pv )
             filename="persistentvolumes"
-            autocomplete_fun=_fzf_without_namespace
+            autocomplete_fun=_fzf_kubectl_pv_complete
             flag_autocomplete_fun=_flag_selector_without_namespace
             ;;
         persistentvolumeclaims | pvc )
