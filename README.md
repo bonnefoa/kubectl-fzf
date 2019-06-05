@@ -75,7 +75,7 @@ $GOPATH/bin/cache_builder
 It will watch the cluster in the current context. If you switch context, `cache_builder` will detect and start watching the new cluster.
 The initial resource listing can be long on big clusters and autocompletion might need 30s+.
 
-`connect: connection refused` or similar messages are expected if there's network issues/interuptions and `cache_builder` will automatically reconnect.
+`connect: connection refused` or similar messages are expected if there's network issues/interruptions and `cache_builder` will automatically reconnect.
 
 ### Troubleshooting
 
