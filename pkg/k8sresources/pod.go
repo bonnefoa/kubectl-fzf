@@ -61,7 +61,9 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	volumes := spec.Volumes
 	for _, v := range volumes {
 		if v.PersistentVolumeClaim != nil {
-			p.claims = append(p.claims, v.PersistentVolumeClaim.ClaimName)
+			fullClaimName := fmt.Sprintf("%s/%s", p.ResourceMeta.namespace,
+				v.PersistentVolumeClaim.ClaimName)
+			p.claims = append(p.claims, fullClaimName)
 		}
 	}
 	tolerations := spec.Tolerations

@@ -1,6 +1,8 @@
 package k8sresources
 
 import (
+	"fmt"
+
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -45,7 +47,7 @@ func (pv *PersistentVolume) FromRuntime(obj interface{}, config CtorConfig) {
 	pv.storageClass = spec.StorageClassName
 	pv.claim = "None"
 	if pvFromRuntime.Spec.ClaimRef != nil {
-		pv.claim = spec.ClaimRef.Name
+		pv.claim = fmt.Sprintf("%s/%s", spec.ClaimRef.Namespace, spec.ClaimRef.Name)
 	}
 }
 
