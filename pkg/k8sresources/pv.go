@@ -8,7 +8,7 @@ import (
 )
 
 // PersistentVolumeHeader is the header for pvc csv
-const PersistentVolumeHeader = "Name Status StorageClass Zone Claim Volume Age Labels\n"
+const PersistentVolumeHeader = "Name Status StorageClass Zone Claim Volume Affinities Age Labels\n"
 
 // PersistentVolume is the summary of a kubernetes physical volume
 type PersistentVolume struct {
@@ -18,6 +18,7 @@ type PersistentVolume struct {
 	volume       string
 	zone         string
 	spec         string
+	affinities   []string
 	storageClass string
 }
 
@@ -49,6 +50,15 @@ func (pv *PersistentVolume) FromRuntime(obj interface{}, config CtorConfig) {
 	if pvFromRuntime.Spec.ClaimRef != nil {
 		pv.claim = fmt.Sprintf("%s/%s", spec.ClaimRef.Namespace, spec.ClaimRef.Name)
 	}
+	if pvFromRuntime.Spec.NodeAffinity != nil {
+		for _, term := range pvFromRuntime.Spec.NodeAffinity.Required.NodeSelectorTerms {
+			for _, expression := range term.MatchExpressions {
+				affinity := fmt.Sprintf("%s:%s:%s", expression.Key,
+					expression.Operator, util.JoinSlicesOrNone(expression.Values, ";"))
+				pv.affinities = append(pv.affinities, affinity)
+			}
+		}
+	}
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
@@ -65,6 +75,7 @@ func (pv *PersistentVolume) ToString() string {
 		pv.zone,
 		pv.claim,
 		pv.volume,
+		util.JoinSlicesOrNone(pv.affinities, ","),
 		pv.resourceAge(),
 		pv.labelsString(),
 	}

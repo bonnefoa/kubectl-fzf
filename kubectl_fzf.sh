@@ -2,7 +2,7 @@ export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
-KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
+KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll)
 
 # $1 is filename
 # $2 is header
@@ -59,7 +59,7 @@ _fzf_kubectl_pv_complete()
     local pod_namespace_field=$(_fzf_get_header_position $pod_header_file "Namespace")
 
     local claim_to_pods=$(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_file | sort)
-    local data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,2.2' -1 $claim_field_pv_file -2 1 -e None <(cut -d ' ' -f 1-$end_field "$pv_file" | sort -k $claim_field_pv_file) <(echo "$claim_to_pods"))
+    local data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.2' -1 $claim_field_pv_file -2 1 -e None <(cut -d ' ' -f 1-$end_field "$pv_file" | sort -k $claim_field_pv_file) <(echo "$claim_to_pods"))
     local num_fields=$(echo $header | wc -w)
 
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
