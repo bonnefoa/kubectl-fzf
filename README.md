@@ -34,6 +34,8 @@ Table of Contents
 Install `cache_builder`:
 ```shell
 go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
+# If you update, you need to recompile cache_builder with
+go install github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
 ```
 
 Source the autocompletion functions:
