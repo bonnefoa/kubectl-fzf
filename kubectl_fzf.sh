@@ -2,7 +2,7 @@ export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
-KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll)
+KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 
 # $1 is filename
 # $2 is header
@@ -130,11 +130,11 @@ _fzf_kubectl_complete()
 
     if [[ $is_flag == "with_namespace" ]]; then
         local header=$(cut -d ' ' -f 1,$label_field "$header_file")
-        local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq -c | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq -c | sort -n -r | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
         header="$header Occurrences"
     elif [[ $is_flag == "without_namespace" ]]; then
         local header=$(cut -d ' ' -f $label_field "$header_file")
-        local data=$(awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" | sort | uniq -c | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        local data=$(awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" | sort | uniq -c | sort -n -r | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
         header="$header Occurrences"
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
