@@ -93,6 +93,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 		resource := k.resourceCtor(runtimeObject, k.ctorConfig)
 		k.data[key] = resource
 	}
+	glog.Infof("Writing new state of %s", k.destFileName)
 	err := k.DumpFullState()
 	if err != nil {
 		glog.Warningf("Error when dumping state: %v", err)
