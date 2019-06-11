@@ -10,18 +10,19 @@ import (
 )
 
 // PodHeader is the header for pod files
-const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels\n"
+const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels FieldSelectors\n"
 
 // Pod is the summary of a kubernetes pod
 type Pod struct {
 	ResourceMeta
-	hostIP      string
-	podIP       string
-	nodeName    string
-	tolerations []string
-	containers  []string
-	claims      []string
-	phase       string
+	hostIP         string
+	podIP          string
+	nodeName       string
+	tolerations    []string
+	containers     []string
+	claims         []string
+	phase          string
+	fieldSelectors string
 }
 
 func getPhase(p *corev1.Pod) string {
@@ -50,6 +51,13 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	spec := pod.Spec
 	p.nodeName = spec.NodeName
 	p.phase = getPhase(pod)
+
+	fieldSelectors := make([]string, 0)
+	if p.nodeName != "" {
+		fieldSelectors = append(fieldSelectors, fmt.Sprintf("spec.nodeName=%s", p.nodeName))
+	}
+	fieldSelectors = append(fieldSelectors, fmt.Sprintf("status.phase=%s", pod.Status.Phase))
+	p.fieldSelectors = util.JoinSlicesOrNone(fieldSelectors, ",")
 
 	containers := spec.Containers
 	containers = append(containers, spec.InitContainers...)
@@ -107,6 +115,7 @@ func (p *Pod) ToString() string {
 		util.JoinSlicesOrNone(p.claims, ","),
 		p.resourceAge(),
 		p.labelsString(),
+		p.fieldSelectors,
 	}
 	return util.DumpLine(lst)
 }

@@ -157,6 +157,35 @@ _fzf_kubectl_complete()
         | awk "$end_print"
 }
 
+# $1 is awk end print command
+# $2 is filepath
+# $3 is context
+# $4 is query
+# $5 optional namespace
+_fzf_field_selector_complete()
+{
+    local end_print=$1
+    local file="$2"
+    local header_file="$2_header"
+    local context="$3"
+    local query=$4
+    local namespace="$5"
+    local field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
+    local main_header=$(_fzf_get_main_header $context $namespace)
+
+    local header="Namespace FieldSelector Occurrences"
+    local data=$(cut -d' ' -f 1,$field_selector_field "$file" \
+        | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | sort | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
+
+    if [[ -n $namespace ]]; then
+        data=$(echo "$data" | grep -w "^$namespace")
+    fi
+
+    (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
+        | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+        | awk "$end_print"
+}
+
 # $1 is filepath
 # $2 is context
 # $3 is query
@@ -189,6 +218,15 @@ _flag_selector_with_namespace()
 _flag_selector_without_namespace()
 {
     _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3"
+}
+
+# $1 is filepath
+# $2 is context
+# $3 is query
+_fzf_field_selector_with_namespace()
+{
+    local namespace_in_query=$(__get_parameter_in_query --namespace -n)
+    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$namespace_in_query"
 }
 
 __kubectl_get_containers()
@@ -237,7 +275,9 @@ __build_namespaced_compreply()
         # We have namespace in first position
         local current_namespace=$(__get_current_namespace)
         local namespace=${result[0]}
-        if [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
+        if [[ $namespace == "all-namespaces" ]]; then
+            COMPREPLY=( "${result[1]} --all-namespaces" )
+        elif [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
             COMPREPLY=( "${result[1]} -n ${result[0]}" )
         else
             COMPREPLY=( ${result[1]} )
@@ -257,6 +297,7 @@ __kubectl_parse_get()
     local filename
     local autocomplete_fun
     local flag_autocomplete_fun
+    local field_selector_autocomplete_fun
     local resource_name=$1
 
     case $resource_name in
@@ -267,6 +308,7 @@ __kubectl_parse_get()
             filename="pods"
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
+            field_selector_autocomplete_fun=_fzf_field_selector_with_namespace
             ;;
         sa | serviceaccount | serviceaccounts )
             filename="serviceaccounts"
@@ -370,6 +412,18 @@ __kubectl_parse_get()
             query=$last_part
         fi
         result=$($flag_autocomplete_fun $filepath $context $query)
+        __build_namespaced_compreply "${result[@]}"
+        return
+    fi
+
+    if [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
+        if [[ ($penultimate == "--field-selector") && ${COMP_LINE: -1} == " " ]]; then
+            return
+        fi
+        if [[ $penultimate == "--field-selector" ]]; then
+            query=$last_part
+        fi
+        result=$($field_selector_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
         return
     fi
