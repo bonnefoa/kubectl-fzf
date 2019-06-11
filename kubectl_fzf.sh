@@ -128,17 +128,14 @@ _fzf_kubectl_complete()
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
-    echo $label_field > /tmp/gra
     if [[ $is_flag == "with_namespace" ]]; then
-        local header=$(cut -d ' ' -f 1,$label_field "$header_file")
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]; print \"all-namespaces\",a[i]}}" "$file" | sort | uniq -c | sort -n -r \
+        local header="Namespace Labels Occurrences"
+        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]}}" "$file" | sort | uniq -c | sort -n -r \
             | awk '{print $2,$3,$1}')
-        header="$header Occurrences"
     elif [[ $is_flag == "without_namespace" ]]; then
-        local header=$(cut -d ' ' -f $label_field "$header_file")
+        local header="Labels Occurrences"
         local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) print a[i]}" "$file" | sort | uniq -c | sort -n -r \
             | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
-        header="$header Occurrences"
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
         local data=$(cut -d ' ' -f 1-$end_field "$file")
