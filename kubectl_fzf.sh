@@ -128,13 +128,16 @@ _fzf_kubectl_complete()
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
+    echo $label_field > /tmp/gra
     if [[ $is_flag == "with_namespace" ]]; then
         local header=$(cut -d ' ' -f 1,$label_field "$header_file")
-        local data=$(awk '{split($NF,a,","); for (i in a) print $1 " " a[i]}' "$file" | sort | uniq -c | sort -n -r | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]; print \"all-namespaces\",a[i]}}" "$file" | sort | uniq -c | sort -n -r \
+            | awk '{print $2,$3,$1}')
         header="$header Occurrences"
     elif [[ $is_flag == "without_namespace" ]]; then
         local header=$(cut -d ' ' -f $label_field "$header_file")
-        local data=$(awk '{split($NF,a,","); for (i in a) print a[i]}' "$file" | sort | uniq -c | sort -n -r | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) print a[i]}" "$file" | sort | uniq -c | sort -n -r \
+            | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
         header="$header Occurrences"
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
@@ -414,9 +417,7 @@ __kubectl_parse_get()
         result=$($flag_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
         return
-    fi
-
-    if [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
+    elif [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
         if [[ ($penultimate == "--field-selector") && ${COMP_LINE: -1} == " " ]]; then
             return
         fi
