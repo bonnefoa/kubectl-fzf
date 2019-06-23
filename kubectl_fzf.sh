@@ -345,6 +345,11 @@ __kubectl_parse_get()
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
+        secret | secrets )
+            filename="secrets"
+            autocomplete_fun=_fzf_with_namespace
+            flag_autocomplete_fun=_flag_selector_with_namespace
+            ;;
         ns | namespace | namespaces )
             filename="namespaces"
             autocomplete_fun=_fzf_without_namespace
