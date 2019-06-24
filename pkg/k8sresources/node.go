@@ -10,12 +10,13 @@ import (
 )
 
 // NodeHeader is the header line of csv result
-const NodeHeader = "Name Roles InstanceType Zone InternalIp Taints InstanceID Age Labels\n"
+const NodeHeader = "Name Roles Status InstanceType Zone InternalIp Taints InstanceID Age Labels\n"
 
 // Node is the summary of a kubernetes node
 type Node struct {
 	ResourceMeta
 	roles        []string
+	status       string
 	instanceType string
 	zone         string
 	instanceID   string
@@ -28,6 +29,17 @@ func NewNodeFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	n := &Node{}
 	n.FromRuntime(obj, config)
 	return n
+}
+
+func getNodeStatus(node *corev1.Node) string {
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == "Ready" {
+			if condition.Status != "True" {
+				return condition.Reason
+			}
+		}
+	}
+	return "Ready"
 }
 
 // FromRuntime builds object from the informer's result
@@ -48,6 +60,8 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 	if node.Spec.ProviderID != "" {
 		n.instanceID = util.LastURLPart(node.Spec.ProviderID)
 	}
+
+	n.status = getNodeStatus(node)
 
 	n.taints = make([]string, 0)
 	for _, t := range node.Spec.Taints {
@@ -79,6 +93,7 @@ func (n *Node) HasChanged(k K8sResource) bool {
 func (n *Node) ToString() string {
 	line := strings.Join([]string{n.name,
 		util.JoinSlicesOrNone(n.roles, ","),
+		n.status,
 		n.instanceType,
 		n.zone,
 		n.internalIP,
