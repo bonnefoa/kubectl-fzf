@@ -26,10 +26,29 @@ type Pod struct {
 }
 
 func getPhase(p *corev1.Pod) string {
+	for _, v := range p.Status.InitContainerStatuses {
+		if v.State.Waiting != nil && v.State.Waiting.Reason != "" {
+			return fmt.Sprintf("Init:%s", v.State.Waiting.Reason)
+		}
+		if v.State.Terminated != nil && v.State.Terminated.Reason != "Completed" {
+			return fmt.Sprintf("Init:%s", v.State.Terminated.Reason)
+		}
+	}
 	for _, v := range p.Status.ContainerStatuses {
-		if v.State.Waiting != nil && v.State.Waiting.Reason != "Completed" {
+		if v.State.Waiting != nil && v.State.Waiting.Reason != "" {
 			return v.State.Waiting.Reason
 		}
+		if v.State.Terminated != nil && v.State.Terminated.Reason != "Completed" {
+			return v.State.Terminated.Reason
+		}
+	}
+	for _, v := range p.Status.Conditions {
+		if v.Status != "True" && v.Reason != "" {
+			return v.Reason
+		}
+	}
+	if p.Status.Reason != "" {
+		return p.Status.Reason
 	}
 	return string(p.Status.Phase)
 }
