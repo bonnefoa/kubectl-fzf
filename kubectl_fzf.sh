@@ -304,7 +304,7 @@ __kubectl_parse_get()
         all )
             filename="pods"
             ;;
-        pod | pods )
+        po | pod | pods )
             filename="pods"
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
@@ -350,12 +350,12 @@ __kubectl_parse_get()
             autocomplete_fun=_fzf_without_namespace
             flag_autocomplete_fun=_flag_selector_without_namespace
             ;;
-        node | nodes )
+        no | node | nodes )
             filename="nodes"
             autocomplete_fun=_fzf_kubectl_node_complete
             flag_autocomplete_fun=_flag_selector_without_namespace
             ;;
-        deployment | deployments | deployments. | deployments.apps | deployments.extensions  )
+        deploy | deployment | deployments | deployments. | deployments.apps | deployments.extensions  )
             filename="deployments"
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
