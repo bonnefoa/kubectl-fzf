@@ -30,9 +30,13 @@ func (j *Job) FromRuntime(obj interface{}, config CtorConfig) {
 	job := obj.(*batchv1.Job)
 	glog.V(19).Infof("Reading meta %#v", job)
 	j.FromObjectMeta(job.ObjectMeta)
-	desired := int(*job.Spec.Completions)
-	successful := int(job.Status.Succeeded)
-	j.completions = fmt.Sprintf("%d/%d", successful, desired)
+
+	j.completions = "-"
+	if job.Spec.Completions != nil {
+		desired := int(*job.Spec.Completions)
+		successful := int(job.Status.Succeeded)
+		j.completions = fmt.Sprintf("%d/%d", successful, desired)
+	}
 
 	spec := job.Spec.Template.Spec
 	containers := spec.Containers
