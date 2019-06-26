@@ -60,7 +60,7 @@ _fzf_kubectl_pv_complete()
 
     local claim_to_pods=$(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_file | sort)
     local data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.2' -1 $claim_field_pv_file -2 1 -e None <(cut -d ' ' -f 1-$end_field "$pv_file" | sort -k $claim_field_pv_file) <(echo "$claim_to_pods"))
-    local num_fields=$(echo $header | wc -w)
+    local num_fields=$(echo $header | wc -w | sed 's/  *//g')
 
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
@@ -101,7 +101,7 @@ _fzf_kubectl_node_complete()
         | awk "{a[\$$node_name_field][length(a[\$$node_name_field])+1]=\$$pod_name_field} END { for (i in a) { printf i \" \"; k=0; for (j in a[i]) { printf (k>1?\",\":\"\") a[i][j]; k=2 } printf \"\n\" } } " \
         | sort)
     local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
-    local num_fields=$(echo $header | wc -w)
+    local num_fields=$(echo $header | wc -w | sed 's/  *//g')
 
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
@@ -149,7 +149,7 @@ _fzf_kubectl_complete()
     if [[ -n $grep_exclude ]]; then
         data=$(echo "$data" | grep -v $grep_exclude)
     fi
-    local num_fields=$(echo $header | wc -w)
+    local num_fields=$(echo $header | wc -w | sed 's/  *//g')
 
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
