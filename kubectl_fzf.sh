@@ -97,12 +97,10 @@ _fzf_kubectl_node_complete()
         fi
     done
 
-    local node_to_pods=$(grep -v $exclude_pods $pod_file \
-        | awk "{a[\$$node_name_field][length(a[\$$node_name_field])+1]=\$$pod_name_field} END { for (i in a) { printf i \" \"; k=0; for (j in a[i]) { printf (k>1?\",\":\"\") a[i][j]; k=2 } printf \"\n\" } } " \
-        | sort)
-    local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
+    local nodes=$(grep -v $exclude_pods $pod_file | cut -d' ' -f$node_name_field | sort | uniq)
+    local node_to_pods=$(for node in $nodes; do echo "$node $(grep $node $pod_file | grep -v $exclude_pods | cut -d' ' -f$pod_name_field | tr '\n' ',' )" | sed 's/,$//g'; done | sort)
+    local data=$(join -a1 -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
     local num_fields=$(echo $header | wc -w | sed 's/  *//g')
-
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
