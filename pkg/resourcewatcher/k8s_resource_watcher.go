@@ -2,11 +2,14 @@ package resourcewatcher
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchbetav1 "k8s.io/api/batch/v1beta1"
@@ -30,6 +33,7 @@ type ResourceWatcher struct {
 	namespace   string
 	cluster     string
 	cancelFuncs []context.CancelFunc
+	storeConfig StoreConfig
 }
 
 // WatchConfig provides the configuration to watch a specific kubernetes resource
@@ -44,19 +48,21 @@ type WatchConfig struct {
 }
 
 // NewResourceWatcher creates a new resource watcher on a given cluster
-func NewResourceWatcher(namespace string, config *restclient.Config) ResourceWatcher {
+func NewResourceWatcher(namespace string, config *restclient.Config,
+	storeConfig StoreConfig) ResourceWatcher {
 	var err error
 	resourceWatcher := ResourceWatcher{}
 	resourceWatcher.namespace = namespace
 	resourceWatcher.clientset, err = kubernetes.NewForConfig(config)
+	resourceWatcher.storeConfig = storeConfig
 
 	util.FatalIf(err)
 	return resourceWatcher
 }
 
 // Start begins the watch/poll of a given k8s resource
-func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) error {
-	store, err := NewK8sStore(cfg, storeConfig, ctorConfig)
+func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctorConfig k8sresources.CtorConfig) error {
+	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig)
 	if err != nil {
 		return err
 	}
@@ -118,6 +124,36 @@ func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) 
 		glog.Warningf("Error extracting list %s: %v", k8sStore.resourceName, err)
 	}
 	k8sStore.AddResourceList(lst)
+}
+
+// DumpAPIResources dumps api resources file
+func (r *ResourceWatcher) DumpAPIResources() error {
+	resourceName := "apiresources"
+	destFileName := util.GetDestFileName(r.storeConfig.CacheDir,
+		r.storeConfig.Cluster, resourceName)
+	util.WriteHeaderFile(k8sresources.APIResourceHeader, destFileName)
+	currentFile, err := ioutil.TempFile("", resourceName)
+	resourceLists, _ := r.clientset.Discovery().ServerPreferredResources()
+	if err != nil {
+		return err
+	}
+	for _, resourceList := range resourceLists {
+		for _, apiResource := range resourceList.APIResources {
+			a := k8sresources.APIResource{}
+			a.FromAPIResource(apiResource, resourceList)
+			_, err := currentFile.WriteString(a.ToString())
+			if err != nil {
+				return err
+			}
+		}
+	}
+	glog.Infof("Writing apiresources in %s", destFileName)
+	err = os.Rename(currentFile.Name(), destFileName)
+	if err != nil {
+		return errors.Wrapf(err, "Error moving file from %s to %s",
+			currentFile.Name(), destFileName)
+	}
+	return nil
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,

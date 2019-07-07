@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"sort"
 	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
+	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,12 +40,7 @@ type StoreConfig struct {
 // NewK8sStore creates a new store
 func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) (K8sStore, error) {
 	k := K8sStore{}
-	destDir := path.Join(storeConfig.CacheDir, storeConfig.Cluster)
-	destFileName := path.Join(destDir, cfg.resourceName)
-	err := os.MkdirAll(destDir, os.ModePerm)
-	if err != nil {
-		return k, errors.Wrapf(err, "Error creating directory %s", destDir)
-	}
+	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
 	currentFile, err := ioutil.TempFile("", k.resourceName)
 	if err != nil {
 		return k, errors.Wrapf(err, "Error creating file for %s", k.resourceName)
@@ -60,23 +55,9 @@ func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresourc
 	k.firstWrite = true
 	k.ctorConfig = ctorConfig
 
-	writeHeaderFile(cfg.header, destFileName)
+	util.WriteHeaderFile(cfg.header, destFileName)
 
 	return k, nil
-}
-
-func writeHeaderFile(header string, destFileName string) error {
-	headerFileName := fmt.Sprintf("%s_header", destFileName)
-	headerFile, err := os.Create(headerFileName)
-	if err != nil {
-		return errors.Wrapf(err, "Error creating header file %s", headerFileName)
-	}
-	headerFile.WriteString(header)
-	err = headerFile.Close()
-	if err != nil {
-		return errors.Wrapf(err, "Error closing header file %s", headerFileName)
-	}
-	return nil
 }
 
 func resourceKey(obj interface{}) string {

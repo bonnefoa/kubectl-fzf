@@ -1,5 +1,6 @@
 export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
+eval "`declare -f __kubectl_parse_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
@@ -284,6 +285,35 @@ __build_namespaced_compreply()
     else
         COMPREPLY=( $result )
     fi
+}
+
+__kubectl_get_resource()
+{
+    local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
+    local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
+    local last_char=${COMP_LINE: -1}
+    if [[ "$last_part" == "get" || ($penultimate == "get" && $last_char != " ") ]]; then
+        if [[ $penultimate == "get" ]]; then
+            query=$last_part
+        fi
+
+        local main_header=$(_fzf_get_main_header $context $namespace)
+        local current_context=$(kubectl config current-context)
+
+        local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
+        local header_file="${apiresources_file}_header"
+
+        local header=$(cat $header_file)
+        local data=$(cat $apiresources_file)
+
+        result=$( (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
+            | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+            | cut -d' ' -f1)
+
+        COMPREPLY=( $result )
+        return 0
+    fi
+    __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
 }
 
 # $1 is the type of resource to get

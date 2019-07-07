@@ -66,22 +66,24 @@ func handleSignals(cancel context.CancelFunc) {
 }
 
 func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
-	watcher := resourcewatcher.NewResourceWatcher(namespace, config)
-	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 	storeConfig := resourcewatcher.StoreConfig{
 		CacheDir:            cacheDir,
 		Cluster:             cluster,
 		TimeBetweenFullDump: timeBetweenFullDump,
 	}
+	watcher := resourcewatcher.NewResourceWatcher(namespace, config, storeConfig)
+	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 	ctorConfig := k8sresources.CtorConfig{
 		RoleBlacklist: roleBlacklist,
 	}
 
 	glog.Infof("Start cache build on cluster %s", config.Host)
 	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig, storeConfig, ctorConfig)
+		err := watcher.Start(ctx, watchConfig, ctorConfig)
 		util.FatalIf(err)
 	}
+	err := watcher.DumpAPIResources()
+	util.FatalIf(err)
 	return watcher
 }
 

@@ -2,7 +2,9 @@ package util
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
+	"path"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -18,6 +20,30 @@ func JoinStringMap(m map[string]string, exclude map[string]string, sep string) [
 		i++
 	}
 	return res
+}
+
+// GetDestFileName builds the destination filename
+func GetDestFileName(cacheDir string, cluster string, resourceName string) string {
+	destDir := path.Join(cacheDir, cluster)
+	destFileName := path.Join(destDir, resourceName)
+	err := os.MkdirAll(destDir, os.ModePerm)
+	FatalIf(err)
+	return destFileName
+}
+
+// WriteHeaderFile writes the header file content
+func WriteHeaderFile(header string, destFileName string) error {
+	headerFileName := fmt.Sprintf("%s_header", destFileName)
+	headerFile, err := os.Create(headerFileName)
+	if err != nil {
+		return errors.Wrapf(err, "Error creating header file %s", headerFileName)
+	}
+	headerFile.WriteString(header)
+	err = headerFile.Close()
+	if err != nil {
+		return errors.Wrapf(err, "Error closing header file %s", headerFileName)
+	}
+	return nil
 }
 
 // JoinSlicesOrNone joins a slice of string with separator or display None if there's no elements
