@@ -27,6 +27,7 @@ Table of Contents
 
 # Requirements
 
+go (minimum version 1.12)
 [fzf](https://github.com/junegunn/fzf)
 
 # Installation
