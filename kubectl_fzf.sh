@@ -289,6 +289,14 @@ __build_namespaced_compreply()
 
 __kubectl_get_resource()
 {
+    local current_context=$(kubectl config current-context)
+    local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
+    local header_file="${apiresources_file}_header"
+    if [[ ! -f ${apiresources_file} ]]; then
+        ___kubectl_get_resource $*
+        return
+    fi
+
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
     local last_char=${COMP_LINE: -1}
@@ -298,10 +306,6 @@ __kubectl_get_resource()
         fi
 
         local main_header=$(_fzf_get_main_header $context $namespace)
-        local current_context=$(kubectl config current-context)
-
-        local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
-        local header_file="${apiresources_file}_header"
 
         local header=$(cat $header_file)
         local data=$(cat $apiresources_file)
