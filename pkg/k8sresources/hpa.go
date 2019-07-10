@@ -49,7 +49,6 @@ func (h *Hpa) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (h *Hpa) ToString() string {
 	line := strings.Join([]string{h.namespace,
-		h.namespace,
 		h.name,
 		h.reference,
 		h.targets,
