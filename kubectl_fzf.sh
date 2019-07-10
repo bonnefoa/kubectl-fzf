@@ -363,8 +363,8 @@ __kubectl_parse_get()
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
-        job | job.batch | jobs | jobs. | jobs.batch )
-            filename="jobs"
+        hpa | horizontalpodautoscaler | horizontalpodautoscalers | horizontalpodautoscalers.autoscaling)
+            filename="horizontalpodautoscalers"
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;

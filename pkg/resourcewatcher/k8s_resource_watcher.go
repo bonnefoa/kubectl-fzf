@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchbetav1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -88,6 +89,7 @@ func (r *ResourceWatcher) Stop() {
 func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []WatchConfig {
 	coreGetter := r.clientset.CoreV1().RESTClient()
 	appsGetter := r.clientset.AppsV1().RESTClient()
+	autoscalingGetter := r.clientset.AutoscalingV1().RESTClient()
 	betaGetter := r.clientset.ExtensionsV1beta1().RESTClient()
 	batchGetterV1Beta := r.clientset.BatchV1beta1().RESTClient()
 	batchGetter := r.clientset.BatchV1().RESTClient()
@@ -106,6 +108,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 		WatchConfig{k8sresources.NewIngressFromRuntime, k8sresources.IngressHeader, "ingresses", betaGetter, &betav1.Ingress{}, true, 0},
 		WatchConfig{k8sresources.NewCronJobFromRuntime, k8sresources.CronJobHeader, "cronjobs", batchGetterV1Beta, &batchbetav1.CronJob{}, true, 0},
 		WatchConfig{k8sresources.NewJobFromRuntime, k8sresources.JobHeader, "jobs", batchGetter, &batchv1.Job{}, true, 0},
+		WatchConfig{k8sresources.NewHpaFromRuntime, k8sresources.HpaHeader, "horizontalpodautoscalers", autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, 0},
 		WatchConfig{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, 0},
 		WatchConfig{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
 		WatchConfig{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, nodePollingPeriod},
