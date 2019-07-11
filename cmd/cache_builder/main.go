@@ -43,10 +43,15 @@ func init() {
 		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
+	cache_dir, assigned := os.LookupEnv("KUBECTL_FZF_CACHE")
+	if assigned == false {
+		cache_dir = "/tmp/kubectl_fzf_cache/"
+	}
+
 	flag.BoolVar(&displayVersion, "version", false, "Display version and exit")
 	flag.BoolVar(&cpuProfile, "cpu-profile", false, "Start with cpu profiling")
 	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
-	flag.StringVar(&cacheDir, "dir", os.Getenv("KUBECTL_FZF_CACHE"), "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
+	flag.StringVar(&cacheDir, "dir", cache_dir, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.StringVar(&roleBlacklistStr, "role-blacklist", os.Getenv("KUBECTL_FZF_ROLE_BLACKLIST"), "List of roles to hide from node list, separated by commas")
 	flag.DurationVar(&timeBetweenFullDump, "time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
