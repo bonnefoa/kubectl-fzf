@@ -100,7 +100,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 		WatchConfig{k8sresources.NewServiceAccountFromRuntime, k8sresources.ServiceAccountHeader, "serviceaccounts", coreGetter, &corev1.Service{}, true, 0},
 		WatchConfig{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, 0},
 		WatchConfig{k8sresources.NewDaemonSetFromRuntime, k8sresources.DaemonSetHeader, "daemonsets", betaGetter, &betav1.DaemonSet{}, true, 0},
-		WatchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
+		//WatchConfig{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, 0},
 		WatchConfig{k8sresources.NewSecretFromRuntime, k8sresources.SecretHeader, "secrets", coreGetter, &corev1.Secret{}, true, 0},
 		WatchConfig{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, 0},
 		WatchConfig{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, 0},
