@@ -2,6 +2,7 @@ export KUBECTL_FZF_CACHE="/tmp/kubectl_fzf_cache"
 eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_parse_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
+eval "`declare -f __kubectl_get_resource | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 
