@@ -124,7 +124,7 @@ export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse)
 
 To enable hscroll
 ```shell
-KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
+export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
 ```
 
 To exclude all namespaces starting with "dev" and consul-agent resources:
