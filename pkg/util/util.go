@@ -22,6 +22,15 @@ func JoinStringMap(m map[string]string, exclude map[string]string, sep string) [
 	return res
 }
 
+// StringSliceToSet converts a string slice to a set like map
+func StringSliceToSet(lst []string) map[string]bool {
+	res := make(map[string]bool)
+	for _, el := range lst {
+		res[el] = true
+	}
+	return res
+}
+
 // GetDestFileName builds the destination filename
 func GetDestFileName(cacheDir string, cluster string, resourceName string) string {
 	destDir := path.Join(cacheDir, cluster)

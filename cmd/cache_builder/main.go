@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/pprof"
-	"strings"
 	"syscall"
 	"time"
 
@@ -17,20 +16,22 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
-	version                = "1.1"
+	version                = "1.2"
 	displayVersion         bool
 	cpuProfile             bool
 	kubeconfig             string
-	namespace              string
+	excludedNamespaces     []string
 	cacheDir               string
-	roleBlacklistStr       string
-	roleBlacklist          map[string]bool
+	roleBlacklist          []string
+	roleBlacklistSet       map[string]bool
 	timeBetweenFullDump    time.Duration
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
@@ -38,24 +39,45 @@ var (
 
 func init() {
 	if home := os.Getenv("HOME"); home != "" {
-		flag.StringVar(&kubeconfig, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+		flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
-		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
+		flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
-	cacheDirEnv, assigned := os.LookupEnv("KUBECTL_FZF_CACHE")
+	defaultCacheDirEnv, assigned := os.LookupEnv("KUBECTL_FZF_CACHE")
 	if assigned == false {
-		cacheDirEnv = "/tmp/kubectl_fzf_cache/"
+		defaultCacheDirEnv = "/tmp/kubectl_fzf_cache/"
 	}
 
-	flag.BoolVar(&displayVersion, "version", false, "Display version and exit")
-	flag.BoolVar(&cpuProfile, "cpu-profile", false, "Start with cpu profiling")
-	flag.StringVar(&namespace, "namespace", "", "Namespace to watch, empty for all namespaces")
-	flag.StringVar(&cacheDir, "dir", cacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
-	flag.StringVar(&roleBlacklistStr, "role-blacklist", os.Getenv("KUBECTL_FZF_ROLE_BLACKLIST"), "List of roles to hide from node list, separated by commas")
-	flag.DurationVar(&timeBetweenFullDump, "time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
-	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
-	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 600*time.Second, "Polling period for namespaces")
+	flag.Bool("version", false, "Display version and exit")
+	flag.Bool("cpu-profile", false, "Start with cpu profiling")
+	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by comma")
+	flag.String("cache-dir", defaultCacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
+	flag.String("role-blacklist", "", "List of roles to hide from node list, separated by commas")
+	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
+	flag.Duration("node-polling-period", 300*time.Second, "Polling period for nodes")
+	flag.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces")
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
+	viper.BindPFlags(pflag.CommandLine)
+
+	viper.SetConfigName(".kubectl_fzf")
+	viper.AddConfigPath("$HOME")
+	err := viper.ReadInConfig()
+	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		util.FatalIf(err)
+	}
+
+	displayVersion = viper.GetBool("version")
+	cpuProfile = viper.GetBool("cpu-profile")
+	kubeconfig = viper.GetString("kubeconfig")
+	cacheDir = viper.GetString("cache-dir")
+	roleBlacklist = viper.GetStringSlice("role-blacklist")
+	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
+	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
+	nodePollingPeriod = viper.GetDuration("node-polling-period")
+	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -76,10 +98,11 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 		Cluster:             cluster,
 		TimeBetweenFullDump: timeBetweenFullDump,
 	}
-	watcher := resourcewatcher.NewResourceWatcher(namespace, config, storeConfig)
+	watcher := resourcewatcher.NewResourceWatcher(config, storeConfig, excludedNamespaces)
+	watcher.FetchNamespaces()
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 	ctorConfig := k8sresources.CtorConfig{
-		RoleBlacklist: roleBlacklist,
+		RoleBlacklist: roleBlacklistSet,
 	}
 
 	glog.Infof("Start cache build on cluster %s", config.Host)
@@ -109,11 +132,8 @@ func getClientConfigAndCluster() (*restclient.Config, string) {
 }
 
 func processArgs() {
-	glog.Infof("Building role blacklist from \"%s\"", roleBlacklistStr)
-	roleBlacklist = make(map[string]bool)
-	for _, role := range strings.Split(roleBlacklistStr, ",") {
-		roleBlacklist[role] = true
-	}
+	glog.Infof("Building role blacklist from \"%s\"", roleBlacklist)
+	roleBlacklistSet = util.StringSliceToSet(roleBlacklist)
 }
 
 func main() {
