@@ -43,7 +43,8 @@ _fzf_kubectl_pv_complete()
 {
     local pv_file="$1"
     local context="$2"
-    local query="$3"
+    local split_by_namespace="$3"
+    local query="$4"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
 
@@ -54,13 +55,13 @@ _fzf_kubectl_pv_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
     header="$header MountedBy"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
+    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_*"
     local pod_header_file="${pod_file}_header"
     local claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
     local pod_namespace_field=$(_fzf_get_header_position $pod_header_file "Namespace")
 
-    local claim_to_pods=$(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_file | sort)
+    local claim_to_pods=$(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" ${pod_file}_* | sort)
     local data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.2' -1 $claim_field_pv_file -2 1 -e None <(cut -d ' ' -f 1-$end_field "$pv_file" | sort -k $claim_field_pv_file) <(echo "$claim_to_pods"))
     local num_fields=$(echo $header | wc -w | sed 's/  *//g')
 
@@ -74,7 +75,8 @@ _fzf_kubectl_node_complete()
 {
     local node_file="$1"
     local context="$2"
-    local query="$3"
+    local split_by_namespace="$3"
+    local query="$4"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
     local node_header_file="${node_file}_header"
@@ -83,7 +85,7 @@ _fzf_kubectl_node_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$node_header_file")
     header="$header Pods"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods"
+    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_*"
     local pod_header_file="${pod_file}_header"
     local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
@@ -99,7 +101,7 @@ _fzf_kubectl_node_complete()
         fi
     done
 
-    local node_to_pods=$(grep -v $exclude_pods $pod_file \
+    local node_to_pods=$(grep -v $exclude_pods ${pod_file}_* \
         | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } " \
         | sort)
     local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
@@ -123,23 +125,28 @@ _fzf_kubectl_complete()
     local file="$3"
     local header_file="$3_header"
     local context="$4"
-    local query=$5
-    local namespace="$6"
+    local split_by_namespace="$5"
+    local query=$6
+    local namespace="$7"
     local label_field=$(_fzf_get_header_position $header_file "Labels")
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
+    if [[ "$split_by_namespace" == "true" ]]; then
+        file=${file}_ns_*
+    fi
+
     if [[ $is_flag == "with_namespace" ]]; then
         local header="Namespace Labels Occurrences"
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]}}" "$file" | sort | uniq -c | sort -n -r \
+        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]}}" $file | sort | uniq -c | sort -n -r \
             | awk '{print $2,$3,$1}')
     elif [[ $is_flag == "without_namespace" ]]; then
         local header="Labels Occurrences"
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) print a[i]}" "$file" | sort | uniq -c | sort -n -r \
+        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) print a[i]}" $file | sort | uniq -c | sort -n -r \
             | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
-        local data=$(cut -d ' ' -f 1-$end_field "$file")
+        local data=$(cut -d ' ' -f 1-$end_field $file)
     fi
 
     if [[ -n $namespace ]]; then
@@ -169,8 +176,9 @@ _fzf_field_selector_complete()
     local file="$2"
     local header_file="$2_header"
     local context="$3"
-    local query=$4
-    local namespace="$5"
+    local split_by_namespace=$4
+    local query=$5
+    local namespace="$6"
     local field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
     local main_header=$(_fzf_get_main_header $context $namespace)
 
@@ -189,45 +197,50 @@ _fzf_field_selector_complete()
 
 # $1 is filepath
 # $2 is context
-# $3 is query
+# $3 is split_by_namespace
+# $4 is query
 _fzf_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1 " " $2}' "false" $1 "$2" "$3" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1 " " $2}' "false" $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is query
+# $3 is split_by_namespace
+# $4 is query
 _fzf_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3"
+    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3" "$4"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is query
+# $3 is split_by_namespace
+# $4 is query
 _flag_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1 " " $2}' "with_namespace" $1 "$2" "$3" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1 " " $2}' "with_namespace" $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is query
-# $3 is context
+# $3 is split_by_namespace
+# $4 is context
 _flag_selector_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3"
+    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3" "$4"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is query
+# $3 is split_by_namespace
+# $4 is query
 _fzf_field_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$namespace_in_query"
+    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
 __kubectl_get_containers()
@@ -235,7 +248,7 @@ __kubectl_get_containers()
     local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
     local main_header=$(_fzf_get_main_header $current_context "")
-    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
+    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_* \
         | tr ',' '\n' \
         | sort)
     if [[ $data == "" ]]; then
@@ -333,6 +346,7 @@ __kubectl_parse_get()
     local flag_autocomplete_fun
     local field_selector_autocomplete_fun
     local resource_name=$1
+    local split_by_namespace=false
 
     case $resource_name in
         all )
@@ -341,6 +355,7 @@ __kubectl_parse_get()
         po | pod | pods )
             filename="pods"
             autocomplete_fun=_fzf_with_namespace
+            split_by_namespace=true
             flag_autocomplete_fun=_flag_selector_with_namespace
             field_selector_autocomplete_fun=_fzf_field_selector_with_namespace
             ;;
@@ -376,6 +391,7 @@ __kubectl_parse_get()
             ;;
         cm | configmap | configmaps )
             filename="configmaps"
+            split_by_namespace=true
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
@@ -438,7 +454,7 @@ __kubectl_parse_get()
 
     local filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
 
-    if [[ ! -f $filepath ]]; then
+    if [[ ! -f ${filepath}_header ]]; then
         ___kubectl_parse_get $*
         return
     fi
@@ -450,7 +466,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
             query=$last_part
         fi
-        result=$($flag_autocomplete_fun $filepath $context $query)
+        result=$($flag_autocomplete_fun $filepath $context $split_by_namespace $query)
         __build_namespaced_compreply "${result[@]}"
         return
     elif [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
@@ -460,7 +476,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--field-selector" ]]; then
             query=$last_part
         fi
-        result=$($field_selector_autocomplete_fun $filepath $context $query)
+        result=$($field_selector_autocomplete_fun $filepath $context $split_by_namespace $query)
         __build_namespaced_compreply "${result[@]}"
         return
     fi
@@ -485,7 +501,7 @@ __kubectl_parse_get()
             fi
     esac
 
-    result=$($autocomplete_fun $filepath $context $query)
+    result=$($autocomplete_fun $filepath $context $split_by_namespace $query)
     if [[ -z "$result" ]]; then
         return
     fi
