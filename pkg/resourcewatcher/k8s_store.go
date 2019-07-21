@@ -38,17 +38,20 @@ type StoreConfig struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) (K8sStore, error) {
+func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, namespace string) (K8sStore, error) {
 	k := K8sStore{}
 	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
-	currentFile, err := ioutil.TempFile("", k.resourceName)
+	currentFile, err := ioutil.TempFile("", cfg.resourceName)
 	if err != nil {
-		return k, errors.Wrapf(err, "Error creating file for %s", k.resourceName)
+		return k, errors.Wrapf(err, "Error creating file for %s", cfg.resourceName)
 	}
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
 	k.destFileName = destFileName
+	if namespace != "" {
+		k.destFileName = fmt.Sprintf("%s_ns_%s", destFileName, namespace)
+	}
 	k.currentFile = currentFile
 	k.lastFullDump = time.Time{}
 	k.storeConfig = storeConfig
