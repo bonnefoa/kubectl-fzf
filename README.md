@@ -7,16 +7,19 @@ kubectl-fzf provides a fast and powerful fzf autocompletion for kubectl.
 Table of Contents
 =================
 
-   * [Features](#features)
-   * [Requirements](#requirements)
-   * [Installation](#installation)
-      * [Using zplug](#using-zplug)
-   * [Usage](#usage)
-      * [cache_builder](#cache_builder)
-         * [Watch a specific namespace](#watch-a-specific-namespace)
-      * [kubectl_fzf](#kubectl_fzf)
-         * [fzf options](#fzf-options)
-   * [Caveats](#caveats)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  * [Using zplug](#using-zplug)
+- [Usage](#usage)
+  * [cache_builder](#cache_builder)
+    + [Configuration](#configuration)
+  * [kubectl_fzf](#kubectl_fzf)
+    + [Options](#options)
+- [Caveats](#caveats)
+- [Troubleshooting](#troubleshooting)
+  * [Debug logs](#debug-logs)
+  * [The normal autocompletion is used](#the-normal-autocompletion-is-used)
 
 # Features
 
@@ -80,18 +83,23 @@ The initial resource listing can be long on big clusters and autocompletion migh
 
 `connect: connection refused` or similar messages are expected if there's network issues/interruptions and `cache_builder` will automatically reconnect.
 
-### Troubleshooting
+### Configuration
 
-To launch with debug logs activated
-```shell
-cache_builder -logtostderr -v 14
-```
+You can configure `cache_builder` with the configuration file `$HOME/.kubectl_fzf.yaml`
 
-### Watch a specific namespace
-
-By default, all namespaces are watched. If you want to build the cache for a specific namespace, run
-```shell
-cache_builder -n mynamespace
+```yaml
+# Role to hide from the role list in node completion
+role-blacklist:
+  - common-node
+# Namespaces to exclude for configmap and pod listing
+# Regexps are accepted
+excluded-namespaces:
+  - consul-agent
+  - datadog-agent
+  - coredns
+  - kube-system
+  - kube2iam
+  - dev-.*
 ```
 
 ## kubectl_fzf
@@ -106,7 +114,6 @@ kubectl get pod <TAB>
 | Environment variable        | Description                                            | Default                                     |
 | --------------------        | --------------------                                   | --------------------                        |
 | KUBECTL_FZF_CACHE           | Cache files location                                   | `/tmp/kubectl_fzf_cache`                    |
-| KUBECTL_FZF_ROLE_BLACKLIST  | List of roles to hide from node list (comma separated) | ""                                          |
 | KUBECTL_FZF_EXCLUDE         | Exclusion patterns passed to the autocompletion        | ""                                          |
 | KUBECTL_FZF_OPTIONS         | fzf parameters                                         | `-1 --header-lines=2 --layout reverse -e`   |
 
@@ -125,11 +132,6 @@ To exclude all namespaces starting with "dev" and consul-agent resources:
 export KUBECTL_FZF_EXCLUDE=("^dev" "consul-agent")
 ```
 
-To hide `common_node` from the node's role list
-```shell
-export KUBECTL_FZF_ROLE_BLACKLIST="common_node"
-```
-
 # Caveats
 
 With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
@@ -146,6 +148,13 @@ If you're using an out-of-the-box `oh-my-zsh` configuration, the default `matche
 Changing the zstyle to `zstyle ':completion:*' matcher-list 'r:|=*'` fixes the issue.
 
 # Troubleshooting
+
+## Debug logs
+
+To launch cache_builder with debug logs
+```shell
+cache_builder -logtostderr -v 14
+```
 
 ## The normal autocompletion is used
 

@@ -1,0 +1,12 @@
+# Role to hide from the role list in node completion
+role-blacklist:
+  - compute
+# Namespaces to exclude for configmap and pod
+# Regexps are accepted
+excluded-namespaces:
+  - consul-agent
+  - datadog-agent
+  - coredns
+  - kube-system
+  - kube2iam
+  - dev-.*
