@@ -86,7 +86,7 @@ _fzf_kubectl_node_complete()
     header="$header Pods"
 
     local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_*"
-    local pod_header_file="${pod_file}_header"
+    local pod_header_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_header"
     local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
 
@@ -101,7 +101,7 @@ _fzf_kubectl_node_complete()
         fi
     done
 
-    local node_to_pods=$(grep -v $exclude_pods ${pod_file}_* \
+    local node_to_pods=$(grep -v $exclude_pods ${pod_file} \
         | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } " \
         | sort)
     local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
@@ -182,8 +182,12 @@ _fzf_field_selector_complete()
     local field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
     local main_header=$(_fzf_get_main_header $context $namespace)
 
+    if [[ "$split_by_namespace" == "true" ]]; then
+        file=${file}_ns_*
+    fi
+
     local header="Namespace FieldSelector Occurrences"
-    local data=$(cut -d' ' -f 1,$field_selector_field "$file" \
+    local data=$(cut -d' ' -f 1,$field_selector_field $file \
         | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | sort | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
 
     if [[ -n $namespace ]]; then
