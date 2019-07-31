@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
+	"kubectlfzf/pkg/k8sresources"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

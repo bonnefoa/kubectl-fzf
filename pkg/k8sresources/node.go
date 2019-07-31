@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"kubectlfzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
 

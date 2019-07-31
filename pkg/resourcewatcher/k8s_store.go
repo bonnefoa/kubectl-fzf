@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
