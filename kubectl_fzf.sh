@@ -55,8 +55,8 @@ _fzf_kubectl_pv_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
     header="$header MountedBy"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_*"
-    local pod_header_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_header"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_ns_*"
+    local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
     local pod_namespace_field=$(_fzf_get_header_position $pod_header_file "Namespace")
