@@ -212,7 +212,7 @@ _fzf_field_selector_complete()
 _fzf_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1 " " $2}' "false" $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
 # $1 is filepath
@@ -231,7 +231,7 @@ _fzf_without_namespace()
 _flag_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1 " " $2}' "with_namespace" $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
 # $1 is filepath
