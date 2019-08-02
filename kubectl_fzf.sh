@@ -39,6 +39,30 @@ _fzf_get_exclude_pattern()
     echo "$grep_exclude"
 }
 
+_fzf_get_node_to_pods()
+{
+    local context="$1"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_ns_*"
+    local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
+    local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
+    local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
+
+    local daemonsets_file="${KUBECTL_FZF_CACHE}/${context}/daemonsets"
+    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
+    local exclude_pods=""
+    for daemonset in $daemonsets ; do
+        if [[ -z $exclude_pods ]]; then
+            exclude_pods=$daemonset
+        else
+            exclude_pods="$exclude_pods\|$daemonset"
+        fi
+    done
+
+    grep -v $exclude_pods $pod_file \
+        | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } " \
+        | sort
+}
+
 _fzf_kubectl_pv_complete()
 {
     local pv_file="$1"
@@ -85,25 +109,7 @@ _fzf_kubectl_node_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$node_header_file")
     header="$header Pods"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_*"
-    local pod_header_file="${KUBECTL_FZF_CACHE}/${current_context}/pods_header"
-    local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
-    local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
-
-    local daemonsets_file="${KUBECTL_FZF_CACHE}/${current_context}/daemonsets"
-    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
-    local exclude_pods=""
-    for daemonset in $daemonsets ; do
-        if [[ -z $exclude_pods ]]; then
-            exclude_pods=$daemonset
-        else
-            exclude_pods="$exclude_pods\|$daemonset"
-        fi
-    done
-
-    local node_to_pods=$(grep -v $exclude_pods ${pod_file} \
-        | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } " \
-        | sort)
+    local node_to_pods=$(_fzf_get_node_to_pods $context)
     local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
     local num_fields=$(echo $header | wc -w | sed 's/  *//g')
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
