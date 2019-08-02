@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // K8sResource is the generic information of a k8s entity
@@ -29,6 +31,22 @@ func (r *ResourceMeta) FromObjectMeta(meta metav1.ObjectMeta) {
 	r.namespace = meta.Namespace
 	r.labels = meta.Labels
 	r.creationTime = meta.CreationTimestamp.Time
+}
+
+// FromDynamicMeta copies meta information to the object
+func (r *ResourceMeta) FromDynamicMeta(u *unstructured.Unstructured) {
+	metadata := u.Object["metadata"].(map[string]interface{})
+	r.name = metadata["name"].(string)
+	r.namespace = metadata["namespace"].(string)
+	var err error
+	var found bool
+	r.labels, found, err = unstructured.NestedStringMap(u.Object, "metadata", "labels")
+	util.FatalIf(err)
+	if !found {
+		glog.V(3).Infof("metadata.labels was not found in %#v", u.Object)
+	}
+	r.creationTime, err = time.Parse(time.RFC3339, metadata["creationTimestamp"].(string))
+	util.FatalIf(err)
 }
 
 func (r *ResourceMeta) resourceAge() string {
