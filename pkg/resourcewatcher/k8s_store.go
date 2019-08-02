@@ -13,6 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 )
@@ -64,8 +65,21 @@ func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresourc
 }
 
 func resourceKey(obj interface{}) string {
-	o := obj.(metav1.ObjectMetaAccessor).GetObjectMeta()
-	return fmt.Sprintf("%s_%s", o.GetNamespace(), o.GetName())
+	name := "None"
+	namespace := "None"
+	switch v := obj.(type) {
+	case metav1.ObjectMetaAccessor:
+		o := v.GetObjectMeta()
+		namespace = o.GetNamespace()
+		name = o.GetName()
+	case *unstructured.Unstructured:
+		metadata := v.Object["metadata"].(map[string]interface{})
+		name = metadata["name"].(string)
+		namespace = metadata["namespace"].(string)
+	default:
+		glog.Warningf("Unknown type %v", obj)
+	}
+	return fmt.Sprintf("%s_%s", namespace, name)
 }
 
 // AddResourceList clears current state add the objects to the store.
@@ -103,6 +117,7 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 	switch v := obj.(type) {
 	case cache.DeletedFinalStateUnknown:
 		key = resourceKey(v.Obj)
+	case unstructured.Unstructured:
 	case metav1.ObjectMetaAccessor:
 		key = resourceKey(obj)
 	default:
