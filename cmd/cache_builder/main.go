@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -27,6 +28,7 @@ var (
 	version                = "1.2"
 	displayVersion         bool
 	cpuProfile             bool
+	inCluster              bool
 	kubeconfig             string
 	excludedNamespaces     []string
 	cacheDir               string
@@ -51,6 +53,7 @@ func init() {
 
 	flag.Bool("version", false, "Display version and exit")
 	flag.Bool("cpu-profile", false, "Start with cpu profiling")
+	flag.Bool("in-cluster", false, "Use in-cluster configuration")
 	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by comma")
 	flag.String("cache-dir", defaultCacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.String("role-blacklist", "", "List of roles to hide from node list, separated by commas")
@@ -71,6 +74,7 @@ func init() {
 
 	displayVersion = viper.GetBool("version")
 	cpuProfile = viper.GetBool("cpu-profile")
+	inCluster = viper.GetBool("in-cluster")
 	kubeconfig = viper.GetString("kubeconfig")
 	cacheDir = viper.GetString("cache-dir")
 	roleBlacklist = viper.GetStringSlice("role-blacklist")
@@ -115,10 +119,15 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 	return watcher
 }
 
-func getClientConfigAndCluster() (*restclient.Config, string) {
+func getClientConfigAndCluster() (*rest.Config, string) {
+	if inCluster {
+		restConfig, err := rest.InClusterConfig()
+		util.FatalIf(err)
+		return restConfig, "incluster"
+	}
+
 	configInBytes, err := ioutil.ReadFile(kubeconfig)
 	util.FatalIf(err)
-
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(configInBytes)
 	util.FatalIf(err)
 
@@ -126,9 +135,9 @@ func getClientConfigAndCluster() (*restclient.Config, string) {
 	util.FatalIf(err)
 	cluster := rawConfig.CurrentContext
 
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	util.FatalIf(err)
-	return restConfig, cluster
+	return cfg, cluster
 }
 
 func processArgs() {
