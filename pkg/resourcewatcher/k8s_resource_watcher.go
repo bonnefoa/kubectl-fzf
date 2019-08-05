@@ -185,7 +185,7 @@ func (r *ResourceWatcher) DumpAPIResources() error {
 	destFileName := util.GetDestFileName(r.storeConfig.CacheDir,
 		r.storeConfig.Cluster, resourceName)
 	util.WriteHeaderFile(k8sresources.APIResourceHeader, destFileName)
-	currentFile, err := ioutil.TempFile("", resourceName)
+	currentFile, err := ioutil.TempFile(r.storeConfig.CacheDir, resourceName)
 	resourceLists, _ := r.clientset.Discovery().ServerPreferredResources()
 	if err != nil {
 		return err

@@ -42,7 +42,7 @@ type StoreConfig struct {
 func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, namespace string) (K8sStore, error) {
 	k := K8sStore{}
 	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
-	currentFile, err := ioutil.TempFile("", cfg.resourceName)
+	currentFile, err := ioutil.TempFile(storeConfig.CacheDir, cfg.resourceName)
 	if err != nil {
 		return k, errors.Wrapf(err, "Error creating file for %s", cfg.resourceName)
 	}
@@ -201,7 +201,7 @@ func (k *K8sStore) DumpFullState() error {
 	}
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
-	tempFile, err := ioutil.TempFile("", k.resourceName)
+	tempFile, err := ioutil.TempFile(k.storeConfig.CacheDir, k.resourceName)
 	if err != nil {
 		return errors.Wrapf(err, "Error creating temp file for resource %s",
 			k.resourceName)
