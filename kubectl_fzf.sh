@@ -3,6 +3,7 @@ eval "`declare -f __kubectl_parse_get | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_parse_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_resource | sed '1s/.*/_&/'`"
+eval "`declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 
@@ -351,12 +352,15 @@ __kubectl_parse_get()
     local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
+    echo "penultimate=$penultimate" >> /tmp/t.txt
+    echo "last_part=$last_part" >> /tmp/t.txt
 
     local filename
     local autocomplete_fun
     local flag_autocomplete_fun
     local field_selector_autocomplete_fun
     local resource_name=$1
+    echo "resource_name=$resource_name" >> /tmp/t.txt
     local split_by_namespace=false
 
     case $resource_name in
@@ -518,6 +522,25 @@ __kubectl_parse_get()
     fi
 
     __build_namespaced_compreply "${result[@]}"
+}
+
+__kubectl_handle_filename_extension_flag()
+{
+    local ext="$1"
+
+    findNames=$( sed "s/|/ -o -name *./g" <<< "-name *.$ext" )
+    COMPREPLY=$( ((git ls-files --exclude-standard --others --modified | grep --color=always .);  (ag -g "$ext" || find . -type f -o $findNames) | sed 's|^./||g') | __kubectl_fzf_preview )
+}
+
+__kubectl_fzf_preview()
+{
+    fzf --ansi --no-sort --reverse --preview '[[ $(file --mime {}) =~ binary ]] &&
+        echo {} is a binary file ||
+        (bat --style=numbers --color=always {} ||
+        highlight -O ansi -l {} ||
+        coderay {} ||
+        rougify {} ||
+        cat {}) 2> /dev/null | head -500'
 }
 
 # Reregister complete function without '-o default' as we don't want to
