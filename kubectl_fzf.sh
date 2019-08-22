@@ -527,8 +527,9 @@ __kubectl_handle_filename_extension_flag()
 
     x="${COMP_WORDS[COMP_CWORD]}"
     if [[ "${x}" == "" ]]; then
-        findNames=$( sed "s/|/ -o -name *./g" <<< "-name *.$ext" )
-        COMPREPLY=$( ((git ls-files --exclude-standard --others --modified | grep --color=always .) 2> /dev/null; (ag -g "$ext" || find . -type f -o $findNames) | sed 's|^./||g') 2> /dev/null | __kubectl_fzf_preview )
+        findNames_0=$( sed "s/|/' '*./g" <<< "'*.$ext'" )
+        findNames_1=$( sed "s/|/ -o -name *./g" <<< "-name *.$ext" )
+        COMPREPLY=$( ((eval "git diff HEAD --name-only --diff-filter ACMR --relative -- $findNames_0" | grep --color=always .) 2> /dev/null; (ag -g "$ext" || find . -type f $findNames_1) | sed 's|^./||g') 2> /dev/null | __kubectl_fzf_preview )
     else
         _filedir "@(${ext})"
     fi
