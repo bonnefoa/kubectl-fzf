@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/resourcewatcher"
 	"kubectlfzf/pkg/util"
@@ -26,8 +25,6 @@ import (
 	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	//"errors"
 )
 
 var (
@@ -44,10 +41,10 @@ var (
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
 
-	daemonCmd              string
-	daemonName             string
-	daemonPidFilePath      string
-	daemonLogFilePath      string
+	daemonCmd         string
+	daemonName        string
+	daemonPidFilePath string
+	daemonLogFilePath string
 )
 
 func init() {
@@ -75,9 +72,12 @@ func init() {
 	flag.String("daemon", "", `Send signal to the daemon:
   start - run as a daemon
   stop — fast shutdown`)
-	flag.String("daemon-name", path.Base(os.Args[0]), "Daemon name")
-	flag.String("daemon-pid-file", "", "Daemon's PID file path")
-	flag.String("daemon-log-file", "", "Daemon's log file path")
+	defaultName := path.Base(os.Args[0])
+	flag.String("daemon-name", defaultName, "Daemon name")
+	defaultPidPath := path.Join("/tmp/", defaultName+".pid")
+	defaultLogPath := path.Join("/tmp/", defaultName+".log")
+	flag.String("daemon-pid-file", defaultPidPath, "Daemon's PID file path")
+	flag.String("daemon-log-file", defaultLogPath, "Daemon's log file path")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
@@ -105,13 +105,7 @@ func init() {
 	daemonCmd = viper.GetString("daemon")
 	daemonName = viper.GetString("daemon-name")
 	daemonPidFilePath = viper.GetString("daemon-pid-file")
-	if daemonPidFilePath == "" {
-		daemonPidFilePath = path.Join("/tmp", daemonName + ".pid")
-	}
 	daemonLogFilePath = viper.GetString("daemon-log-file")
-	if daemonLogFilePath == "" {
-		daemonLogFilePath = path.Join("/tmp", daemonName + ".log")
-	}
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -127,20 +121,8 @@ func handleSignals(cancel context.CancelFunc) {
 }
 
 func termHandler(sig os.Signal) error {
-	glog.Infoln("terminating...")
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	//stop <- struct{}{}
-	//if sig == syscall.SIGQUIT {
-	//	<-done
-	//}
+	glog.Infoln("Terminating daemon...")
 	return daemon.ErrStop
-}
-
-func reloadHandler(sig os.Signal) error {
-	glog.Infoln("configuration reloaded")
-	return nil
 }
 
 func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
@@ -240,10 +222,7 @@ func main() {
 		return
 	}
 
-	glog.Infof("Running as a daemon...")
-	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "quit"), syscall.SIGQUIT, termHandler)
 	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "stop"), syscall.SIGTERM, termHandler)
-	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "reload"), syscall.SIGHUP, reloadHandler)
 
 	cntxt := &daemon.Context{
 		PidFileName: daemonPidFilePath,
@@ -256,6 +235,7 @@ func main() {
 	}
 
 	if len(daemon.ActiveFlags()) > 0 {
+		glog.Infof("Stopping daemon...")
 		d, err := cntxt.Search()
 		if err != nil {
 			glog.Fatalf("Unable send signal to the daemon: %s", err.Error())
@@ -263,6 +243,7 @@ func main() {
 		daemon.SendCommands(d)
 		return
 	}
+	glog.Infof("Starting daemon...")
 
 	d, err := cntxt.Reborn()
 	if err != nil {
@@ -286,4 +267,3 @@ func main() {
 	glog.Infoln("daemon terminated")
 
 }
-
