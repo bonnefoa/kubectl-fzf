@@ -7,19 +7,21 @@ kubectl-fzf provides a fast and powerful fzf autocompletion for kubectl.
 Table of Contents
 =================
 
+- [Kubectl-fzf](#kubectl-fzf)
+- [Table of Contents](#table-of-contents)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
-  * [Using zplug](#using-zplug)
+  - [Using zplug](#using-zplug)
 - [Usage](#usage)
-  * [cache_builder](#cache_builder)
-    + [Configuration](#configuration)
-  * [kubectl_fzf](#kubectl_fzf)
-    + [Options](#options)
+  - [cache_builder](#cachebuilder)
+    - [Configuration](#configuration)
+  - [kubectl_fzf](#kubectlfzf)
+    - [Options](#options)
 - [Caveats](#caveats)
 - [Troubleshooting](#troubleshooting)
-  * [Debug logs](#debug-logs)
-  * [The normal autocompletion is used](#the-normal-autocompletion-is-used)
+  - [Debug logs](#debug-logs)
+  - [The normal autocompletion is used](#the-normal-autocompletion-is-used)
 
 # Features
 
@@ -52,7 +54,7 @@ echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.sh" >> ~/.b
 
 # zsh version
 echo "source <(kubectl completion zsh)" >> ~/.zshrc
-echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.sh" >> ~/.zshrc
+echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.plugin.zsh" >> ~/.zshrc
 ```
 
 ## Using zplug

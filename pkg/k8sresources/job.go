@@ -3,7 +3,7 @@ package k8sresources
 import (
 	"fmt"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	batchv1 "k8s.io/api/batch/v1"
 )

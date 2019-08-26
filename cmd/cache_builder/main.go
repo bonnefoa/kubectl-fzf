@@ -4,17 +4,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/sevlyar/go-daemon"
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"runtime/pprof"
 	"syscall"
 	"time"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
-	"github.com/bonnefoa/kubectl-fzf/pkg/resourcewatcher"
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/resourcewatcher"
+	"kubectlfzf/pkg/util"
+
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -22,6 +26,8 @@ import (
 	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	//"errors"
 )
 
 var (
@@ -37,6 +43,11 @@ var (
 	timeBetweenFullDump    time.Duration
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
+
+	daemonCmd              string
+	daemonName             string
+	daemonPidFilePath      string
+	daemonLogFilePath      string
 )
 
 func init() {
@@ -61,8 +72,16 @@ func init() {
 	flag.Duration("node-polling-period", 300*time.Second, "Polling period for nodes")
 	flag.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces")
 
+	flag.String("daemon", "", `Send signal to the daemon:
+  start - run as a daemon
+  stop — fast shutdown`)
+	flag.String("daemon-name", path.Base(os.Args[0]), "Daemon name")
+	flag.String("daemon-pid-file", "", "Daemon's PID file path")
+	flag.String("daemon-log-file", "", "Daemon's log file path")
+
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
+	viper.AutomaticEnv()
 	viper.BindPFlags(pflag.CommandLine)
 
 	viper.SetConfigName(".kubectl_fzf")
@@ -82,6 +101,17 @@ func init() {
 	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 	nodePollingPeriod = viper.GetDuration("node-polling-period")
 	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
+
+	daemonCmd = viper.GetString("daemon")
+	daemonName = viper.GetString("daemon-name")
+	daemonPidFilePath = viper.GetString("daemon-pid-file")
+	if daemonPidFilePath == "" {
+		daemonPidFilePath = path.Join("/tmp", daemonName + ".pid")
+	}
+	daemonLogFilePath = viper.GetString("daemon-log-file")
+	if daemonLogFilePath == "" {
+		daemonLogFilePath = path.Join("/tmp", daemonName + ".log")
+	}
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -94,6 +124,23 @@ func handleSignals(cancel context.CancelFunc) {
 			cancel()
 		}
 	}
+}
+
+func termHandler(sig os.Signal) error {
+	glog.Infoln("terminating...")
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	//stop <- struct{}{}
+	//if sig == syscall.SIGQUIT {
+	//	<-done
+	//}
+	return daemon.ErrStop
+}
+
+func reloadHandler(sig os.Signal) error {
+	glog.Infoln("configuration reloaded")
+	return nil
 }
 
 func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
@@ -145,11 +192,7 @@ func processArgs() {
 	roleBlacklistSet = util.StringSliceToSet(roleBlacklist)
 }
 
-func main() {
-	flag.Set("logtostderr", "true")
-	flag.Parse()
-	processArgs()
-
+func start() {
 	if displayVersion {
 		fmt.Printf("%s", version)
 		os.Exit(0)
@@ -168,6 +211,7 @@ func main() {
 	currentRestConfig, currentCluster := getClientConfigAndCluster()
 	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster)
 	ticker := time.NewTicker(time.Second * 5)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -185,3 +229,61 @@ func main() {
 		}
 	}
 }
+
+func main() {
+	flag.Set("logtostderr", "true")
+	flag.Parse()
+	processArgs()
+
+	if daemonCmd == "" && !daemon.WasReborn() {
+		start()
+		return
+	}
+
+	glog.Infof("Running as a daemon...")
+	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "quit"), syscall.SIGQUIT, termHandler)
+	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "stop"), syscall.SIGTERM, termHandler)
+	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "reload"), syscall.SIGHUP, reloadHandler)
+
+	cntxt := &daemon.Context{
+		PidFileName: daemonPidFilePath,
+		PidFilePerm: 0644,
+		LogFileName: daemonLogFilePath,
+		LogFilePerm: 0640,
+		WorkDir:     "./",
+		Umask:       027,
+		Args:        []string{daemonName},
+	}
+
+	if len(daemon.ActiveFlags()) > 0 {
+		d, err := cntxt.Search()
+		if err != nil {
+			glog.Fatalf("Unable send signal to the daemon: %s", err.Error())
+		}
+		daemon.SendCommands(d)
+		return
+	}
+
+	d, err := cntxt.Reborn()
+	if err != nil {
+		glog.Fatalln(err)
+	}
+	if d != nil {
+		return
+	}
+	defer cntxt.Release()
+
+	glog.Infoln("- - - - - - - - - - - - - - -")
+	glog.Infoln("daemon started")
+
+	go start()
+
+	err = daemon.ServeSignals()
+	if err != nil {
+		glog.Infof("Error: %s", err.Error())
+	}
+
+	glog.Infoln("daemon terminated")
+
+}
+

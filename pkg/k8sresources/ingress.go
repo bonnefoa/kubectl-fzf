@@ -1,7 +1,7 @@
 package k8sresources
 
 import (
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"kubectlfzf/pkg/util"
 	betav1 "k8s.io/api/extensions/v1beta1"
 )
 

@@ -1,7 +1,7 @@
 package k8sresources
 
 import (
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	batchbetav1 "k8s.io/api/batch/v1beta1"
 	"strings"

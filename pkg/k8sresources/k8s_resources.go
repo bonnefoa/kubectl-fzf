@@ -4,8 +4,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
 	"github.com/golang/glog"
+	"kubectlfzf/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )

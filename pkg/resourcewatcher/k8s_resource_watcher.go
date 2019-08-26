@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/bonnefoa/kubectl-fzf/pkg/k8sresources"
-	"github.com/bonnefoa/kubectl-fzf/pkg/util"
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
