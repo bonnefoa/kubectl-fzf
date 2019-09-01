@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Chart.Name }}-config
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: {{ $.Chart.Name }}
+    chart: {{ $.Chart.Name }}
+    chart_version: {{ $.Chart.Version }}
+    release: {{ .Release.Name }}
+data:
+  rsyncd.conf: |
+    lock file = /var/run/rsync.lock
+    log file = /var/log/rsyncd.log
+    pid file = /var/run/rsyncd.pid
+    port = 80
+    use chroot = no
+
+    [fzf_cache]
+        path = /tmp/kubectl_fzf_cache/incluster
+        uid = root
+        gid = root
+        read only = yes
+        list = yes
+
+  kubectl_fzf.yaml: |
+    role-blacklist:
+      - compute
+    excluded-namespaces:
+      - consul-agent
+      - coredns
+      - go-audit
+      - datadog-agent
+      - kube-system
+      - local-volume-provisioner
+      - kube2iam
+      - localusers
+      - node-monitoring
+      - kube2iam
+      - devenv-.*

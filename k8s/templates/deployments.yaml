@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Chart.Name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: {{ $.Chart.Name }}
+    chart: {{ $.Chart.Name }}
+    chart_version: {{ $.Chart.Version }}
+    release: {{ .Release.Name }}
+spec:
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: {{ $.Chart.Name }}
+  template:
+    metadata:
+      name: {{ $.Chart.Name }}
+      labels:
+        app: {{ $.Chart.Name }}
+        chart: {{ $.Chart.Name }}
+        chart_version: {{ $.Chart.Version }}
+        release: {{ .Release.Name }}
+      annotations:
+        checksum/configs: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ $.Chart.Name }}
+      {{- if $.Values.toleration }}
+      tolerations:
+      - key: node
+        operator: Equal
+        value: {{ $.Values.toleration }}
+        effect: NoSchedule
+      {{- end }}
+      containers:
+      - name: cache-builder
+        image: {{ $.Values.image.cache_builder }}
+        imagePullPolicy: {{ $.Values.docker.pullPolicy }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kubectl_fzf
+        - name: cache
+          mountPath: /tmp/kubectl_fzf_cache
+        resources:
+          requests:
+            memory: {{ $.Values.resources.cache_builder.memory }}
+            cpu: {{ $.Values.resources.cache_builder.cpu }}
+          limits:
+            memory: {{ $.Values.resources.cache_builder.memory }}
+            cpu: {{ $.Values.resources.cache_builder.cpu }}
+        args:
+          - --in-cluster
+
+      - name: rsyncd
+        image: {{ $.Values.image.rsyncd }}
+        imagePullPolicy: {{ $.Values.docker.pullPolicy }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kubectl_fzf
+        - name: cache
+          mountPath: /tmp/kubectl_fzf_cache
+        ports:
+        - containerPort: {{ $.Values.port }}
+          name: rsync
+        resources:
+          requests:
+            memory: {{ $.Values.resources.rsyncd.memory }}
+            cpu: {{ $.Values.resources.rsyncd.cpu }}
+          limits:
+            memory: {{ $.Values.resources.rsyncd.memory }}
+            cpu: {{ $.Values.resources.rsyncd.cpu }}
+        command: ["rsync"]
+        args:
+          - --daemon
+          - --no-detach
+          - --config
+          - /etc/kubectl_fzf/rsyncd.conf
+        livenessProbe:
+          tcpSocket:
+            port: {{ $.Values.port }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ $.Chart.Name }}-config
+      - name: cache
+        emptyDir: {}
