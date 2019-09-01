@@ -28,7 +28,12 @@ import (
 )
 
 var (
-	version                = "1.2"
+	Version   string
+	BuildDate string
+	GitCommit string
+	GitBranch string
+	GoVersion string
+
 	displayVersion         bool
 	cpuProfile             bool
 	inCluster              bool
@@ -177,7 +182,19 @@ func processArgs() {
 
 func start() {
 	if displayVersion {
-		fmt.Printf("%s", version)
+		fmt.Printf("Version: %s\n", Version)
+		if GitCommit != "" {
+			fmt.Printf("Git hash: %s\n", GitCommit)
+		}
+		if GitBranch != "" {
+			fmt.Printf("Git branch: %s\n", GitBranch)
+		}
+		if BuildDate != "" {
+			fmt.Printf("Build date: %s\n", BuildDate)
+		}
+		if GoVersion != "" {
+			fmt.Printf("Go Version: %s\n", GoVersion)
+		}
 		os.Exit(0)
 	}
 
