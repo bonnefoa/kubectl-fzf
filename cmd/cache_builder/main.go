@@ -85,6 +85,7 @@ func init() {
 	viper.BindPFlags(pflag.CommandLine)
 
 	viper.SetConfigName(".kubectl_fzf")
+	viper.AddConfigPath("/etc/kubectl_fzf/")
 	viper.AddConfigPath("$HOME")
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
