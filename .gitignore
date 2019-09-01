@@ -128,3 +128,6 @@ fabric.properties
 dist/
 kubeconfig
 TEMP.md
+tags
+cmd/cache_builder/cache_builder
+TODO
