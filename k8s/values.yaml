@@ -4,9 +4,8 @@ docker:
   pullPolicy: IfNotPresent
 
 image:
-  cache_builder: bonnefoa/kubectl-fzf:1.0.7
+  cache_builder: bonnefoa/kubectl-fzf:v1.0.8
   rsyncd: eeacms/rsync:2.1
-
 
 resources:
   rsyncd:
