@@ -39,9 +39,15 @@ Table of Contents
 
 Install `cache_builder`:
 ```shell
-go get -u github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
-# If you update, you need to recompile cache_builder with
-go install github.com/bonnefoa/kubectl-fzf/cmd/cache_builder
+# Mac
+FILE="kubectl-fzf_darwin_amd64.tar.gz"
+# Linux
+FILE="kubectl-fzf_linux_amd64.tar.gz"
+
+cd /tmp
+wget "https://github.com/bonnefoa/kubectl-fzf/releases/latest/download/$FILE"
+tar -xf $FILE
+install cache_builder ~/local/bin/cache_builder
 ```
 
 Source the autocompletion functions:
