@@ -40,6 +40,8 @@ archives:
     - kubectl_fzf.example.yaml
     - kubectl_fzf.plugin.zsh
     - kubectl_fzf.sh
+  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
 checksum:
   # You can change the name of the checksums file.
   # Default is `{{ .ProjectName }}_{{ .Version }}_checksums.txt`.
@@ -71,12 +73,12 @@ release:
 
   # You can change the name of the GitHub release.
   # Default is `{{.Tag}}`
-  name_template: "cache_builder"
-
+  name_template: "v{{.Version}}"
   # You can disable this pipe in order to not upload any artifacts to
   # GitHub.
   # Defaults to false.
   disable: false
+
 changelog:
   sort: asc
   filters:
