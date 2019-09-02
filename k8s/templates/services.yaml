@@ -11,9 +11,9 @@ spec:
   clusterIP: None
   ports:
   - name: rsync
-    port: 873
+    port: {{ $.Values.port }}
     protocol: TCP
-    targetPort: 873
+    targetPort: {{ $.Values.port }}
   selector:
     app: {{ $.Chart.Name }}
     release: {{ .Release.Name }}
