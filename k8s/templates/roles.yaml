@@ -7,7 +7,6 @@ metadata:
     app: {{ $.Chart.Name }}
     chart: {{ $.Chart.Name }}
     chart_version: {{ $.Chart.Version }}
-    release: {{ .Release.Name }}
 rules:
 - apiGroups:
   - ""
@@ -74,7 +73,6 @@ metadata:
     app: {{ $.Chart.Name }}
     chart: {{ $.Chart.Name }}
     version: {{ $.Chart.Version }}
-    release: {{ .Release.Name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

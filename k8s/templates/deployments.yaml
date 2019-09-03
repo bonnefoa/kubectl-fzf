@@ -7,7 +7,6 @@ metadata:
     app: {{ $.Chart.Name }}
     chart: {{ $.Chart.Name }}
     chart_version: {{ $.Chart.Version }}
-    release: {{ .Release.Name }}
 spec:
   revisionHistoryLimit: 2
   selector:
@@ -20,7 +19,6 @@ spec:
         app: {{ $.Chart.Name }}
         chart: {{ $.Chart.Name }}
         chart_version: {{ $.Chart.Version }}
-        release: {{ .Release.Name }}
       annotations:
         checksum/configs: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:

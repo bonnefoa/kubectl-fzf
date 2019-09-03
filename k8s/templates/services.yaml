@@ -6,7 +6,6 @@ metadata:
   labels:
     app: {{ $.Chart.Name }}
     chart: {{ $.Chart.Name }}-{{ $.Chart.Version }}
-    release: {{ .Release.Name }}
 spec:
   clusterIP: None
   ports:
@@ -16,5 +15,4 @@ spec:
     targetPort: {{ $.Values.port }}
   selector:
     app: {{ $.Chart.Name }}
-    release: {{ .Release.Name }}
   type: ClusterIP

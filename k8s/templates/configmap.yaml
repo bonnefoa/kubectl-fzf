@@ -7,7 +7,6 @@ metadata:
     app: {{ $.Chart.Name }}
     chart: {{ $.Chart.Name }}
     chart_version: {{ $.Chart.Version }}
-    release: {{ .Release.Name }}
 data:
   rsyncd.conf: |
     lock file = /var/run/rsync.lock
