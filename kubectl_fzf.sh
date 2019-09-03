@@ -28,14 +28,14 @@ _fzf_check_for_endpoints()
                 return
             fi
         fi
-        if nc -z $cached_ip 80 &>/dev/null; then
+        if nc -G 1 -z $cached_ip 80 &>/dev/null; then
             echo $cached_ip > "$endpoint_file"
             echo $cached_ip
             return
         fi
     fi
     for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
-        if nc -z $ip 80 &>/dev/null; then
+        if nc -G 1 -z $ip 80 &>/dev/null; then
             echo $ip > "$endpoint_file"
             echo $ip
             return

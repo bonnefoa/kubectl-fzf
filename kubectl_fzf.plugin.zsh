@@ -28,14 +28,14 @@ _fzf_check_for_endpoints()
                 return
             fi
         fi
-        if nc -z $cached_ip 80 &>/dev/null; then
+        if nc -G 1 -z $cached_ip 80 &>/dev/null; then
             echo $cached_ip > "$endpoint_file"
             echo $cached_ip
             return
         fi
     fi
     for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
-        if nc -z $ip 80 &>/dev/null; then
+        if nc -G 1 -z $ip 80 &>/dev/null; then
             echo $ip > "$endpoint_file"
             echo $ip
             return
@@ -497,7 +497,7 @@ __kubectl_parse_get()
     local filepath; filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     local rsync_endpoint; rsync_endpoint=$(_fzf_check_for_endpoints $current_context)
     if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete "rsync://$rsync_endpoint:80/fzf_cache/${filename}*" "${KUBECTL_FZF_CACHE}/${context}/"
+        rsync -qPrz --delete --include="${filename}_*" --exclude="*" "rsync://$rsync_endpoint:80/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
     fi
 
     if [[ ! -f ${filepath}_header ]]; then
