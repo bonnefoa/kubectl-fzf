@@ -15,6 +15,36 @@ _fzf_get_header_position()
 }
 
 # $1 is context
+_fzf_check_for_endpoints()
+{
+    local context="$1"
+    local endpoint_file="$KUBECTL_FZF_CACHE/${context}_cache_endpoint"
+    if [[ -s "$endpoint_file" ]]; then
+        local cached_ip=$(cat "$endpoint_file")
+        if [[ "$cached_ip" == "No service" ]]; then
+            local mtime=$(stat +mtime "$endpoint_file")
+            local current=$(date +%s)
+            if [[ $((current - mtime)) -lt 3600 ]]; then
+                return
+            fi
+        fi
+        if nc -z $cached_ip 80 &>/dev/null; then
+            echo $cached_ip > "$endpoint_file"
+            echo $cached_ip
+            return
+        fi
+    fi
+    for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
+        if nc -z $ip 80 &>/dev/null; then
+            echo $ip > "$endpoint_file"
+            echo $ip
+            return
+        fi
+    done
+    echo "No service" > "$endpoint_file"
+}
+
+# $1 is context
 # $2 is namespace
 _fzf_get_main_header()
 {
@@ -465,6 +495,10 @@ __kubectl_parse_get()
     fi
 
     local filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
+    local rsync_endpoint=$(_fzf_check_for_endpoints $current_context)
+    if [[ -n "$rsync_endpoint" ]]; then
+        rsync -qPrz --delete "rsync://$rsync_endpoint:80/fzf_cache/${filename}*" "${KUBECTL_FZF_CACHE}/${context}/"
+    fi
 
     if [[ ! -f ${filepath}_header ]]; then
         ___kubectl_parse_get $*
