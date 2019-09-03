@@ -497,7 +497,7 @@ __kubectl_parse_get()
     local filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     local rsync_endpoint=$(_fzf_check_for_endpoints $current_context)
     if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete "rsync://$rsync_endpoint:80/fzf_cache/${filename}*" "${KUBECTL_FZF_CACHE}/${context}/"
+        rsync -qPrz --delete --include="${filename}_*" --exclude="*" "rsync://$rsync_endpoint:80/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
     fi
 
     if [[ ! -f ${filepath}_header ]]; then
