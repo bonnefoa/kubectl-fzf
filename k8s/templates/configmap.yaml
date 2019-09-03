@@ -22,7 +22,7 @@ data:
         read only = yes
         list = yes
 
-  kubectl_fzf.yaml: |
+  .kubectl_fzf.yaml: |
     role-blacklist:
       - compute
     excluded-namespaces:
