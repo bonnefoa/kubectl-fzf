@@ -32,7 +32,7 @@ spec:
       {{- end }}
       containers:
       - name: cache-builder
-        image: {{ $.Values.image.cache_builder }}
+        image: {{ $.Values.image.cache_builder.name }}:{{ $.Values.image.cache_builder.tag }}
         imagePullPolicy: {{ $.Values.docker.pullPolicy }}
         volumeMounts:
         - name: config
@@ -50,7 +50,7 @@ spec:
           - --in-cluster
 
       - name: rsyncd
-        image: {{ $.Values.image.rsyncd }}
+        image: {{ $.Values.image.rsyncd.name }}:{{ $.Values.image.rsyncd.tag }}
         imagePullPolicy: {{ $.Values.docker.pullPolicy }}
         volumeMounts:
         - name: config
