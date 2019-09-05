@@ -399,12 +399,12 @@ __kubectl_get_resource()
 
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
-    local antepenultimate=$(echo $COMP_LINE | awk '{print $(NF-2)}')
+    local number_args=$(echo $COMP_LINE | awk '{print NF}')
     local last_char=${COMP_LINE: -1}
     local query=""
 
-    # 'k get pod <TAB>' completion
-    if [[ $antepenultimate == "kubectl" && $last_char == " " ]]; then
+    if [[ $number_args -gt 3 || ($number_args -eq 3 && $last_char == " ") ]]; then
+        # 'k get pod <TAB>' completion
         __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
         return 0
     fi
