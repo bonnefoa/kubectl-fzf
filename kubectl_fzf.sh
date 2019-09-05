@@ -7,11 +7,12 @@ eval "`declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 # Cache time when no rsync service was detected
-KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=3600
+KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME:3600}
 # Cache time of api resource list
-KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=3600
+KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=10
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:10}
+KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 
 # $1 is filename
 # $2 is header
@@ -52,7 +53,7 @@ _fzf_fetch_rsynced_resource()
     fi
     local rsync_endpoint=$(_fzf_check_for_endpoints $context)
     if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete --include="${resource_name}*" --exclude="*" "rsync://$rsync_endpoint:80/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+        rsync -qPrz --delete --include="${resource_name}*" --timeout=1 --exclude="*" "rsync://$rsync_endpoint:${KUBECTL_FZF_RSYNC_PORT}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
     fi
 }
 
@@ -69,14 +70,14 @@ _fzf_check_for_endpoints()
             fi
         fi
 
-        if nc -G 1 -z $cached_ip 80 &>/dev/null; then
+        if nc -G 1 -z $cached_ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
             echo $cached_ip > "$endpoint_file"
             echo $cached_ip
             return
         fi
     fi
     for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
-        if nc -G 1 -z $ip 80 &>/dev/null; then
+        if nc -G 1 -z $ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
             echo $ip > "$endpoint_file"
             echo $ip
             return
