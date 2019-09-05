@@ -25,16 +25,16 @@ _fzf_file_mtime_older_than()
     local file; file=$1
     local cache_time; cache_time=$2
     if [[ ! -s "$file" ]]; then
-        return 1
+        return 0
     fi
 
-    local mtime; mtime=$(stat +mtime "$file")
+    local mtime; mtime=$(date +%s -r "$file")
     local current; current=$(date +%s)
     if [[ $((current - mtime)) -gt $cache_time ]]; then
-        return 1
+        return 0
     fi
 
-    return 0
+    return 1
 }
 
 # $1 is resource name
@@ -47,7 +47,7 @@ _fzf_fetch_rsynced_resource()
     local cache_time; cache_time=$3
     local resource_file; resource_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_header"
 
-    if [[ ! $(_fzf_file_mtime_older_than $resource_file $cache_time) ]]; then
+    if ! $(_fzf_file_mtime_older_than $resource_file $cache_time); then
         return
     fi
     local rsync_endpoint; rsync_endpoint=$(_fzf_check_for_endpoints $context)
@@ -64,7 +64,7 @@ _fzf_check_for_endpoints()
     if [[ -s "$endpoint_file" ]]; then
         local cached_ip; cached_ip=$(cat "$endpoint_file")
         if [[ "$cached_ip" == "No service" ]]; then
-            if [[ ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME) ]]; then
+            if ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME); then
                 return
             fi
         fi
