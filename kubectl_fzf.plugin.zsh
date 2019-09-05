@@ -22,7 +22,7 @@ _fzf_check_for_endpoints()
     if [[ -s "$endpoint_file" ]]; then
         local cached_ip; cached_ip=$(cat "$endpoint_file")
         if [[ "$cached_ip" == "No service" ]]; then
-            local mtime; mtime=$(stat +mtime "$endpoint_file")
+            local mtime; mtime=$(stat -c %Y "$endpoint_file")
             local current; current=$(date +%s)
             if [[ $((current - mtime)) -lt 3600 ]]; then
                 return
