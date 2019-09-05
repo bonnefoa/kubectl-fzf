@@ -355,12 +355,22 @@ __kubectl_get_resource()
 
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
+    local antepenultimate=$(echo $COMP_LINE | awk '{print $(NF-2)}')
     local last_char=${COMP_LINE: -1}
-    if [[ "$last_part" == "get" || ($penultimate == "get" && $last_char != " ") ]]; then
-        if [[ $penultimate == "get" ]]; then
+    local query=""
+
+    # 'k get pod <TAB>' completion
+    if [[ $antepenultimate == "kubectl" && $last_char == " " ]]; then
+        __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
+        return 0
+    fi
+
+    # 'k get p<TAB>' completion
+    if [[ $penultimate != "kubectl" || $last_char != " " ]]; then
             query=$last_part
         fi
 
+    # 'k get <TAB>' completion
         local main_header=$(_fzf_get_main_header $context $namespace)
 
         local header=$(cat $header_file)
@@ -372,8 +382,6 @@ __kubectl_get_resource()
 
         COMPREPLY=( $result )
         return 0
-    fi
-    __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
 }
 
 # $1 is the type of resource to get
