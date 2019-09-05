@@ -6,12 +6,54 @@ eval "`builtin declare -f __kubectl_get_resource | sed '1s/.*/_&/'`"
 eval "`builtin declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
+# Cache time when no rsync service was detected
+KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=3600
+# Cache time of api resource list
+KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=3600
+# Cache time of every other resources
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=10
 
 # $1 is filename
 # $2 is header
 _fzf_get_header_position()
 {
     awk "NR==1{ for(i = 1; i <= NF; i++){ if (\$i == \"$2\") {print i; } } } " $1
+}
+
+_fzf_file_mtime_older_than()
+{
+    local file; file=$1
+    local cache_time; cache_time=$2
+    if [[ ! -s "$file" ]]; then
+        return 1
+    fi
+
+    local mtime; mtime=$(stat +mtime "$file")
+    local current; current=$(date +%s)
+    if [[ $((current - mtime)) -gt $cache_time ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# $1 is resource name
+# $2 is context
+# $3 is cache time
+_fzf_fetch_rsynced_resource()
+{
+    local resource_name; resource_name=$1
+    local context; context=$2
+    local cache_time; cache_time=$3
+    local resource_file; resource_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_header"
+
+    if [[ ! $(_fzf_file_mtime_older_than $resource_file $cache_time) ]]; then
+        return
+    fi
+    local rsync_endpoint; rsync_endpoint=$(_fzf_check_for_endpoints $context)
+    if [[ -n "$rsync_endpoint" ]]; then
+        rsync -qPrz --delete --include="${resource_name}*" --exclude="*" "rsync://$rsync_endpoint:80/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+    fi
 }
 
 # $1 is context
@@ -22,12 +64,11 @@ _fzf_check_for_endpoints()
     if [[ -s "$endpoint_file" ]]; then
         local cached_ip; cached_ip=$(cat "$endpoint_file")
         if [[ "$cached_ip" == "No service" ]]; then
-            local mtime; mtime=$(stat +mtime "$endpoint_file")
-            local current; current=$(date +%s)
-            if [[ $((current - mtime)) -lt 3600 ]]; then
+            if [[ ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME) ]]; then
                 return
             fi
         fi
+
         if nc -G 1 -z $cached_ip 80 &>/dev/null; then
             echo $cached_ip > "$endpoint_file"
             echo $cached_ip
@@ -348,6 +389,9 @@ __kubectl_get_resource()
     local current_context; current_context=$(kubectl config current-context)
     local apiresources_file; apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
     local header_file; header_file="${apiresources_file}_header"
+
+    _fzf_fetch_rsynced_resource "apiresources" $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME
+
     if [[ ! -f ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
         return
@@ -355,25 +399,33 @@ __kubectl_get_resource()
 
     local last_part; last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local penultimate; penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
+    local antepenultimate; antepenultimate=$(echo $COMP_LINE | awk '{print $(NF-2)}')
     local last_char; last_char=${COMP_LINE: -1}
-    if [[ "$last_part" == "get" || ($penultimate == "get" && $last_char != " ") ]]; then
-        if [[ $penultimate == "get" ]]; then
-            query=$last_part
-        fi
+    local query; query=""
 
-        local main_header; main_header=$(_fzf_get_main_header $context $namespace)
-
-        local header; header=$(cat $header_file)
-        local data; data=$(cat $apiresources_file)
-
-        result=$( (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
-            | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
-            | cut -d' ' -f1)
-
-        COMPREPLY=( $result )
+    # 'k get pod <TAB>' completion
+    if [[ $antepenultimate == "kubectl" && $last_char == " " ]]; then
+        __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
         return 0
     fi
-    __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
+
+    # 'k get p<TAB>' completion
+    if [[ $penultimate != "kubectl" || $last_char != " " ]]; then
+        query=$last_part
+    fi
+
+    # 'k get <TAB>' completion
+    local main_header; main_header=$(_fzf_get_main_header $context $namespace)
+
+    local header; header=$(cat $header_file)
+    local data; data=$(cat $apiresources_file)
+
+    result=$( (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
+        | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
+        | cut -d' ' -f1)
+
+    COMPREPLY=( $result )
+    return 0
 }
 
 # $1 is the type of resource to get
@@ -494,12 +546,9 @@ __kubectl_parse_get()
         context=$query_context
     fi
 
-    local filepath; filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
-    local rsync_endpoint; rsync_endpoint=$(_fzf_check_for_endpoints $current_context)
-    if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete --include="${filename}*" --exclude="*" "rsync://$rsync_endpoint:80/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
-    fi
+    _fzf_fetch_rsynced_resource "$filename" $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME
 
+    local filepath; filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     if [[ ! -f ${filepath}_header ]]; then
         ___kubectl_parse_get $*
         return
