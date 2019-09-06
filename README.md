@@ -163,7 +163,7 @@ kubectl get pod <TAB>
 | --------------------        | --------------------                                   | --------------------                        |
 | KUBECTL_FZF_CACHE           | Cache files location                                   | `/tmp/kubectl_fzf_cache`                    |
 | KUBECTL_FZF_EXCLUDE         | Exclusion patterns passed to the autocompletion        | ""                                          |
-| KUBECTL_FZF_OPTIONS         | fzf parameters                                         | `-1 --header-lines=2 --layout reverse -e`   |
+| KUBECTL_FZF_OPTIONS         | fzf parameters                                         | `-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort `   |
 
 To turn down exact match in search:
 ```shell
@@ -174,6 +174,12 @@ To enable hscroll
 ```shell
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
 ```
+
+To bind space to accept current result
+```shell
+export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort --bind space:accept)
+```
+You have the list of keys and actions available in the fzf man.
 
 To exclude all namespaces starting with "dev" and consul-agent resources:
 ```shell
