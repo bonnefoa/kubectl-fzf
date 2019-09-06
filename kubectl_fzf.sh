@@ -38,22 +38,27 @@ _fzf_file_mtime_older_than()
     return 1
 }
 
-# $1 is resource name
-# $2 is context
-# $3 is cache time
+# $1 is context
+# $2 is cache time
+# $3 is resource name
 _fzf_fetch_rsynced_resource()
 {
-    local resource_name=$1
-    local context=$2
-    local cache_time=$3
-    local resource_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_header"
+    local context=$1
+    local cache_time=$2
+    local resources=($@)
 
+    local resource_file="${KUBECTL_FZF_CACHE}/${context}/${resources[1]}_header"
     if ! $(_fzf_file_mtime_older_than $resource_file $cache_time); then
         return
     fi
+
+    local include_param=""
+    for resource_name in ${resources[@]} ; do
+        include_param="$include_param --include="${resource_name}*""
+    done
     local rsync_endpoint=$(_fzf_check_for_endpoints $context)
     if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete --include="${resource_name}*" --timeout=1 --exclude="*" "rsync://$rsync_endpoint:${KUBECTL_FZF_RSYNC_PORT}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+        rsync -qPrz --delete $include_param --timeout=1 --exclude="*" "rsync://$rsync_endpoint:${KUBECTL_FZF_RSYNC_PORT}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
     fi
 }
 
@@ -391,7 +396,7 @@ __kubectl_get_resource()
     local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
     local header_file="${apiresources_file}_header"
 
-    _fzf_fetch_rsynced_resource "apiresources" $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME
+    _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
 
     if [[ ! -f ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
@@ -547,7 +552,11 @@ __kubectl_parse_get()
         context=$query_context
     fi
 
-    _fzf_fetch_rsynced_resource "$filename" $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME
+    if [[ "$filename" == "nodes" ]]; then
+        _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME "pods" "nodes" "daemonsets"
+    else
+        _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME $filename
+    fi
 
     local filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     if [[ ! -f ${filepath}_header ]]; then
