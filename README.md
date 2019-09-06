@@ -175,11 +175,11 @@ To enable hscroll
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
 ```
 
-To bind space to accept current result
+To bind space to accept current result (You can check the list of available keys and actions in the fzf man)
 ```shell
 export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort --bind space:accept)
 ```
-You have the list of keys and actions available in the fzf man.
+
 
 To exclude all namespaces starting with "dev" and consul-agent resources:
 ```shell
