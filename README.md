@@ -7,21 +7,25 @@ kubectl-fzf provides a fast and powerful fzf autocompletion for kubectl.
 Table of Contents
 =================
 
-- [Kubectl-fzf](#kubectl-fzf)
-- [Table of Contents](#table-of-contents)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-  - [Using zplug](#using-zplug)
-- [Usage](#usage)
-  - [cache_builder](#cachebuilder)
-    - [Configuration](#configuration)
-  - [kubectl_fzf](#kubectlfzf)
-    - [Options](#options)
-- [Caveats](#caveats)
-- [Troubleshooting](#troubleshooting)
-  - [Debug logs](#debug-logs)
-  - [The normal autocompletion is used](#the-normal-autocompletion-is-used)
+* [Kubectl-fzf](#kubectl-fzf)
+* [Table of Contents](#table-of-contents)
+* [Features](#features)
+* [Requirements](#requirements)
+* [Installation](#installation)
+  * [Cache builder](#cache-builder)
+	 * [Local installation](#local-installation)
+	 * [As a kubernetes deployment](#as-a-kubernetes-deployment)
+  * [Shell autocompletion](#shell-autocompletion)
+	 * [Using zplug](#using-zplug)
+* [Usage](#usage)
+  * [cache_builder](#cache_builder)
+	 * [Configuration](#configuration)
+  * [kubectl_fzf](#kubectl_fzf)
+	 * [Options](#options)
+* [Caveats](#caveats)
+* [Troubleshooting](#troubleshooting)
+  * [Debug logs](#debug-logs)
+  * [The normal autocompletion is used](#the-normal-autocompletion-is-used)
 
 # Features
 
@@ -37,6 +41,10 @@ Table of Contents
 
 # Installation
 
+## Cache builder
+
+### Local installation
+
 Install `cache_builder`:
 ```shell
 # Mac
@@ -50,20 +58,35 @@ tar -xf $FILE
 install cache_builder ~/local/bin/cache_builder
 ```
 
+### As a kubernetes deployment
+
+You can deploy the cache builder as a pod in your cluster.
+
+```shell
+
+helm template --namespace myns --set image.cache_builder.tag=1.0.11 --set toleration=aToleration . | kubectl apply -f -
+```
+
+You can check the latest image version [here](https://cloud.docker.com/repository/docker/bonnefoa/kubectl-fzf/general).
+
+## Shell autocompletion
+
 Source the autocompletion functions:
 ```shell
 # kubectl_fzf.sh needs to be sourced after kubectl completion.
 
 # bash version
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/kubectl_fzf.sh -O ~/.kubectl_fzf.sh
 echo "source <(kubectl completion bash)" >> ~/.bashrc
-echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.sh" >> ~/.bashrc
+echo "source ~/.kubectl_fzf.sh" >> ~/.bashrc
 
 # zsh version
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/kubectl_fzf.plugin.zsh -O ~/.kubectl_fzf.plugin.zsh
 echo "source <(kubectl completion zsh)" >> ~/.zshrc
-echo "source $GOPATH/src/github.com/bonnefoa/kubectl-fzf/kubectl_fzf.plugin.zsh" >> ~/.zshrc
+echo "source ~/.kubectl_fzf.plugin.zsh" >> ~/.zshrc
 ```
 
-## Using zplug
+### Using zplug
 
 You can use zplug to install the autocompletion functions
 ```shell
@@ -73,7 +96,7 @@ zplug "bonnefoa/kubectl-fzf", defer:3
 
 # Usage
 
-## cache_builder
+## cache_builder: local version
 
 `cache_builder` will watch cluster resources and keep the current state of the cluster in local files.
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
@@ -82,8 +105,6 @@ To create cache files necessary for `kubectl_fzf`, just run in a tmux or a scree
 
 ```shell
 cache_builder
-# If $GOPATH/bin is not in you $PATH
-$GOPATH/bin/cache_builder
 ```
 
 It will watch the cluster in the current context. If you switch context, `cache_builder` will detect and start watching the new cluster.
@@ -108,6 +129,25 @@ excluded-namespaces:
   - kube-system
   - kube2iam
   - dev-.*
+```
+
+## cache_builder: pod version
+
+If the pod is deployed in your cluster, the autocompletion fetch the cache files from the pod using rsync.
+
+To check if you can reach the pod, try:
+
+```shell
+IP=$(k get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}')
+nc -v -z $IP 80
+```
+
+By default, it will use the port 80.
+You can change it by deploying the chart with a different port value and using `KUBECTL_FZF_RSYNC_PORT`:
+
+```shell
+helm template --namespace myns --set port=873 . | kubectl apply -f -
+export KUBECTL_FZF_RSYNC_PORT=873
 ```
 
 ## kubectl_fzf
