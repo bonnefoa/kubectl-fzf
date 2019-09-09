@@ -11,8 +11,9 @@ KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIM
 # Cache time of api resource list
 KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:10}
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:15}
 KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
+KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
 
 # $1 is filename
 # $2 is header
@@ -38,52 +39,121 @@ _fzf_file_mtime_older_than()
     return 1
 }
 
-# $1 is resource name
-# $2 is context
-# $3 is cache time
+# $1 is context
+# $2 is cache time
+# $3 is resource name
 _fzf_fetch_rsynced_resource()
 {
-    local resource_name; resource_name=$1
-    local context; context=$2
-    local cache_time; cache_time=$3
-    local resource_file; resource_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_header"
+    local context; context=$1
+    local cache_time; cache_time=$2
+    local resources; resources=($@)
 
+    local resource_file; resource_file="${KUBECTL_FZF_CACHE}/${context}/${resources[1]}_header"
     if ! $(_fzf_file_mtime_older_than $resource_file $cache_time); then
         return
     fi
-    local rsync_endpoint; rsync_endpoint=$(_fzf_check_for_endpoints $context)
-    if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete --include="${resource_name}*" --timeout=1 --exclude="*" "rsync://$rsync_endpoint:${KUBECTL_FZF_RSYNC_PORT}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+
+    local include_param; include_param=""
+    for resource_name in ${resources[@]} ; do
+        include_param="$include_param --include="${resource_name}*""
+    done
+    local rsync_port; rsync_port=$(_fzf_check_for_endpoints $context)
+
+    if [[ -n "$rsync_port" ]]; then
+        rsync -qPrz --delete $include_param --timeout=1 --exclude="*" "rsync://localhost:${rsync_port}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
     fi
+}
+
+_fzf_get_port_forward_port()
+{
+    local context; context="$1"
+    local port_file; port_file="$KUBECTL_FZF_CACHE/${context}_port"
+    local global_port_file; global_port_file="$KUBECTL_FZF_CACHE/port"
+    local local_port; local_port=$KUBECTL_FZF_PORT_FORWARD_START
+    if [[ -f "$port_file" ]]; then
+        local_port=$(cat $port_file)
+    else
+        if [[ -f "$global_port_file" ]]; then
+            local_port=$(cat $global_port_file)
+        fi
+        echo $local_port > $port_file
+        echo $((local_port + 1)) > $global_port_file
+    fi
+    echo $local_port
+}
+
+_fzf_check_port_forward_running()
+{
+    local local_port; local_port=$1
+    local pid_file; pid_file=$2
+
+    if [[ ! -f $pid_file ]]; then
+        return 1
+    fi
+    local pid; pid=$(cat $pid_file)
+    if ! ps -p $pid &> /dev/null; then
+        return 1
+    fi
+    if ! nc -G 1 -z localhost $local_port &> /dev/null; then
+        return 1
+    fi
+    return 0
+}
+
+_fzf_get_service_namespace()
+{
+    local context; context="$1"
+    local service_file; service_file="$KUBECTL_FZF_CACHE/${context}_service"
+    local kfzf_ns; kfzf_ns=""
+    if [[ -s "$service_file" ]]; then
+        local cached_service; cached_service=$(cat "$service_file")
+        if [[ "$cached_service" == "No service" ]]; then
+            if ! $(_fzf_file_mtime_older_than $service_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME); then
+                return 1
+            fi
+        else
+            cat $service_file
+            return 0
+        fi
+    fi
+    kfzf_ns=($(kubectl get svc --all-namespaces -l app=kubectl-fzf -o=jsonpath='{.items[0].metadata.namespace}' 2> /dev/null))
+    if [[ "$kfzf_ns" == "" ]]; then
+        echo "No service" > "$service_file"
+        return 1
+    fi
+    echo "${kfzf_ns}" > "$service_file"
+    echo "${kfzf_ns}"
+    return 0
 }
 
 # $1 is context
 _fzf_check_for_endpoints()
 {
     local context; context="$1"
-    local endpoint_file; endpoint_file="$KUBECTL_FZF_CACHE/${context}_cache_endpoint"
-    if [[ -s "$endpoint_file" ]]; then
-        local cached_ip; cached_ip=$(cat "$endpoint_file")
-        if [[ "$cached_ip" == "No service" ]]; then
-            if ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME); then
-                return
-            fi
-        fi
+    local port_file; port_file="$KUBECTL_FZF_CACHE/${context}_port"
+    local pid_file; pid_file="$KUBECTL_FZF_CACHE/${context}_pid"
+    local log_file; log_file="$KUBECTL_FZF_CACHE/${context}_port_forward_log"
 
-        if nc -G 1 -z $cached_ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
-            echo $cached_ip > "$endpoint_file"
-            echo $cached_ip
-            return
-        fi
+    local local_port; local_port=$(_fzf_get_port_forward_port $context)
+    if _fzf_check_port_forward_running $local_port $pid_file; then
+        echo $local_port
+        return 0
     fi
-    for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
-        if nc -G 1 -z $ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
-            echo $ip > "$endpoint_file"
-            echo $ip
-            return
-        fi
-    done
-    echo "No service" > "$endpoint_file"
+
+    local kfzf_ns; kfzf_ns=$(_fzf_get_service_namespace $context)
+    if [[ "$kfzf_ns" == "" ]]; then
+        return
+    fi
+
+    nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &
+    local pid; pid=$!
+    echo $pid > "$pid_file"
+
+    if _fzf_check_port_forward_running $local_port $pid_file; then
+        echo $local_port
+        return 0
+    fi
+    return
 }
 
 # $1 is context
@@ -391,7 +461,7 @@ __kubectl_get_resource()
     local apiresources_file; apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
     local header_file; header_file="${apiresources_file}_header"
 
-    _fzf_fetch_rsynced_resource "apiresources" $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME
+    _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
 
     if [[ ! -f ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
@@ -547,7 +617,11 @@ __kubectl_parse_get()
         context=$query_context
     fi
 
-    _fzf_fetch_rsynced_resource "$filename" $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME
+    if [[ "$filename" == "nodes" ]]; then
+        _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME "pods" "nodes" "daemonsets"
+    else
+        _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME $filename
+    fi
 
     local filepath; filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     if [[ ! -f ${filepath}_header ]]; then
