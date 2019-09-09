@@ -48,7 +48,7 @@ _fzf_fetch_rsynced_resource()
     local cache_time; cache_time=$2
     local resources; resources=($@)
 
-    local resource_file; resource_file="${KUBECTL_FZF_CACHE}/${context}/${resources[1]}_header"
+    local resource_file; resource_file="${KUBECTL_FZF_CACHE}/${context}/${resources}_header"
     if ! $(_fzf_file_mtime_older_than $resource_file $cache_time); then
         return
     fi
@@ -85,15 +85,7 @@ _fzf_get_port_forward_port()
 _fzf_check_port_forward_running()
 {
     local local_port; local_port=$1
-    local pid_file; pid_file=$2
 
-    if [[ ! -f $pid_file ]]; then
-        return 1
-    fi
-    local pid; pid=$(cat $pid_file)
-    if ! ps -p $pid &> /dev/null; then
-        return 1
-    fi
     if ! nc -G 1 -z localhost $local_port &> /dev/null; then
         return 1
     fi
@@ -112,7 +104,7 @@ _fzf_get_service_namespace()
                 return 1
             fi
         else
-            cat $service_file
+            echo "$cached_service"
             return 0
         fi
     fi
@@ -131,11 +123,10 @@ _fzf_check_for_endpoints()
 {
     local context; context="$1"
     local port_file; port_file="$KUBECTL_FZF_CACHE/${context}_port"
-    local pid_file; pid_file="$KUBECTL_FZF_CACHE/${context}_pid"
     local log_file; log_file="$KUBECTL_FZF_CACHE/${context}_port_forward_log"
 
     local local_port; local_port=$(_fzf_get_port_forward_port $context)
-    if _fzf_check_port_forward_running $local_port $pid_file; then
+    if _fzf_check_port_forward_running $local_port; then
         echo $local_port
         return 0
     fi
@@ -146,10 +137,8 @@ _fzf_check_for_endpoints()
     fi
 
     nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &
-    local pid; pid=$!
-    echo $pid > "$pid_file"
 
-    if _fzf_check_port_forward_running $local_port $pid_file; then
+    if _fzf_check_port_forward_running $local_port; then
         echo $local_port
         return 0
     fi
