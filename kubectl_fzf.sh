@@ -7,13 +7,14 @@ eval "`declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 # Cache time when no rsync service was detected
-KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME:3600}
+KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME:-3600}
 # Cache time of api resource list
-KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:3600}
+KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:-3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:15}
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-10}
 KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
+mkdir -p $KUBECTL_FZF_CACHE
 
 # $1 is filename
 # $2 is header
@@ -46,6 +47,7 @@ _fzf_fetch_rsynced_resource()
 {
     local context=$1
     local cache_time=$2
+    shift 2
     local resources=($@)
 
     local resource_file="${KUBECTL_FZF_CACHE}/${context}/${resources}_header"
@@ -85,7 +87,6 @@ _fzf_get_port_forward_port()
 _fzf_check_port_forward_running()
 {
     local local_port=$1
-
     if ! nc -G 1 -z localhost $local_port &> /dev/null; then
         return 1
     fi
@@ -133,16 +134,24 @@ _fzf_check_for_endpoints()
 
     local kfzf_ns=$(_fzf_get_service_namespace $context)
     if [[ "$kfzf_ns" == "" ]]; then
-        return
+        return 1
     fi
 
-    nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &
+    (nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &)
+
+    for (( i = 0; i < 10; i++ )); do
+        if nc -G 1 -z localhost $local_port &> /dev/null; then
+            echo $local_port
+            return 0
+        fi
+        sleep 1
+    done
 
     if _fzf_check_port_forward_running $local_port; then
         echo $local_port
         return 0
     fi
-    return
+    return 1
 }
 
 # $1 is context
