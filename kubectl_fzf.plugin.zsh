@@ -56,9 +56,9 @@ _fzf_fetch_rsynced_resource()
     fi
     touch $check_time_file
 
-    local include_param; include_param=""
+    local include_param; include_param=()
     for resource_name in ${resources[@]} ; do
-        include_param="--include=\"${resource_name}*\" $include_param"
+        include_param+="--include=${resource_name}*"
     done
 
     local rsync_endpoint; rsync_endpoint=($(_fzf_check_direct_access $context))
@@ -67,7 +67,7 @@ _fzf_fetch_rsynced_resource()
     fi
 
     if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete $include_param --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+        rsync -qPrz --delete ${include_param[@]} --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
     fi
 
 }
