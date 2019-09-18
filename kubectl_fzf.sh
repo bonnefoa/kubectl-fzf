@@ -51,6 +51,7 @@ _fzf_fetch_rsynced_resource()
     local resources=($@)
 
     local check_time_file="${KUBECTL_FZF_CACHE}/${context}/${resources}_check_time_file"
+    mkdir -p ${KUBECTL_FZF_CACHE}/${context}
     if ! $(_fzf_file_mtime_older_than $check_time_file $cache_time); then
         return
     fi
