@@ -58,13 +58,18 @@ _fzf_fetch_rsynced_resource()
 
     local include_param=""
     for resource_name in ${resources[@]} ; do
-        include_param="$include_param --include="${resource_name}*""
+        include_param="--include=\"${resource_name}*\" $include_param"
     done
-    local rsync_port=$(_fzf_check_for_endpoints $context)
 
-    if [[ -n "$rsync_port" ]]; then
-        rsync -qPrz --delete $include_param --timeout=1 --exclude="*" "rsync://localhost:${rsync_port}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+    local rsync_endpoint=($(_fzf_check_direct_access $context))
+    if [[ -z "$rsync_endpoint" ]]; then
+        rsync_endpoint=($(_fzf_check_port_forward $context))
     fi
+
+    if [[ -n "$rsync_endpoint" ]]; then
+        rsync -qPrz --delete $include_param --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+    fi
+
 }
 
 _fzf_get_port_forward_port()
@@ -83,6 +88,34 @@ _fzf_get_port_forward_port()
         echo $((local_port + 1)) > $global_port_file
     fi
     echo $local_port
+}
+
+_fzf_check_direct_access()
+{
+    local context="$1"
+    local endpoint_file="$KUBECTL_FZF_CACHE/${context}_cache_endpoint"
+    if [[ -s "$endpoint_file" ]]; then
+        local cached_ip=$(cat "$endpoint_file")
+        if [[ "$cached_ip" == "No service" ]]; then
+            if ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME); then
+                return
+            fi
+        fi
+
+        if nc -G 1 -z $cached_ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
+            echo $cached_ip > "$endpoint_file"
+            echo "$cached_ip $KUBECTL_FZF_RSYNC_PORT"
+            return
+        fi
+    fi
+    for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
+        if nc -G 1 -z $ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
+            echo $ip > "$endpoint_file"
+            echo "$ip $KUBECTL_FZF_RSYNC_PORT"
+            return
+        fi
+    done
+    echo "No service" > "$endpoint_file"
 }
 
 _fzf_check_port_forward_running()
@@ -121,7 +154,7 @@ _fzf_get_service_namespace()
 }
 
 # $1 is context
-_fzf_check_for_endpoints()
+_fzf_check_port_forward()
 {
     local context="$1"
     local port_file="$KUBECTL_FZF_CACHE/${context}_port"
@@ -129,7 +162,7 @@ _fzf_check_for_endpoints()
 
     local local_port=$(_fzf_get_port_forward_port $context)
     if _fzf_check_port_forward_running $local_port; then
-        echo $local_port
+        echo "localhost $local_port"
         return 0
     fi
 
@@ -142,14 +175,14 @@ _fzf_check_for_endpoints()
 
     for (( i = 0; i < 10; i++ )); do
         if nc -G 1 -z localhost $local_port &> /dev/null; then
-            echo $local_port
+            echo "localhost $local_port"
             return 0
         fi
         sleep 1
     done
 
     if _fzf_check_port_forward_running $local_port; then
-        echo $local_port
+        echo "localhost $local_port"
         return 0
     fi
     return 1
