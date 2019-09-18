@@ -27,7 +27,7 @@ _fzf_file_mtime_older_than()
 {
     local file=$1
     local cache_time=$2
-    if [[ ! -s "$file" ]]; then
+    if [[ ! -f "$file" ]]; then
         return 0
     fi
 
@@ -50,10 +50,11 @@ _fzf_fetch_rsynced_resource()
     shift 2
     local resources=($@)
 
-    local resource_file="${KUBECTL_FZF_CACHE}/${context}/${resources}_header"
-    if ! $(_fzf_file_mtime_older_than $resource_file $cache_time); then
+    local check_time_file="${KUBECTL_FZF_CACHE}/${context}/${resources}_check_time_file"
+    if ! $(_fzf_file_mtime_older_than $check_time_file $cache_time); then
         return
     fi
+    touch $check_time_file
 
     local include_param=""
     for resource_name in ${resources[@]} ; do
