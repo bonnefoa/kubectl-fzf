@@ -59,7 +59,7 @@ _fzf_fetch_rsynced_resource()
 
     local include_param=()
     for resource_name in ${resources[@]} ; do
-        include_param+="--include=${resource_name}*"
+        include_param+="--include=${resource_name}* "
     done
 
     local rsync_endpoint=($(_fzf_check_direct_access $context))
