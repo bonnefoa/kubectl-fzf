@@ -11,7 +11,7 @@ KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIM
 # Cache time of api resource list
 KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:-3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-10}
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-30}
 KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
 mkdir -p $KUBECTL_FZF_CACHE
@@ -50,12 +50,14 @@ _fzf_fetch_rsynced_resource()
     shift 2
     local resources=($@)
 
-    local check_time_file="${KUBECTL_FZF_CACHE}/${context}/${resources}_check_time_file"
-    mkdir -p ${KUBECTL_FZF_CACHE}/${context}
-    if ! $(_fzf_file_mtime_older_than $check_time_file $cache_time); then
-        return
-    fi
-    touch $check_time_file
+    mkdir -p "${KUBECTL_FZF_CACHE}/${context}"
+    for resource in ${resources[@]} ; do
+        local check_time_file="${KUBECTL_FZF_CACHE}/${context}/_${resource}"
+        if ! $(_fzf_file_mtime_older_than $check_time_file $cache_time); then
+            return
+        fi
+        touch "$check_time_file"
+    done
 
     local include_param=()
     for resource_name in ${resources[@]} ; do
