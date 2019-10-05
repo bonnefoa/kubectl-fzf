@@ -27,11 +27,8 @@ data:
       - compute
     excluded-namespaces:
       - consul-agent
-      - coredns
       - go-audit
-      - kube-system
       - local-volume-provisioner
-      - kube2iam
       - localusers
       - kube2iam
       - devenv-.*
