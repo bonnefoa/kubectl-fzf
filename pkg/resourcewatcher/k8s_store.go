@@ -8,14 +8,14 @@ import (
 	"sort"
 	"time"
 
-	"kubectlfzf/pkg/k8sresources"
-	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
 )
 
 // K8sStore stores the current state of k8s resources
@@ -42,10 +42,6 @@ type StoreConfig struct {
 func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, namespace string) (K8sStore, error) {
 	k := K8sStore{}
 	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
-	currentFile, err := ioutil.TempFile(storeConfig.CacheDir, cfg.resourceName)
-	if err != nil {
-		return k, errors.Wrapf(err, "Error creating file for %s", cfg.resourceName)
-	}
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
@@ -53,7 +49,7 @@ func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresourc
 	if namespace != "" {
 		k.destFileName = fmt.Sprintf("%s_ns_%s", destFileName, namespace)
 	}
-	k.currentFile = currentFile
+	k.currentFile = nil
 	k.lastFullDump = time.Time{}
 	k.storeConfig = storeConfig
 	k.firstWrite = true
@@ -148,9 +144,9 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
-	if k.firstWrite {
-		k.firstWrite = false
-		err := os.Rename(k.currentFile.Name(), k.destFileName)
+	if k.currentFile == nil {
+		var err error
+		k.currentFile, err = os.Create(k.destFileName)
 		if err != nil {
 			return err
 		}
@@ -212,8 +208,10 @@ func (k *K8sStore) DumpFullState() error {
 		return err
 	}
 
-	glog.V(17).Infof("Closing file %s", k.currentFile.Name())
-	k.currentFile.Close()
+	if k.currentFile != nil {
+		glog.V(17).Infof("Closing file %s", k.currentFile.Name())
+		k.currentFile.Close()
+	}
 	err = os.Rename(tempFile.Name(), k.destFileName)
 	if err != nil {
 		return errors.Wrapf(err, "Error moving file from %s to %s",
