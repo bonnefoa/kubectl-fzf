@@ -131,6 +131,15 @@ excluded-namespaces:
   - dev-.*
 ```
 
+### Advantages
+
+- Minimal setup needed.
+
+### Drawbacks
+
+- It can be CPU and memory intensive on big clusters
+- It also can be bandwidth intensive. The most expensive is the initial listing at startup and on error/disconnection. Big namespace can increase the probability of errors during initial listing.
+
 ## cache_builder: pod version
 
 If the pod is deployed in your cluster, the autocompletion fetch the cache files from the pod using rsync.
@@ -149,6 +158,19 @@ You can change it by deploying the chart with a different port value and using `
 helm template --namespace myns --set port=873 . | kubectl apply -f -
 export KUBECTL_FZF_RSYNC_PORT=873
 ```
+
+If there's no direct access, a `port-forward` will be opened.
+Opening a `port-forward` can take several seconds and thus, slow the autocompletion.
+If you want to avoid this, you can keep the `open_port_forward.sh` script running which will keep the `port-forward` opened.
+
+### Advantages
+
+- No need to run a local `cache_builder`
+- Bandwidth usage is limited to the rsync transfert which is low.
+
+### Drawbacks
+
+- Rsynced resources are cached for 30 seconds so the autocompletion can get outdated.
 
 ## kubectl_fzf
 
