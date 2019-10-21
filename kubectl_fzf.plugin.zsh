@@ -65,7 +65,7 @@ _fzf_fetch_rsynced_resource()
     done
 
     local rsync_endpoint; rsync_endpoint=($(_fzf_check_direct_access $context))
-    if [[ -z "$rsync_endpoint" ]]; then
+    if [[ -z "${rsync_endpoint[@]}" ]]; then
         rsync_endpoint=($(_fzf_check_port_forward $context))
     fi
 
