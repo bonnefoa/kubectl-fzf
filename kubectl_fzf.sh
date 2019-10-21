@@ -741,4 +741,4 @@ __kubectl_fzf_preview()
 
 # Reregister complete function without '-o default' as we don't want to
 # fallback to files and dir completion
-complete -F __start_kubectl kubectl
+declare -f complete > /dev/null && complete -F __start_kubectl kubectl || true
