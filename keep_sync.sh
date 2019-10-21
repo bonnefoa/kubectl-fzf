@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 
-. ~/git-repos/kubectl-fzf/kubectl_fzf.sh
+. kubectl_fzf.sh
 
 resources=("pods" "serviceaccounts" "daemonsets" "replicasets" "cronjobs" "horizontalpodautoscalers" "ingresses" "configmaps" "secrets" "namespaces" "nodes" "deployments" "statefulsets" "persistentvolumes" "persistentvolumeclaims" "endpoints" "services")
 
