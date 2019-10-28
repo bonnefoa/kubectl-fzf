@@ -105,14 +105,14 @@ _fzf_check_direct_access()
             fi
         fi
 
-        if nc -G 1 -z $cached_ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
+        if nc -w 1 -z $cached_ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
             echo $cached_ip > "$endpoint_file"
             echo "$cached_ip $KUBECTL_FZF_RSYNC_PORT"
             return
         fi
     fi
     for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
-        if nc -G 1 -z $ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
+        if nc -w 1 -z $ip ${KUBECTL_FZF_RSYNC_PORT} &>/dev/null; then
             echo $ip > "$endpoint_file"
             echo "$ip $KUBECTL_FZF_RSYNC_PORT"
             return
@@ -124,7 +124,7 @@ _fzf_check_direct_access()
 _fzf_check_port_forward_running()
 {
     local local_port; local_port=$1
-    if ! nc -G 1 -z localhost $local_port &> /dev/null; then
+    if ! nc -w 1 -z localhost $local_port &> /dev/null; then
         return 1
     fi
     return 0
@@ -177,7 +177,7 @@ _fzf_check_port_forward()
     (nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &)
 
     for (( i = 0; i < 10; i++ )); do
-        if nc -G 1 -z localhost $local_port &> /dev/null; then
+        if nc -w 1 -z localhost $local_port &> /dev/null; then
             echo "localhost $local_port"
             return 0
         fi
