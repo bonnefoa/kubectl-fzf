@@ -31,7 +31,7 @@ _fzf_file_mtime_older_than()
         return 0
     fi
 
-    local mtime; mtime=$(date +%s -r "$file")
+    local mtime; mtime=$(date -r "$file" +%s)
     local current; current=$(date +%s)
     if [[ $((current - mtime)) -gt $cache_time ]]; then
         return 0
