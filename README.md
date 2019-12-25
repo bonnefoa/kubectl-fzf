@@ -38,7 +38,6 @@ Table of Contents
 
 - go (minimum version 1.12)
 - [fzf](https://github.com/junegunn/fzf)
-- coreutils `brew install coreutils`
 
 # Installation
 
