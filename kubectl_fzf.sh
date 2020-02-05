@@ -99,7 +99,7 @@ _fzf_check_connection()
     local port="$2"
 
     local nc_options=""
-    if ! nc -G 1 2>&1 | grep invalid; then
+    if [ ! "`nc -G 1 2>&1 | grep invalid`" ]; then
         nc_options="-G 1"
     fi
     if nc $nc_options -w 1 -z $ip $port &>/dev/null; then
