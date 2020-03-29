@@ -63,6 +63,14 @@ func JoinSlicesOrNone(sl []string, sep string) string {
 	return strings.Join(sl, sep)
 }
 
+// TruncateString truncates a string to a given maximum
+func TruncateString(s string, max int) string {
+	if len(s) > max {
+		return s[:max]
+	}
+	return s
+}
+
 // JoinSlicesWithMaxOrNone joins a slice of string with separator up to x elements. Display None if there's no elements
 func JoinSlicesWithMaxOrNone(sl []string, max int, sep string) string {
 	if len(sl) == 0 {

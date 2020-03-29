@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
+	"kubectlfzf/pkg/util"
 )
 
 // PodHeader is the header for pod files
@@ -129,7 +129,7 @@ func (p *Pod) ToString() string {
 		p.hostIP,
 		p.nodeName,
 		p.phase,
-		util.JoinSlicesOrNone(p.containers, ","),
+		util.TruncateString(util.JoinSlicesOrNone(p.containers, ","), 300),
 		util.JoinSlicesOrNone(p.tolerations, ","),
 		util.JoinSlicesOrNone(p.claims, ","),
 		p.resourceAge(),
