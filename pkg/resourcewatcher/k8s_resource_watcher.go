@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"kubectlfzf/pkg/k8sresources"
-	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
 	"regexp"
 
 	// Import for oidc auth
@@ -163,8 +163,8 @@ func (r *ResourceWatcher) isNamespaceExcluded(namespaceName string) bool {
 	return false
 }
 
-func (r *ResourceWatcher) FetchNamespaces() error {
-	namespaces, err := r.clientset.CoreV1().Namespaces().List(metav1.ListOptions{})
+func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
+	namespaces, err := r.clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

@@ -138,7 +138,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 		TimeBetweenFullDump: timeBetweenFullDump,
 	}
 	watcher := resourcewatcher.NewResourceWatcher(config, storeConfig, excludedNamespaces)
-	watcher.FetchNamespaces()
+	watcher.FetchNamespaces(ctx)
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 	ctorConfig := k8sresources.CtorConfig{
 		RoleBlacklist: roleBlacklistSet,
