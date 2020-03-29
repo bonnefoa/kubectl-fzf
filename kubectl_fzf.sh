@@ -50,6 +50,10 @@ _fzf_fetch_rsynced_resource()
     shift 2
     local resources=($@)
 
+    if pgrep -x cache_builder > /dev/null; then
+        return
+    fi
+
     mkdir -p "${KUBECTL_FZF_CACHE}/${context}"
     for resource in ${resources[@]} ; do
         local check_time_file="${KUBECTL_FZF_CACHE}/${context}/_${resource}"
