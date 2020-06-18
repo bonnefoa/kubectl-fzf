@@ -218,12 +218,14 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 
 	r.doPoll(watchlist, k8sStore)
 	ticker := time.NewTicker(cfg.pollingPeriod)
-	select {
-	case <-ctx.Done():
-		glog.Infof("Exiting poll of %s", k8sStore.resourceName)
-		return
-	case <-ticker.C:
-		r.doPoll(watchlist, k8sStore)
+	for {
+		select {
+		case <-ctx.Done():
+			glog.Infof("Exiting poll of %s", k8sStore.resourceName)
+			return
+		case <-ticker.C:
+			r.doPoll(watchlist, k8sStore)
+		}
 	}
 }
 
