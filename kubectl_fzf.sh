@@ -528,14 +528,14 @@ __kubectl_get_resource()
     local last_char=${COMP_LINE: -1}
     local query=""
 
-    if [[ $number_args -gt 3 || ($number_args -eq 3 && $last_char == " ") ]]; then
+    if [[ ${#nouns[@]} -gt 0 ]]; then
         # 'k get pod <TAB>' completion
         __kubectl_parse_get "${nouns[${#nouns[@]} -1]}"
         return 0
     fi
 
     # 'k get p<TAB>' completion
-    if [[ $penultimate != "kubectl" || $last_char != " " ]]; then
+    if [[ $last_char != " " ]]; then
         query=$last_part
     fi
 
