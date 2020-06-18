@@ -523,8 +523,6 @@ __kubectl_get_resource()
     fi
 
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
-    local penultimate=$(echo $COMP_LINE | awk '{print $(NF-1)}')
-    local number_args=$(echo $COMP_LINE | awk '{print NF}')
     local last_char=${COMP_LINE: -1}
     local query=""
 
