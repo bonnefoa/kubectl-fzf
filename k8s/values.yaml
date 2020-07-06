@@ -17,5 +17,5 @@ resources:
     cpu: 0.2
 
   cache_builder:
-    memory: 2G
+    memory: 4G
     cpu: 1
