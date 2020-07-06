@@ -4,6 +4,7 @@ eval "`declare -f __kubectl_parse_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
+KUBECTL_FZF_CONF=${KUBECTL_FZF_CONF:-$HOME/.kubectl_fzf.sh}
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 # Cache time when no rsync service was detected
@@ -11,10 +12,30 @@ KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIM
 # Cache time of api resource list
 KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:-3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-30}
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-120}
 KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
 mkdir -p $KUBECTL_FZF_CACHE
+
+declare -A cluster_groups
+if [[ -f "$KUBECTL_FZF_CONF" ]]; then
+    source "$KUBECTL_FZF_CONF"
+fi
+
+declare -A context_to_group
+_fzf_init_context_mapping()
+{
+    local clusters=()
+    echo "GRA"
+	for key in "${!cluster_groups[@]}" ; do
+        #echo $key
+        #echo ${cluster_groups[$key]}
+        #clusters=(${cluster_groups[$key]//,/ })
+		#for cluster in "${clusters[@]}" ; do
+			#context_to_group[$cluster]=$key
+		#done
+	done
+}
 
 # $1 is filename
 # $2 is header
