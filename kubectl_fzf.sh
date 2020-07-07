@@ -25,15 +25,14 @@ fi
 declare -A context_to_group
 _fzf_init_context_mapping()
 {
-    local clusters=()
-    echo "GRA"
-	for key in "${!cluster_groups[@]}" ; do
-        #echo $key
-        #echo ${cluster_groups[$key]}
-        #clusters=(${cluster_groups[$key]//,/ })
-		#for cluster in "${clusters[@]}" ; do
-			#context_to_group[$cluster]=$key
-		#done
+    if type emulate >/dev/null 2>/dev/null; then
+        emulate ksh;
+    fi
+	for cluster_group in ${cluster_groups[@]} ; do
+        local clusters=(${cluster_group//,/ })
+        for cluster in ${clusters[@]}; do
+            context_to_group[$cluster]=$clusters
+        done
 	done
 }
 
