@@ -338,7 +338,7 @@ _fzf_kubectl_node_complete()
 
 # $1 is awk end print command
 # $2 isFlag
-# $3 is filepath
+# $3 is filename
 # $4 is context
 # $5 is query
 # $6 optional namespace
@@ -346,7 +346,7 @@ _fzf_kubectl_complete()
 {
     local end_print=$1
     local is_flag="$2"
-    local file="$3"
+    local filename="$3"
     local header_file="$3_header"
     local context="$4"
     local split_by_namespace="$5"
@@ -356,6 +356,7 @@ _fzf_kubectl_complete()
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
+    local file="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     if [[ "$split_by_namespace" == "true" ]]; then
         file=${file}_ns_*
     fi
@@ -390,14 +391,14 @@ _fzf_kubectl_complete()
 }
 
 # $1 is awk end print command
-# $2 is filepath
+# $2 is filename
 # $3 is context
 # $4 is query
 # $5 optional namespace
 _fzf_field_selector_complete()
 {
     local end_print=$1
-    local file="$2"
+    local filename="$2"
     local header_file="$2_header"
     local context="$3"
     local split_by_namespace=$4
@@ -406,6 +407,7 @@ _fzf_field_selector_complete()
     local field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
     local main_header=$(_fzf_get_main_header $context $namespace)
 
+    local file="${KUBECTL_FZF_CACHE}/${context}/${filename}"
     if [[ "$split_by_namespace" == "true" ]]; then
         file=${file}_ns_*
     fi
@@ -423,7 +425,7 @@ _fzf_field_selector_complete()
         | awk "$end_print"
 }
 
-# $1 is filepath
+# $1 is filename
 # $2 is context
 # $3 is split_by_namespace
 # $4 is query
@@ -433,7 +435,7 @@ _fzf_with_namespace()
     _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
-# $1 is filepath
+# $1 is filename
 # $2 is context
 # $3 is split_by_namespace
 # $4 is query
@@ -442,7 +444,7 @@ _fzf_without_namespace()
     _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3" "$4"
 }
 
-# $1 is filepath
+# $1 is filename
 # $2 is context
 # $3 is split_by_namespace
 # $4 is query
@@ -452,7 +454,7 @@ _flag_selector_with_namespace()
     _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$4" "$namespace_in_query"
 }
 
-# $1 is filepath
+# $1 is filename
 # $2 is query
 # $3 is split_by_namespace
 # $4 is context
@@ -461,7 +463,7 @@ _flag_selector_without_namespace()
     _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3" "$4"
 }
 
-# $1 is filepath
+# $1 is filename
 # $2 is context
 # $3 is split_by_namespace
 # $4 is query
@@ -708,7 +710,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
             query=$last_part
         fi
-        result=$($flag_autocomplete_fun $filepath $context $split_by_namespace $query)
+        result=$($flag_autocomplete_fun $filename $context $split_by_namespace $query)
         __build_namespaced_compreply "${result[@]}"
         return
     elif [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
@@ -718,7 +720,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--field-selector" ]]; then
             query=$last_part
         fi
-        result=$($field_selector_autocomplete_fun $filepath $context $split_by_namespace $query)
+        result=$($field_selector_autocomplete_fun $filename $context $split_by_namespace $query)
         __build_namespaced_compreply "${result[@]}"
         return
     fi
@@ -743,7 +745,7 @@ __kubectl_parse_get()
             fi
     esac
 
-    result=$($autocomplete_fun $filepath $context $split_by_namespace $query)
+    result=$($autocomplete_fun $filename $context $split_by_namespace $query)
     if [[ -z "$result" ]]; then
         return
     fi
