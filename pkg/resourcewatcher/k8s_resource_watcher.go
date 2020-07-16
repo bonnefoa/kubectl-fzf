@@ -85,6 +85,10 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 
 	if cfg.splitByNamespaces {
 		for _, ns := range r.namespaces {
+			if r.isNamespaceExcluded(ns) {
+				continue
+			}
+			glog.Infof("Starting watcher for ns %s, resource %s", ns, cfg.resourceName)
 			store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, ns)
 			if err != nil {
 				return err
