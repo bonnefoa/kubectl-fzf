@@ -65,7 +65,7 @@ func NewResourceWatcher(config *restclient.Config,
 		util.FatalIf(err)
 		resourceWatcher.excludedNamespaces[i] = rg
 	}
-	glog.Infof("Namespaces %s will be excluded", excludedNamespaces)
+	glog.Infof("%d Namespaces will be excluded: %s", len(excludedNamespaces), excludedNamespaces)
 	return resourceWatcher
 }
 
