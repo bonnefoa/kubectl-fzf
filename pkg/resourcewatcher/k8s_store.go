@@ -2,11 +2,16 @@ package resourcewatcher
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
+	"strings"
 	"time"
+
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -14,13 +19,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
-	"kubectlfzf/pkg/k8sresources"
-	"kubectlfzf/pkg/util"
 )
 
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
 	data         map[string]k8sresources.K8sResource
+	ch           chan string
+	header       string
 	resourceCtor func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
 	ctorConfig   k8sresources.CtorConfig
 	resourceName string
@@ -39,13 +44,14 @@ type StoreConfig struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, namespace string) (K8sStore, error) {
+func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, namespace string, ch chan string) (K8sStore, error) {
 	k := K8sStore{}
 	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
 	k.destFileName = destFileName
+	k.ch = ch
 	if namespace != "" {
 		k.destFileName = fmt.Sprintf("%s_ns_%s", destFileName, namespace)
 	}
@@ -54,6 +60,7 @@ func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresourc
 	k.storeConfig = storeConfig
 	k.firstWrite = true
 	k.ctorConfig = ctorConfig
+	k.header = cfg.header
 
 	util.WriteHeaderFile(cfg.header, destFileName)
 
@@ -159,8 +166,9 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	return nil
 }
 
-func (k *K8sStore) writeDataInFile(tempFile *os.File) error {
-	w := bufio.NewWriter(tempFile)
+func (k *K8sStore) generateOutput() (string, error) {
+	var res strings.Builder
+
 	keys := make([]string, len(k.data))
 	i := 0
 	for key := range k.data {
@@ -170,13 +178,31 @@ func (k *K8sStore) writeDataInFile(tempFile *os.File) error {
 	sort.Strings(keys)
 	for _, key := range keys {
 		v := k.data[key]
-		_, err := w.WriteString(v.ToString())
+		_, err := res.WriteString(v.ToString())
 		if err != nil {
-			return errors.Wrapf(err, "Error writing bytes to file %s",
-				tempFile.Name())
+			return "", errors.Wrapf(err, "Error writing string %s",
+				v.ToString())
 		}
 	}
-	err := w.Flush()
+
+	return res.String(), nil
+}
+
+func (k *K8sStore) writeDataInFile(tempFile *os.File) error {
+	s, err := k.generateOutput()
+	if err != nil {
+		return errors.Wrapf(err, "Error generating output")
+	}
+
+	w := bufio.NewWriter(tempFile)
+
+	_, err = w.WriteString(s)
+	if err != nil {
+		return errors.Wrapf(err, "Error writing bytes to file %s",
+			tempFile.Name())
+	}
+
+	err = w.Flush()
 	if err != nil {
 		return errors.Wrapf(err, "Error flushing buffer")
 	}
@@ -185,6 +211,33 @@ func (k *K8sStore) writeDataInFile(tempFile *os.File) error {
 		return errors.Wrapf(err, "Error syncing file")
 	}
 	return nil
+}
+
+func (k *K8sStore) WatchRequest(ctx context.Context) {
+
+	for {
+		select {
+		case <-ctx.Done():
+			glog.Infof("Exiting request watcher of %s", k.resourceName)
+			return
+		case query := <-k.ch:
+			var output string
+			var err error
+			if query == "resource" {
+				output, err = k.generateOutput()
+			} else if query == "header" {
+				output = k.header
+			} else {
+				k.ch <- "Invalid query"
+			}
+
+			if err != nil {
+				k.ch <- "Error"
+			} else {
+				k.ch <- output
+			}
+		}
+	}
 }
 
 // DumpFullState writes the full state to the cache file

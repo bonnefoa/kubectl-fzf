@@ -70,12 +70,15 @@ func NewResourceWatcher(config *restclient.Config,
 }
 
 // Start begins the watch/poll of a given k8s resource
-func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctorConfig k8sresources.CtorConfig) error {
+func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig,
+	ctorConfig k8sresources.CtorConfig, resourceChan map[string][]chan string) error {
 	ctx, cancel := context.WithCancel(parentCtx)
 	r.cancelFuncs = append(r.cancelFuncs, cancel)
 
 	if cfg.pollingPeriod > 0 {
-		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "")
+		ch := make(chan string)
+		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "", ch)
+		resourceChan[cfg.resourceName] = append(resourceChan[cfg.resourceName], ch)
 		if err != nil {
 			return err
 		}
@@ -88,8 +91,10 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 			if r.isNamespaceExcluded(ns) {
 				continue
 			}
+			ch := make(chan string)
+			resourceChan[cfg.resourceName] = append(resourceChan[cfg.resourceName], ch)
 			glog.Infof("Starting watcher for ns %s, resource %s", ns, cfg.resourceName)
-			store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, ns)
+			store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, ns, ch)
 			if err != nil {
 				return err
 			}
@@ -98,7 +103,9 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 		return nil
 	}
 
-	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "")
+	ch := make(chan string)
+	resourceChan[cfg.resourceName] = append(resourceChan[cfg.resourceName], ch)
+	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "", ch)
 	if err != nil {
 		return err
 	}
@@ -248,6 +255,7 @@ func (r *ResourceWatcher) watchResource(ctx context.Context,
 		},
 	)
 
+	go k8sStore.WatchRequest(ctx)
 	stop := make(chan struct{})
 	go controller.Run(stop)
 	<-ctx.Done()

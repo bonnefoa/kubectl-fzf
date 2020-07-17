@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/sevlyar/go-daemon"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -14,8 +13,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sevlyar/go-daemon"
+
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/resourcewatcher"
+	"kubectlfzf/pkg/server"
 	"kubectlfzf/pkg/util"
 
 	"github.com/golang/glog"
@@ -46,6 +48,9 @@ var (
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
 
+	httpPort  int
+	httpsPort int
+
 	daemonCmd         string
 	daemonName        string
 	daemonPidFilePath string
@@ -73,6 +78,9 @@ func init() {
 	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 	flag.Duration("node-polling-period", 300*time.Second, "Polling period for nodes")
 	flag.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces")
+
+	flag.Int("http-port", 80, "Http port to open")
+	flag.Int("https-port", 443, "Https port to open")
 
 	flag.String("daemon", "", `Send signal to the daemon:
   start - run as a daemon
@@ -107,6 +115,8 @@ func init() {
 	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 	nodePollingPeriod = viper.GetDuration("node-polling-period")
 	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
+	httpPort = viper.GetInt("http-port")
+	httpsPort = viper.GetInt("https-port")
 
 	daemonCmd = viper.GetString("daemon")
 	daemonName = viper.GetString("daemon-name")
@@ -131,7 +141,8 @@ func termHandler(sig os.Signal) error {
 	return daemon.ErrStop
 }
 
-func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
+func startWatchOnCluster(ctx context.Context, config *restclient.Config,
+	cluster string, resourceChan map[string][]chan string) resourcewatcher.ResourceWatcher {
 	storeConfig := resourcewatcher.StoreConfig{
 		CacheDir:            cacheDir,
 		Cluster:             cluster,
@@ -146,7 +157,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 
 	glog.Infof("Start cache build on cluster %s", config.Host)
 	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig, ctorConfig)
+		err := watcher.Start(ctx, watchConfig, ctorConfig, resourceChan)
 		util.FatalIf(err)
 	}
 	err := watcher.DumpAPIResources()
@@ -208,9 +219,14 @@ func start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
+	resourceChan := make(map[string][]chan string)
+
 	currentRestConfig, currentCluster := getClientConfigAndCluster()
-	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster)
+	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster, resourceChan)
 	ticker := time.NewTicker(time.Second * 5)
+
+	httpServer := server.NewHttpServer(resourceChan, httpPort, httpsPort)
+	go httpServer.Start(ctx)
 
 	for {
 		select {
@@ -222,7 +238,7 @@ func start() {
 			if restConfig.Host != currentRestConfig.Host {
 				glog.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
-				watcher = startWatchOnCluster(ctx, restConfig, cluster)
+				watcher = startWatchOnCluster(ctx, restConfig, cluster, resourceChan)
 				currentRestConfig = restConfig
 				currentCluster = cluster
 			}
