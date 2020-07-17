@@ -3,8 +3,8 @@ package resourcewatcher
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -25,19 +25,35 @@ type LabelKey struct {
 	Label     string
 }
 
+type LabelPair struct {
+	Key         LabelKey
+	Occurrences int
+}
+
+type LabelPairList []LabelPair
+
+func (p LabelPairList) Len() int { return len(p) }
+func (p LabelPairList) Less(i, j int) bool {
+	if p[i].Occurrences == p[j].Occurrences {
+		return p[i].Key.Namespace < p[j].Key.Namespace && p[i].Key.Label < p[j].Key.Label
+	}
+	return p[i].Occurrences < p[j].Occurrences
+}
+func (p LabelPairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
 	data             map[string]k8sresources.K8sResource
-	label            map[LabelKey]int
+	labelMap         map[LabelKey]int
 	ch               chan string
 	resourceCtor     func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
 	ctorConfig       k8sresources.CtorConfig
 	resourceName     string
-	destFileName     string
 	currentFile      *os.File
 	lastFullDump     time.Time
 	storeConfig      StoreConfig
 	firstWrite       bool
+	destDir          string
 	splitByNamespace bool
 }
 
@@ -51,11 +67,11 @@ type StoreConfig struct {
 // NewK8sStore creates a new store
 func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, splitByNamespace bool, ch chan string) (K8sStore, error) {
 	k := K8sStore{}
-	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
+	k.destDir = path.Join(storeConfig.CacheDir, storeConfig.Cluster)
 	k.data = make(map[string]k8sresources.K8sResource, 0)
+	k.labelMap = make(map[LabelKey]int, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
-	k.destFileName = destFileName
 	k.ch = ch
 	k.splitByNamespace = splitByNamespace
 	k.currentFile = nil
@@ -65,40 +81,54 @@ func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresourc
 	k.ctorConfig = ctorConfig
 
 	if !splitByNamespace {
-		util.WriteHeaderFile(cfg.header, destFileName)
+		err := util.WriteStringToFile(cfg.header, k.destDir, k.resourceName, "header")
+		if err != nil {
+			return k, err
+		}
 	}
 
 	return k, nil
 }
 
-func resourceKey(obj interface{}) string {
+func resourceKey(obj interface{}) (string, string, map[string]string) {
 	name := "None"
 	namespace := "None"
+	var labels map[string]string
 	switch v := obj.(type) {
 	case metav1.ObjectMetaAccessor:
 		o := v.GetObjectMeta()
 		namespace = o.GetNamespace()
 		name = o.GetName()
+		labels = o.GetLabels()
 	case *unstructured.Unstructured:
 		metadata := v.Object["metadata"].(map[string]interface{})
 		name = metadata["name"].(string)
 		namespace = metadata["namespace"].(string)
+		labels = metadata["labels"].(map[string]string)
 	default:
 		glog.Warningf("Unknown type %v", obj)
 	}
-	return fmt.Sprintf("%s_%s", namespace, name)
+	return fmt.Sprintf("%s_%s", namespace, name), namespace, labels
+}
+
+func (k *K8sStore) updateLabelMap(namespace string, labels map[string]string) {
+	for labelKey, labelValue := range labels {
+		k.labelMap[LabelKey{namespace, fmt.Sprintf("%s=%s", labelKey, labelValue)}]++
+	}
 }
 
 // AddResourceList clears current state add the objects to the store.
 // It will trigger a full dump
 func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 	k.data = make(map[string]k8sresources.K8sResource, 0)
+	k.labelMap = make(map[LabelKey]int, 0)
 	for _, runtimeObject := range lstRuntime {
-		key := resourceKey(runtimeObject)
+		key, ns, labels := resourceKey(runtimeObject)
 		resource := k.resourceCtor(runtimeObject, k.ctorConfig)
 		k.data[key] = resource
+		k.updateLabelMap(ns, labels)
 	}
-	glog.Infof("Writing new state of %s", k.destFileName)
+	glog.Infof("Writing new state of %s", k.resourceName)
 	err := k.DumpFullState()
 	if err != nil {
 		glog.Warningf("Error when dumping state: %v", err)
@@ -107,10 +137,11 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 
 // AddResource adds a new k8s object to the store
 func (k *K8sStore) AddResource(obj interface{}) {
-	key := resourceKey(obj)
+	key, ns, labels := resourceKey(obj)
 	newObj := k.resourceCtor(obj, k.ctorConfig)
 	glog.V(11).Infof("%s added: %s", k.resourceName, key)
 	k.data[key] = newObj
+	k.updateLabelMap(ns, labels)
 
 	err := k.AppendNewObject(newObj)
 	if err != nil {
@@ -121,17 +152,21 @@ func (k *K8sStore) AddResource(obj interface{}) {
 // DeleteResource removes an existing k8s object to the store
 func (k *K8sStore) DeleteResource(obj interface{}) {
 	key := "Unknown"
+	ns := "Unknown"
+	var labels map[string]string
 	switch v := obj.(type) {
 	case cache.DeletedFinalStateUnknown:
-		key = resourceKey(v.Obj)
+		key, ns, labels = resourceKey(v.Obj)
 	case unstructured.Unstructured:
 	case metav1.ObjectMetaAccessor:
-		key = resourceKey(obj)
+		key, ns, labels = resourceKey(obj)
 	default:
 		glog.V(6).Infof("Unknown object type %v", obj)
+		return
 	}
 	glog.V(11).Infof("%s deleted: %s", k.resourceName, key)
 	delete(k.data, key)
+	k.updateLabelMap(ns, labels)
 
 	err := k.DumpFullState()
 	if err != nil {
@@ -141,16 +176,23 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 
 // UpdateResource update an existing k8s object
 func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
-	key := resourceKey(newObj)
+	key, ns, labels := resourceKey(newObj)
 	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
 	if k8sObj.HasChanged(k.data[key]) {
 		glog.V(11).Infof("%s changed: %s", k.resourceName, key)
 		k.data[key] = k8sObj
+		k.updateLabelMap(ns, labels)
 		err := k.DumpFullState()
 		if err != nil {
 			glog.Warningf("Error when dumping state: %v", err)
 		}
 	}
+}
+
+func (k *K8sStore) updateCurrentFile() (err error) {
+	destFile := path.Join(k.destDir, fmt.Sprintf("%s_%s", k.resourceName, "resource"))
+	k.currentFile, err = os.OpenFile(destFile, os.O_APPEND|os.O_WRONLY, 0644)
+	return err
 }
 
 // AppendNewObject appends a new object to the cache dump
@@ -160,17 +202,45 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	}
 	if k.currentFile == nil {
 		var err error
-		k.currentFile, err = os.Create(k.destFileName)
+		err = util.WriteStringToFile(resource.ToString(), k.destDir, k.resourceName, "resource")
 		if err != nil {
 			return err
 		}
-		glog.Infof("Initial write of %s", k.destFileName)
+		err = k.updateCurrentFile()
+		if err != nil {
+			return err
+		}
+		glog.Infof("Initial write of %s", k.currentFile.Name())
 	}
 	_, err := k.currentFile.WriteString(resource.ToString())
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (k *K8sStore) generateLabel() (string, error) {
+
+	pl := make(LabelPairList, len(k.labelMap))
+	i := 0
+	for key, occurrences := range k.labelMap {
+		pl[i] = LabelPair{key, occurrences}
+		i++
+	}
+	sort.Sort(sort.Reverse(pl))
+
+	var res strings.Builder
+	for _, pair := range pl {
+		str := fmt.Sprintf("%s %s %d\n",
+			pair.Key.Namespace, pair.Key.Label, pair.Occurrences)
+		_, err := res.WriteString(str)
+		if err != nil {
+			return "", errors.Wrapf(err, "Error writing string %s",
+				str)
+		}
+	}
+
+	return res.String(), nil
 }
 
 func (k *K8sStore) generateOutput() (string, error) {
@@ -207,6 +277,8 @@ func (k *K8sStore) WatchRequest(ctx context.Context) {
 			var err error
 			if query == "resource" {
 				output, err = k.generateOutput()
+			} else if query == "label" {
+				output, err = k.generateLabel()
 			} else {
 				k.ch <- "Invalid query"
 			}
@@ -233,31 +305,25 @@ func (k *K8sStore) DumpFullState() error {
 	}
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
-	tempFile, err := ioutil.TempFile(k.storeConfig.CacheDir, k.resourceName)
-	if err != nil {
-		return errors.Wrapf(err, "Error creating temp file for resource %s",
-			k.resourceName)
-	}
-	glog.V(12).Infof("Created temp file for full state %s", tempFile.Name())
 
-	s, err := k.generateOutput()
+	resourceOutput, err := k.generateOutput()
 	if err != nil {
 		return errors.Wrapf(err, "Error generating output")
 	}
-	util.WriteStringToFile(s, tempFile)
+	err = util.WriteStringToFile(resourceOutput, k.destDir, k.resourceName, "resource")
 	if err != nil {
 		return err
 	}
 
-	if k.currentFile != nil {
-		glog.V(17).Infof("Closing file %s", k.currentFile.Name())
-		k.currentFile.Close()
-	}
-	err = os.Rename(tempFile.Name(), k.destFileName)
+	err = k.updateCurrentFile()
 	if err != nil {
-		return errors.Wrapf(err, "Error moving file from %s to %s",
-			tempFile.Name(), k.destFileName)
+		return err
 	}
-	k.currentFile = tempFile
-	return nil
+
+	labelOutput, err := k.generateLabel()
+	if err != nil {
+		return errors.Wrapf(err, "Error generating label output")
+	}
+	err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
+	return err
 }

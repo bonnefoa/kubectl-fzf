@@ -5,15 +5,17 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"kubectlfzf/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kubectlfzf/pkg/util"
 )
 
 // K8sResource is the generic information of a k8s entity
 type K8sResource interface {
 	HasChanged(k K8sResource) bool
 	ToString() string
+	GetLabels() []string
+	GetNamespace() string
 	FromRuntime(obj interface{}, config CtorConfig)
 }
 
@@ -59,6 +61,15 @@ var ExcludedLabels = map[string]string{"pod-template-generation": "",
 	"app.kubernetes.io/managed-by": "", "pod-template-hash": "",
 	"statefulset.kubernetes.io/pod-name": "",
 	"controler-uid":                      ""}
+
+func (r *ResourceMeta) GetNamespace() string {
+	return r.namespace
+}
+
+func (r *ResourceMeta) GetLabels() []string {
+	els := util.JoinStringMap(r.labels, ExcludedLabels, "=")
+	return els
+}
 
 func (r *ResourceMeta) labelsString() string {
 	if len(r.labels) == 0 {

@@ -2,12 +2,15 @@ package resourcewatcher
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
+	"path"
+	"strings"
 	"time"
 
+	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
+	"regexp"
+
 	"github.com/golang/glog"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -19,9 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	"kubectlfzf/pkg/k8sresources"
-	"kubectlfzf/pkg/util"
-	"regexp"
 
 	// Import for oidc auth
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -199,10 +199,13 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 // DumpAPIResources dumps api resources file
 func (r *ResourceWatcher) DumpAPIResources() error {
 	resourceName := "apiresources"
-	destFileName := util.GetDestFileName(r.storeConfig.CacheDir,
-		r.storeConfig.Cluster, resourceName)
-	util.WriteHeaderFile(k8sresources.APIResourceHeader, destFileName)
-	currentFile, err := ioutil.TempFile(r.storeConfig.CacheDir, resourceName)
+	destDir := path.Join(r.storeConfig.CacheDir, r.storeConfig.Cluster)
+	err := util.WriteStringToFile(k8sresources.APIResourceHeader, destDir, resourceName, "header")
+	if err != nil {
+		return err
+	}
+
+	var res strings.Builder
 	resourceLists, _ := r.clientset.Discovery().ServerPreferredResources()
 	if err != nil {
 		return err
@@ -211,19 +214,15 @@ func (r *ResourceWatcher) DumpAPIResources() error {
 		for _, apiResource := range resourceList.APIResources {
 			a := k8sresources.APIResource{}
 			a.FromAPIResource(apiResource, resourceList)
-			_, err := currentFile.WriteString(a.ToString())
+			_, err := res.WriteString(a.ToString())
 			if err != nil {
 				return err
 			}
 		}
 	}
-	glog.Infof("Writing apiresources in %s", destFileName)
-	err = os.Rename(currentFile.Name(), destFileName)
-	if err != nil {
-		return errors.Wrapf(err, "Error moving file from %s to %s",
-			currentFile.Name(), destFileName)
-	}
-	return nil
+
+	err = util.WriteStringToFile(res.String(), destDir, resourceName, "resource")
+	return err
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,

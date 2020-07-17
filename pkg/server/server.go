@@ -30,7 +30,7 @@ func (h *HttpServer) resourceHandler(w http.ResponseWriter, r *http.Request) {
 
 	glog.Infof("Received %s request for %s", outputType, resourceName)
 
-	if outputType != "resource" && outputType != "header" {
+	if outputType != "label" && outputType != "resource" && outputType != "header" {
 		glog.Infof("Unknown output type %s", outputType)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Unknown output type %s", outputType)
