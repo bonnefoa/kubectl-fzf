@@ -7,13 +7,13 @@ eval "`declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 # Cache time when no rsync service was detected
-KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME:-3600}
+KUBECTL_FZF_HTTP_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_HTTP_NO_SERVICE_CACHE_TIME:-3600}
 # Cache time of api resource list
-KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:-3600}
+KUBECTL_FZF_HTTP_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_HTTP_API_RESOURCE_CACHE_TIME:-3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-30}
-KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
-KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
+KUBECTL_FZF_HTTP_RESOURCE_CACHE_TIME=${KUBECTL_FZF_HTTP_RESOURCE_CACHE_TIME:-30}
+KUBECTL_FZF_HTTP_PORT=${KUBECTL_FZF_HTTP_PORT:-80}
+KUBECTL_FZF_HTTPS_PORT=${KUBECTL_FZF_HTTPS_PORT:-443}
 mkdir -p $KUBECTL_FZF_CACHE
 
 # $1 is filename
@@ -43,7 +43,7 @@ _fzf_file_mtime_older_than()
 # $1 is context
 # $2 is cache time
 # $3 is resource name
-_fzf_fetch_rsynced_resource()
+_fzf_fetch_http_resource()
 {
     local context=$1
     local cache_time=$2
@@ -54,47 +54,30 @@ _fzf_fetch_rsynced_resource()
         return
     fi
 
+    local http_endpoint=($(_fzf_check_direct_access $context))
+    if [[ -z "${http_endpoint[@]}" ]]; then
+        return
+    fi
+
     mkdir -p "${KUBECTL_FZF_CACHE}/${context}"
-    for resource in ${resources[@]} ; do
-        local check_time_file="${KUBECTL_FZF_CACHE}/${context}/_${resource}"
+    for resource_name in ${resources[@]} ; do
+        local check_time_file="${KUBECTL_FZF_CACHE}/${context}/_${resource_name}"
         if ! $(_fzf_file_mtime_older_than $check_time_file $cache_time); then
             return
         fi
-        touch "$check_time_file"
-    done
 
-    local include_param=()
-    for resource_name in ${resources[@]} ; do
-        include_param+="--include=${resource_name}* "
-    done
-
-    local rsync_endpoint=($(_fzf_check_direct_access $context))
-    if [[ -z "${rsync_endpoint[@]}" ]]; then
-        rsync_endpoint=($(_fzf_check_port_forward $context))
-    fi
-
-    if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete ${include_param[@]} --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
-    fi
-
-}
-
-_fzf_get_port_forward_port()
-{
-    local context="$1"
-    local port_file="$KUBECTL_FZF_CACHE/${context}_port"
-    local global_port_file="$KUBECTL_FZF_CACHE/port"
-    local local_port=$KUBECTL_FZF_PORT_FORWARD_START
-    if [[ -f "$port_file" ]]; then
-        local_port=$(cat $port_file)
-    else
-        if [[ -f "$global_port_file" ]]; then
-            local_port=$(cat $global_port_file)
+        local header_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_header"
+        if [[ ! -f "$header_file" && $resource_name != "apiresources" ]]; then
+            curl -s ${http_endpoint[2]}://${http_endpoint[0]}:${http_endpoint[1]}/header/$resource_name > "$header_file"
         fi
-        echo $local_port > $port_file
-        echo $((local_port + 1)) > $global_port_file
-    fi
-    echo $local_port
+
+        local resource_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_resource"
+        curl -s ${http_endpoint[2]}://${http_endpoint[0]}:${http_endpoint[1]}/resource/$resource_name > "$resource_file"
+
+        local label_file="${KUBECTL_FZF_CACHE}/${context}/${resource_name}_label"
+        curl -s ${http_endpoint[2]}://${http_endpoint[0]}:${http_endpoint[1]}/label/$resource_name > "$label_file"
+        touch -m "$check_time_file"
+    done
 }
 
 _fzf_check_connection()
@@ -117,97 +100,37 @@ _fzf_check_direct_access()
     local context="$1"
     local endpoint_file="$KUBECTL_FZF_CACHE/${context}_cache_endpoint"
     if [[ -s "$endpoint_file" ]]; then
-        local cached_ip=$(cat "$endpoint_file")
-        if [[ "$cached_ip" == "No service" ]]; then
-            if ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME); then
+        local cached_endpoint=($(cat "$endpoint_file"))
+        if [[ "${cached_endpoint[@]}" == "NoService" ]]; then
+            if ! $(_fzf_file_mtime_older_than $endpoint_file $KUBECTL_FZF_HTTP_NO_SERVICE_CACHE_TIME); then
                 return
             fi
         fi
 
-        if _fzf_check_connection $cached_ip ${KUBECTL_FZF_RSYNC_PORT}; then
-            echo $cached_ip > "$endpoint_file"
-            echo "$cached_ip $KUBECTL_FZF_RSYNC_PORT"
+        if _fzf_check_connection ${cached_endpoint[0]} ${cached_endpoint[1]}; then
+            touch -m "$endpoint_file"
+            echo ${cached_endpoint[0]} ${cached_endpoint[1]} ${cached_endpoint[2]}
             return
         fi
     fi
+
     for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
-        if _fzf_check_connection $ip ${KUBECTL_FZF_RSYNC_PORT}; then
-            echo $ip > "$endpoint_file"
-            echo "$ip $KUBECTL_FZF_RSYNC_PORT"
+
+        if _fzf_check_connection $ip $KUBECTL_FZF_HTTP_PORT; then
+            echo "$ip $KUBECTL_FZF_HTTP_PORT http" > "$endpoint_file"
+            echo "$ip $KUBECTL_FZF_HTTP_PORT http"
             return
         fi
-    done
-    echo "No service" > "$endpoint_file"
-}
 
-_fzf_check_port_forward_running()
-{
-    local local_port=$1
-    if ! _fzf_check_connection localhost $local_port; then
-        return 1
-    fi
-    return 0
-}
-
-_fzf_get_service_namespace()
-{
-    local context="$1"
-    local service_file="$KUBECTL_FZF_CACHE/${context}_service"
-    local kfzf_ns=""
-    if [[ -s "$service_file" ]]; then
-        local cached_service=$(cat "$service_file")
-        if [[ "$cached_service" == "No service" ]]; then
-            if ! $(_fzf_file_mtime_older_than $service_file $KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME); then
-                return 1
-            fi
-        else
-            echo "$cached_service"
-            return 0
+        if _fzf_check_connection $ip $KUBECTL_FZF_HTTPS_PORT; then
+            echo "$ip $KUBECTL_FZF_HTTPS_PORT https" > "$endpoint_file"
+            echo "$ip $KUBECTL_FZF_HTTPS_PORT https"
+            return
         fi
-    fi
-    kfzf_ns=($(kubectl get svc --all-namespaces -l app=kubectl-fzf -o=jsonpath='{.items[0].metadata.namespace}' 2> /dev/null))
-    if [[ "$kfzf_ns" == "" ]]; then
-        echo "No service" > "$service_file"
-        return 1
-    fi
-    echo "${kfzf_ns}" > "$service_file"
-    echo "${kfzf_ns}"
-    return 0
-}
 
-# $1 is context
-_fzf_check_port_forward()
-{
-    local context="$1"
-    local port_file="$KUBECTL_FZF_CACHE/${context}_port"
-    local log_file="$KUBECTL_FZF_CACHE/${context}_port_forward_log"
 
-    local local_port=$(_fzf_get_port_forward_port $context)
-    if _fzf_check_port_forward_running $local_port; then
-        echo "localhost $local_port"
-        return 0
-    fi
-
-    local kfzf_ns=$(_fzf_get_service_namespace $context)
-    if [[ "$kfzf_ns" == "" ]]; then
-        return 1
-    fi
-
-    (nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &)
-
-    for (( i = 0; i < 10; i++ )); do
-        if _fzf_check_connection localhost $local_port; then
-            echo "localhost $local_port"
-            return 0
-        fi
-        sleep 1
     done
-
-    if _fzf_check_port_forward_running $local_port; then
-        echo "localhost $local_port"
-        return 0
-    fi
-    return 1
+    echo "NoService" > "$endpoint_file"
 }
 
 # $1 is context
@@ -239,13 +162,13 @@ _fzf_get_exclude_pattern()
 _fzf_get_node_to_pods()
 {
     local context="$1"
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_ns_*"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_resource"
     local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
 
     local daemonsets_file="${KUBECTL_FZF_CACHE}/${context}/daemonsets"
-    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
+    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | uniq)
     local exclude_pods=""
     for daemonset in $daemonsets ; do
         if [[ -z $exclude_pods ]]; then
@@ -256,16 +179,14 @@ _fzf_get_node_to_pods()
     done
 
     grep -v $exclude_pods $pod_file \
-        | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } " \
-        | sort
+        | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } "
 }
 
 _fzf_kubectl_pv_complete()
 {
     local pv_file="$1"
     local context="$2"
-    local split_by_namespace="$3"
-    local query="$4"
+    local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
 
@@ -276,7 +197,7 @@ _fzf_kubectl_pv_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
     header="$header MountedBy"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_ns_*"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_resource"
     local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
@@ -297,8 +218,7 @@ _fzf_kubectl_node_complete()
 {
     local node_file="$1"
     local context="$2"
-    local split_by_namespace="$3"
-    local query="$4"
+    local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
     local node_header_file="${node_file}_header"
@@ -326,31 +246,26 @@ _fzf_kubectl_complete()
 {
     local end_print=$1
     local is_flag="$2"
-    local file="$3"
-    local header_file="$3_header"
+    local prefix="$3"
+    local resource_file="${prefix}_resource"
+    local header_file="${prefix}_header"
+    local label_file="${prefix}_label"
     local context="$4"
-    local split_by_namespace="$5"
-    local query=$6
-    local namespace="$7"
+    local query=$5
+    local namespace="$6"
     local label_field=$(_fzf_get_header_position $header_file "Labels")
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
 
-    if [[ "$split_by_namespace" == "true" ]]; then
-        file=${file}_ns_*
-    fi
-
     if [[ $is_flag == "with_namespace" ]]; then
         local header="Namespace Labels Occurrences"
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]}}" $file | sort | uniq -c | sort -n -r \
-            | awk '{print $2,$3,$1}')
+        local data=$(cat $label_file)
     elif [[ $is_flag == "without_namespace" ]]; then
         local header="Labels Occurrences"
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) print a[i]}" $file | sort | uniq -c | sort -n -r \
-            | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        local data=$(cat $label_file)
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
-        local data=$(cut -d ' ' -f 1-$end_field $file)
+        local data=$(cut -d ' ' -f 1-$end_field $resource_file)
     fi
 
     if [[ -n $namespace ]]; then
@@ -377,22 +292,17 @@ _fzf_kubectl_complete()
 _fzf_field_selector_complete()
 {
     local end_print=$1
-    local file="$2"
-    local header_file="$2_header"
+    local resource_prefix="$2"
+    local header_file="${resource_prefix}_header"
     local context="$3"
-    local split_by_namespace=$4
-    local query=$5
-    local namespace="$6"
+    local query=$4
+    local namespace="$5"
     local field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
     local main_header=$(_fzf_get_main_header $context $namespace)
 
-    if [[ "$split_by_namespace" == "true" ]]; then
-        file=${file}_ns_*
-    fi
-
     local header="Namespace FieldSelector Occurrences"
-    local data=$(cut -d' ' -f 1,$field_selector_field $file \
-        | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | sort | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
+    local data=$(cut -d' ' -f 1,$field_selector_field $resource_prefix \
+        | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
 
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
@@ -405,50 +315,45 @@ _fzf_field_selector_complete()
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _fzf_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _fzf_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3" "$4"
+    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _flag_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is query
-# $3 is split_by_namespace
-# $4 is context
+# $3 is context
 _flag_selector_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3" "$4"
+    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _fzf_field_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$namespace_in_query"
 }
 
 __kubectl_get_containers()
@@ -456,9 +361,8 @@ __kubectl_get_containers()
     local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
     local main_header=$(_fzf_get_main_header $current_context "")
-    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_* \
-        | tr ',' '\n' \
-        | sort)
+    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
+        | tr ',' '\n')
     if [[ $data == "" ]]; then
         ___kubectl_get_containers $*
         return
@@ -512,10 +416,10 @@ __build_namespaced_compreply()
 __kubectl_get_resource()
 {
     local current_context=$(kubectl config current-context)
-    local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
+    local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_resource"
     local header_file="${apiresources_file}_header"
 
-    _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
+    _fzf_fetch_http_resource $current_context $KUBECTL_FZF_HTTP_API_RESOURCE_CACHE_TIME "apiresources"
 
     if [[ ! -f ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
@@ -563,7 +467,6 @@ __kubectl_parse_get()
     local flag_autocomplete_fun
     local field_selector_autocomplete_fun
     local resource_name=$1
-    local split_by_namespace=false
 
     case $resource_name in
         all )
@@ -572,7 +475,6 @@ __kubectl_parse_get()
         po | pod | pods )
             filename="pods"
             autocomplete_fun=_fzf_with_namespace
-            split_by_namespace=true
             flag_autocomplete_fun=_flag_selector_with_namespace
             field_selector_autocomplete_fun=_fzf_field_selector_with_namespace
             ;;
@@ -608,7 +510,6 @@ __kubectl_parse_get()
             ;;
         cm | configmap | configmaps )
             filename="configmaps"
-            split_by_namespace=true
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
@@ -670,9 +571,9 @@ __kubectl_parse_get()
     fi
 
     if [[ "$filename" == "nodes" ]]; then
-        _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME "pods" "nodes" "daemonsets"
+        _fzf_fetch_http_resource $current_context $KUBECTL_FZF_HTTP_RESOURCE_CACHE_TIME "pods" "nodes" "daemonsets"
     else
-        _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME $filename
+        _fzf_fetch_http_resource $current_context $KUBECTL_FZF_HTTP_RESOURCE_CACHE_TIME $filename
     fi
 
     local filepath="${KUBECTL_FZF_CACHE}/${context}/${filename}"
@@ -688,7 +589,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
             query=$last_part
         fi
-        result=$($flag_autocomplete_fun $filepath $context $split_by_namespace $query)
+        result=$($flag_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
         return
     elif [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
@@ -698,7 +599,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--field-selector" ]]; then
             query=$last_part
         fi
-        result=$($field_selector_autocomplete_fun $filepath $context $split_by_namespace $query)
+        result=$($field_selector_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
         return
     fi
@@ -723,7 +624,7 @@ __kubectl_parse_get()
             fi
     esac
 
-    result=$($autocomplete_fun $filepath $context $split_by_namespace $query)
+    result=$($autocomplete_fun $filepath $context $query)
     if [[ -z "$result" ]]; then
         return
     fi
