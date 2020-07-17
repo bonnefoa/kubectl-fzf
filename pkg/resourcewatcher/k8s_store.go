@@ -231,8 +231,14 @@ func (k *K8sStore) generateLabel() (string, error) {
 
 	var res strings.Builder
 	for _, pair := range pl {
-		str := fmt.Sprintf("%s %s %d\n",
-			pair.Key.Namespace, pair.Key.Label, pair.Occurrences)
+		var str string
+		if pair.Key.Namespace == "" {
+			str = fmt.Sprintf("%s %d\n",
+				pair.Key.Label, pair.Occurrences)
+		} else {
+			str = fmt.Sprintf("%s %s %d\n",
+				pair.Key.Namespace, pair.Key.Label, pair.Occurrences)
+		}
 		_, err := res.WriteString(str)
 		if err != nil {
 			return "", errors.Wrapf(err, "Error writing string %s",
