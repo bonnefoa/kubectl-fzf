@@ -10,12 +10,12 @@ import (
 )
 
 type HttpServer struct {
-	resourceChan map[string][]chan string
+	resourceChan map[string]chan string
 	httpPort     int
 	httpsPort    int
 }
 
-func NewHttpServer(resourceChan map[string][]chan string, httpPort int, httpsPort int) HttpServer {
+func NewHttpServer(resourceChan map[string]chan string, httpPort int, httpsPort int) HttpServer {
 	s := HttpServer{}
 	s.resourceChan = resourceChan
 	s.httpPort = httpPort
@@ -37,7 +37,7 @@ func (h *HttpServer) resourceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chans, ok := h.resourceChan[resourceName]
+	ch, ok := h.resourceChan[resourceName]
 	if !ok {
 		glog.Infof("Unknown resource type %s", resourceName)
 		w.WriteHeader(http.StatusBadRequest)
@@ -45,18 +45,11 @@ func (h *HttpServer) resourceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if outputType == "header" {
-		chans = chans[0:1]
-	}
-	for _, c := range chans {
-		c <- outputType
-	}
+	ch <- outputType
 
 	w.WriteHeader(http.StatusOK)
-	for _, c := range chans {
-		output := <-c
-		fmt.Fprintf(w, output)
-	}
+	output := <-ch
+	fmt.Fprintf(w, output)
 }
 
 func (h *HttpServer) Start(ctx context.Context) {

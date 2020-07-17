@@ -1,7 +1,6 @@
 package resourcewatcher
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -21,19 +20,25 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+type LabelKey struct {
+	Namespace string
+	Label     string
+}
+
 // K8sStore stores the current state of k8s resources
 type K8sStore struct {
-	data         map[string]k8sresources.K8sResource
-	ch           chan string
-	header       string
-	resourceCtor func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
-	ctorConfig   k8sresources.CtorConfig
-	resourceName string
-	destFileName string
-	currentFile  *os.File
-	lastFullDump time.Time
-	storeConfig  StoreConfig
-	firstWrite   bool
+	data             map[string]k8sresources.K8sResource
+	label            map[LabelKey]int
+	ch               chan string
+	resourceCtor     func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
+	ctorConfig       k8sresources.CtorConfig
+	resourceName     string
+	destFileName     string
+	currentFile      *os.File
+	lastFullDump     time.Time
+	storeConfig      StoreConfig
+	firstWrite       bool
+	splitByNamespace bool
 }
 
 // StoreConfig defines parameters used for the cache location
@@ -44,7 +49,7 @@ type StoreConfig struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, namespace string, ch chan string) (K8sStore, error) {
+func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, splitByNamespace bool, ch chan string) (K8sStore, error) {
 	k := K8sStore{}
 	destFileName := util.GetDestFileName(storeConfig.CacheDir, storeConfig.Cluster, cfg.resourceName)
 	k.data = make(map[string]k8sresources.K8sResource, 0)
@@ -52,17 +57,16 @@ func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresourc
 	k.resourceName = cfg.resourceName
 	k.destFileName = destFileName
 	k.ch = ch
-	if namespace != "" {
-		k.destFileName = fmt.Sprintf("%s_ns_%s", destFileName, namespace)
-	}
+	k.splitByNamespace = splitByNamespace
 	k.currentFile = nil
 	k.lastFullDump = time.Time{}
 	k.storeConfig = storeConfig
 	k.firstWrite = true
 	k.ctorConfig = ctorConfig
-	k.header = cfg.header
 
-	util.WriteHeaderFile(cfg.header, destFileName)
+	if !splitByNamespace {
+		util.WriteHeaderFile(cfg.header, destFileName)
+	}
 
 	return k, nil
 }
@@ -151,6 +155,9 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
+	if k.splitByNamespace {
+		return nil
+	}
 	if k.currentFile == nil {
 		var err error
 		k.currentFile, err = os.Create(k.destFileName)
@@ -188,31 +195,6 @@ func (k *K8sStore) generateOutput() (string, error) {
 	return res.String(), nil
 }
 
-func (k *K8sStore) writeDataInFile(tempFile *os.File) error {
-	s, err := k.generateOutput()
-	if err != nil {
-		return errors.Wrapf(err, "Error generating output")
-	}
-
-	w := bufio.NewWriter(tempFile)
-
-	_, err = w.WriteString(s)
-	if err != nil {
-		return errors.Wrapf(err, "Error writing bytes to file %s",
-			tempFile.Name())
-	}
-
-	err = w.Flush()
-	if err != nil {
-		return errors.Wrapf(err, "Error flushing buffer")
-	}
-	err = tempFile.Sync()
-	if err != nil {
-		return errors.Wrapf(err, "Error syncing file")
-	}
-	return nil
-}
-
 func (k *K8sStore) WatchRequest(ctx context.Context) {
 
 	for {
@@ -225,8 +207,6 @@ func (k *K8sStore) WatchRequest(ctx context.Context) {
 			var err error
 			if query == "resource" {
 				output, err = k.generateOutput()
-			} else if query == "header" {
-				output = k.header
 			} else {
 				k.ch <- "Invalid query"
 			}
@@ -242,6 +222,9 @@ func (k *K8sStore) WatchRequest(ctx context.Context) {
 
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
+	if k.splitByNamespace {
+		return nil
+	}
 	now := time.Now()
 	delta := now.Sub(k.lastFullDump)
 	if delta < k.storeConfig.TimeBetweenFullDump {
@@ -256,7 +239,12 @@ func (k *K8sStore) DumpFullState() error {
 			k.resourceName)
 	}
 	glog.V(12).Infof("Created temp file for full state %s", tempFile.Name())
-	err = k.writeDataInFile(tempFile)
+
+	s, err := k.generateOutput()
+	if err != nil {
+		return errors.Wrapf(err, "Error generating output")
+	}
+	util.WriteStringToFile(s, tempFile)
 	if err != nil {
 		return err
 	}

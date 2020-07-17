@@ -71,14 +71,14 @@ func NewResourceWatcher(config *restclient.Config,
 
 // Start begins the watch/poll of a given k8s resource
 func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig,
-	ctorConfig k8sresources.CtorConfig, resourceChan map[string][]chan string) error {
+	ctorConfig k8sresources.CtorConfig, resourceChan map[string]chan string) error {
 	ctx, cancel := context.WithCancel(parentCtx)
 	r.cancelFuncs = append(r.cancelFuncs, cancel)
 
+	ch := make(chan string)
+	resourceChan[cfg.resourceName] = ch
 	if cfg.pollingPeriod > 0 {
-		ch := make(chan string)
-		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "", ch)
-		resourceChan[cfg.resourceName] = append(resourceChan[cfg.resourceName], ch)
+		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, false, ch)
 		if err != nil {
 			return err
 		}
@@ -87,25 +87,31 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig,
 	}
 
 	if cfg.splitByNamespaces {
+		aggregatedChans := make([]chan string, 0)
 		for _, ns := range r.namespaces {
 			if r.isNamespaceExcluded(ns) {
 				continue
 			}
-			ch := make(chan string)
-			resourceChan[cfg.resourceName] = append(resourceChan[cfg.resourceName], ch)
 			glog.Infof("Starting watcher for ns %s, resource %s", ns, cfg.resourceName)
-			store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, ns, ch)
+
+			namespaceChan := make(chan string)
+			aggregatedChans = append(aggregatedChans, namespaceChan)
+			store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, true, namespaceChan)
 			if err != nil {
 				return err
 			}
 			go r.watchResource(ctx, cfg, store, ns)
 		}
+
+		aggr, err := NewK8sAggregator(cfg, r.storeConfig, aggregatedChans, ch)
+		if err != nil {
+			return err
+		}
+		go aggr.Start(ctx)
 		return nil
 	}
 
-	ch := make(chan string)
-	resourceChan[cfg.resourceName] = append(resourceChan[cfg.resourceName], ch)
-	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "", ch)
+	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, false, ch)
 	if err != nil {
 		return err
 	}

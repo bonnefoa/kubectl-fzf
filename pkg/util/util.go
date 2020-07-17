@@ -1,14 +1,16 @@
 package util
 
 import (
+	"bufio"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"path"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // JoinStringMap generates a list of map element separated by string excluding keys in excluded maps
@@ -51,6 +53,27 @@ func WriteHeaderFile(header string, destFileName string) error {
 	err = headerFile.Close()
 	if err != nil {
 		return errors.Wrapf(err, "Error closing header file %s", headerFileName)
+	}
+	return nil
+}
+
+// WriteStringToFile writes string to the given file and sync file
+func WriteStringToFile(str string, tempFile *os.File) error {
+	w := bufio.NewWriter(tempFile)
+
+	_, err := w.WriteString(str)
+	if err != nil {
+		return errors.Wrapf(err, "Error writing bytes to file %s",
+			tempFile.Name())
+	}
+
+	err = w.Flush()
+	if err != nil {
+		return errors.Wrapf(err, "Error flushing buffer")
+	}
+	err = tempFile.Sync()
+	if err != nil {
+		return errors.Wrapf(err, "Error syncing file")
 	}
 	return nil
 }

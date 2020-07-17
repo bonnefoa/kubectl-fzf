@@ -142,7 +142,7 @@ func termHandler(sig os.Signal) error {
 }
 
 func startWatchOnCluster(ctx context.Context, config *restclient.Config,
-	cluster string, resourceChan map[string][]chan string) resourcewatcher.ResourceWatcher {
+	cluster string, resourceChan map[string]chan string) resourcewatcher.ResourceWatcher {
 	storeConfig := resourcewatcher.StoreConfig{
 		CacheDir:            cacheDir,
 		Cluster:             cluster,
@@ -219,7 +219,7 @@ func start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	resourceChan := make(map[string][]chan string)
+	resourceChan := make(map[string]chan string)
 
 	currentRestConfig, currentCluster := getClientConfigAndCluster()
 	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster, resourceChan)
