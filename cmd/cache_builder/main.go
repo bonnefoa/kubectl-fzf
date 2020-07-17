@@ -17,7 +17,6 @@ import (
 
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/resourcewatcher"
-	"kubectlfzf/pkg/server"
 	"kubectlfzf/pkg/util"
 
 	"github.com/golang/glog"
@@ -48,9 +47,6 @@ var (
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
 
-	httpPort  int
-	httpsPort int
-
 	daemonCmd         string
 	daemonName        string
 	daemonPidFilePath string
@@ -78,9 +74,6 @@ func init() {
 	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 	flag.Duration("node-polling-period", 300*time.Second, "Polling period for nodes")
 	flag.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces")
-
-	flag.Int("http-port", 80, "Http port to open")
-	flag.Int("https-port", 443, "Https port to open")
 
 	flag.String("daemon", "", `Send signal to the daemon:
   start - run as a daemon
@@ -115,8 +108,6 @@ func init() {
 	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 	nodePollingPeriod = viper.GetDuration("node-polling-period")
 	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
-	httpPort = viper.GetInt("http-port")
-	httpsPort = viper.GetInt("https-port")
 
 	daemonCmd = viper.GetString("daemon")
 	daemonName = viper.GetString("daemon-name")
@@ -224,9 +215,6 @@ func start() {
 	currentRestConfig, currentCluster := getClientConfigAndCluster()
 	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster, resourceChan)
 	ticker := time.NewTicker(time.Second * 5)
-
-	httpServer := server.NewHttpServer(resourceChan, httpPort, httpsPort)
-	go httpServer.Start(ctx)
 
 	for {
 		select {
