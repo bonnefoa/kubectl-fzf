@@ -45,7 +45,8 @@ func (p LabelPairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 type K8sStore struct {
 	data             map[string]k8sresources.K8sResource
 	labelMap         map[LabelKey]int
-	ch               chan string
+	resourceChan     chan string
+	labelChan        chan LabelPairList
 	resourceCtor     func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
 	ctorConfig       k8sresources.CtorConfig
 	resourceName     string
@@ -65,14 +66,16 @@ type StoreConfig struct {
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, splitByNamespace bool, ch chan string) (K8sStore, error) {
+func NewK8sStore(cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig, splitByNamespace bool,
+	resourceChan chan string, labelChan chan LabelPairList) (K8sStore, error) {
 	k := K8sStore{}
 	k.destDir = path.Join(storeConfig.CacheDir, storeConfig.Cluster)
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.labelMap = make(map[LabelKey]int, 0)
 	k.resourceCtor = cfg.resourceCtor
 	k.resourceName = cfg.resourceName
-	k.ch = ch
+	k.resourceChan = resourceChan
+	k.labelChan = labelChan
 	k.splitByNamespace = splitByNamespace
 	k.currentFile = nil
 	k.lastFullDump = time.Time{}

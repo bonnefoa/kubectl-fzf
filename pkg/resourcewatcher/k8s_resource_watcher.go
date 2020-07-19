@@ -29,6 +29,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+type ResourceChanMap map[string]chan string
+
 // ResourceWatcher contains rest clients for a given kubernetes context
 type ResourceWatcher struct {
 	clientset          *kubernetes.Clientset
@@ -71,14 +73,15 @@ func NewResourceWatcher(config *restclient.Config,
 
 // Start begins the watch/poll of a given k8s resource
 func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig,
-	ctorConfig k8sresources.CtorConfig, resourceChan map[string]chan string) error {
+	ctorConfig k8sresources.CtorConfig, resourceChanMap ResourceChanMap) error {
 	ctx, cancel := context.WithCancel(parentCtx)
 	r.cancelFuncs = append(r.cancelFuncs, cancel)
 
-	ch := make(chan string)
-	resourceChan[cfg.resourceName] = ch
+	resourceChan := make(chan string)
+	labelChan := make(chan []LabelPairList)
+	resourceChanMap[cfg.resourceName] = resourceChan
 	if cfg.pollingPeriod > 0 {
-		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, false, ch)
+		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, false, resourceChan)
 		if err != nil {
 			return err
 		}
@@ -103,7 +106,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig,
 			go r.watchResource(ctx, cfg, store, ns)
 		}
 
-		aggr, err := NewK8sAggregator(cfg, r.storeConfig, aggregatedChans, ch)
+		aggr, err := NewK8sAggregator(cfg, r.storeConfig, aggregatedChans, resourceChan)
 		if err != nil {
 			return err
 		}
@@ -111,7 +114,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig,
 		return nil
 	}
 
-	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, false, ch)
+	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, false, resourceChan)
 	if err != nil {
 		return err
 	}

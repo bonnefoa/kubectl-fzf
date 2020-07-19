@@ -12,19 +12,20 @@ import (
 )
 
 type K8sAggregator struct {
-	storeConfig     StoreConfig
-	ch              chan string
-	aggregatedChans []chan string
-	header          string
-	destDir         string
-	resourceName    string
+	storeConfig   StoreConfig
+	ch            chan string
+	resourceChans []chan string
+	labelChans    []chan LabelPairList
+	header        string
+	destDir       string
+	resourceName  string
 }
 
 func NewK8sAggregator(cfg WatchConfig, storeConfig StoreConfig,
-	aggregatedChans []chan string, ch chan string) (K8sAggregator, error) {
+	resourceChans []chan string, ch chan string) (K8sAggregator, error) {
 
 	k := K8sAggregator{}
-	k.aggregatedChans = aggregatedChans
+	k.resourceChans = resourceChans
 	k.destDir = path.Join(storeConfig.CacheDir, storeConfig.Cluster)
 	k.resourceName = cfg.resourceName
 	k.header = cfg.header
@@ -37,10 +38,10 @@ func NewK8sAggregator(cfg WatchConfig, storeConfig StoreConfig,
 
 func (k *K8sAggregator) generateOutput(resourceType string) (string, error) {
 	var res strings.Builder
-	for _, c := range k.aggregatedChans {
+	for _, c := range k.resourceChans {
 		c <- resourceType
 	}
-	for _, c := range k.aggregatedChans {
+	for _, c := range k.resourceChans {
 		output := <-c
 		res.WriteString(output)
 	}
