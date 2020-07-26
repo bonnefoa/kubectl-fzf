@@ -32,7 +32,7 @@ import (
 // ResourceWatcher contains rest clients for a given kubernetes context
 type ResourceWatcher struct {
 	clientset          *kubernetes.Clientset
-	namespaces         []string
+	namespaces         []string // List of namespaces filtered using excludedNamespaces
 	excludedNamespaces []*regexp.Regexp
 	cluster            string
 	cancelFuncs        []context.CancelFunc
@@ -75,7 +75,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 	r.cancelFuncs = append(r.cancelFuncs, cancel)
 
 	if cfg.pollingPeriod > 0 {
-		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "")
+		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig)
 		if err != nil {
 			return err
 		}
@@ -84,25 +84,20 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 	}
 
 	if cfg.splitByNamespaces {
-		for _, ns := range r.namespaces {
-			if r.isNamespaceExcluded(ns) {
-				continue
-			}
-			glog.Infof("Starting watcher for ns %s, resource %s", ns, cfg.resourceName)
-			store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, ns)
-			if err != nil {
-				return err
-			}
-			go r.watchResource(ctx, cfg, store, ns)
+		glog.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceName)
+		store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig)
+		if err != nil {
+			return err
 		}
+		go r.watchResource(ctx, cfg, store, r.namespaces)
 		return nil
 	}
 
-	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig, "")
+	store, err := NewK8sStore(cfg, r.storeConfig, ctorConfig)
 	if err != nil {
 		return err
 	}
-	go r.watchResource(ctx, cfg, store, "")
+	go r.watchResource(ctx, cfg, store, []string{})
 	return nil
 }
 
@@ -158,23 +153,15 @@ func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) 
 	k8sStore.AddResourceList(lst)
 }
 
-func (r *ResourceWatcher) isNamespaceExcluded(namespaceName string) bool {
-	for _, excludedNamespace := range r.excludedNamespaces {
-		if excludedNamespace.MatchString(namespaceName) {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 	namespaces, err := r.clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
+
 	for _, namespace := range namespaces.Items {
 		namespaceName := namespace.GetName()
-		if r.isNamespaceExcluded(namespaceName) {
+		if util.IsStringExcluded(namespaceName, r.excludedNamespaces) {
 			continue
 		}
 		r.namespaces = append(r.namespaces, namespaceName)
@@ -234,23 +221,25 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 }
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
-	cfg WatchConfig, k8sStore K8sStore, ns string) {
-	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, ns)
-	watchlist := cache.NewListWatchFromClient(cfg.getter,
-		k8sStore.resourceName, ns, fields.Everything())
-
-	_, controller := cache.NewInformer(
-		watchlist, cfg.runtimeObject, time.Second*0,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc:    k8sStore.AddResource,
-			DeleteFunc: k8sStore.DeleteResource,
-			UpdateFunc: k8sStore.UpdateResource,
-		},
-	)
+	cfg WatchConfig, k8sStore K8sStore, namespaces []string) {
+	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, namespaces)
 
 	stop := make(chan struct{})
-	go controller.Run(stop)
+	for _, ns := range namespaces {
+		watchlist := cache.NewListWatchFromClient(cfg.getter,
+			k8sStore.resourceName, ns, fields.Everything())
+		_, controller := cache.NewInformer(
+			watchlist, cfg.runtimeObject, time.Second*0,
+			cache.ResourceEventHandlerFuncs{
+				AddFunc:    k8sStore.AddResource,
+				DeleteFunc: k8sStore.DeleteResource,
+				UpdateFunc: k8sStore.UpdateResource,
+			},
+		)
+		go controller.Run(stop)
+	}
+
 	<-ctx.Done()
-	glog.Infof("Exiting watch of %s namespace %s", k8sStore.resourceName, ns)
+	glog.Infof("Exiting watch of %s namespace %s", k8sStore.resourceName, namespaces)
 	close(stop)
 }

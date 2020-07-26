@@ -2,13 +2,15 @@ package util
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"path"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // JoinStringMap generates a list of map element separated by string excluding keys in excluded maps
@@ -131,6 +133,30 @@ func ExcludeFromSlice(sl []string, exclude map[string]string) []string {
 			continue
 		}
 		res[k] = v
+		i++
+	}
+	return res[:i]
+}
+
+// IsStringExcluded returns true if one of the regexp match the input string
+func IsStringExcluded(s string, regexps []*regexp.Regexp) bool {
+	for _, regexp := range regexps {
+		if regexp.MatchString(s) {
+			return true
+		}
+	}
+	return false
+}
+
+// RegexpFilter removes elements in matching one of the regexp from slice sl
+func FilterSliceWithRegexps(sl []string, excludeRegexps []*regexp.Regexp) []string {
+	res := make([]string, len(sl))
+	i := 0
+	for k, s := range sl {
+		if IsStringExcluded(s, excludeRegexps) {
+			continue
+		}
+		res[k] = s
 		i++
 	}
 	return res[:i]
