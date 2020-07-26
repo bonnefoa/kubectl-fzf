@@ -60,7 +60,6 @@ _fzf_fetch_rsynced_resource()
         if ! $(_fzf_file_mtime_older_than $check_time_file $cache_time); then
             return
         fi
-        touch "$check_time_file"
     done
 
     local include_param=()
@@ -75,8 +74,15 @@ _fzf_fetch_rsynced_resource()
 
     if [[ -n "$rsync_endpoint" ]]; then
         rsync -qPrz --delete ${include_param[@]} --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+
+        if [[ $? -eq 0 ]]; then
+            for resource in ${resources[@]} ; do
+                local check_time_file="${KUBECTL_FZF_CACHE}/${context}/_${resource}"
+                touch "$check_time_file"
+            done
     fi
 
+    fi
 }
 
 _fzf_get_port_forward_port()
