@@ -523,7 +523,7 @@ __kubectl_get_resource()
 
     _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
 
-    if [[ ! -f ${apiresources_file} ]]; then
+    if [[ ! -f ${apiresources_file} || -s ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
         return
     fi
