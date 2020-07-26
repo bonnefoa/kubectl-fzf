@@ -80,7 +80,7 @@ _fzf_fetch_rsynced_resource()
                 local check_time_file="${KUBECTL_FZF_CACHE}/${context}/_${resource}"
                 touch "$check_time_file"
             done
-    fi
+        fi
 
     fi
 }
@@ -245,7 +245,7 @@ _fzf_get_exclude_pattern()
 _fzf_get_node_to_pods()
 {
     local context="$1"
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_ns_*"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods"
     local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
@@ -270,8 +270,7 @@ _fzf_kubectl_pv_complete()
 {
     local pv_file="$1"
     local context="$2"
-    local split_by_namespace="$3"
-    local query="$4"
+    local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
 
@@ -282,7 +281,7 @@ _fzf_kubectl_pv_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
     header="$header MountedBy"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_ns_*"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods"
     local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
@@ -303,8 +302,7 @@ _fzf_kubectl_node_complete()
 {
     local node_file="$1"
     local context="$2"
-    local split_by_namespace="$3"
-    local query="$4"
+    local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
     local node_header_file="${node_file}_header"
@@ -335,16 +333,11 @@ _fzf_kubectl_complete()
     local file="$3"
     local header_file="$3_header"
     local context="$4"
-    local split_by_namespace="$5"
-    local query=$6
-    local namespace="$7"
+    local query=$5
+    local namespace="$6"
     local label_field=$(_fzf_get_header_position $header_file "Labels")
     local end_field=$((label_field - 1))
     local main_header=$(_fzf_get_main_header $context $namespace)
-
-    if [[ "$split_by_namespace" == "true" ]]; then
-        file=${file}_ns_*
-    fi
 
     if [[ $is_flag == "with_namespace" ]]; then
         local header="Namespace Labels Occurrences"
@@ -386,15 +379,10 @@ _fzf_field_selector_complete()
     local file="$2"
     local header_file="$2_header"
     local context="$3"
-    local split_by_namespace=$4
-    local query=$5
-    local namespace="$6"
+    local query=$4
+    local namespace="$5"
     local field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
     local main_header=$(_fzf_get_main_header $context $namespace)
-
-    if [[ "$split_by_namespace" == "true" ]]; then
-        file=${file}_ns_*
-    fi
 
     local header="Namespace FieldSelector Occurrences"
     local data=$(cut -d' ' -f 1,$field_selector_field $file \
@@ -411,50 +399,45 @@ _fzf_field_selector_complete()
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _fzf_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _fzf_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3" "$4"
+    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _flag_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is filepath
 # $2 is query
-# $3 is split_by_namespace
-# $4 is context
+# $3 is context
 _flag_selector_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3" "$4"
+    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3"
 }
 
 # $1 is filepath
 # $2 is context
-# $3 is split_by_namespace
-# $4 is query
+# $3 is query
 _fzf_field_selector_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$4" "$namespace_in_query"
+    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$namespace_in_query"
 }
 
 __kubectl_get_containers()
@@ -462,7 +445,7 @@ __kubectl_get_containers()
     local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
     local main_header=$(_fzf_get_main_header $current_context "")
-    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods_ns_* \
+    local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
         | tr ',' '\n' \
         | sort)
     if [[ $data == "" ]]; then
@@ -523,7 +506,7 @@ __kubectl_get_resource()
 
     _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
 
-    if [[ ! -f ${apiresources_file} || -s ${apiresources_file} ]]; then
+    if [[ ! -s ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
         return
     fi
@@ -569,7 +552,6 @@ __kubectl_parse_get()
     local flag_autocomplete_fun
     local field_selector_autocomplete_fun
     local resource_name=$1
-    local split_by_namespace=false
 
     case $resource_name in
         all )
@@ -578,7 +560,6 @@ __kubectl_parse_get()
         po | pod | pods )
             filename="pods"
             autocomplete_fun=_fzf_with_namespace
-            split_by_namespace=true
             flag_autocomplete_fun=_flag_selector_with_namespace
             field_selector_autocomplete_fun=_fzf_field_selector_with_namespace
             ;;
@@ -614,7 +595,6 @@ __kubectl_parse_get()
             ;;
         cm | configmap | configmaps )
             filename="configmaps"
-            split_by_namespace=true
             autocomplete_fun=_fzf_with_namespace
             flag_autocomplete_fun=_flag_selector_with_namespace
             ;;
@@ -694,7 +674,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--selector" || $penultimate == "-l" ]]; then
             query=$last_part
         fi
-        result=$($flag_autocomplete_fun $filepath $context $split_by_namespace $query)
+        result=$($flag_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
         return
     elif [[ -n $field_selector_autocomplete_fun && ($penultimate == "--field-selector" || $last_part == "--field-selector") ]]; then
@@ -704,7 +684,7 @@ __kubectl_parse_get()
         if [[ $penultimate == "--field-selector" ]]; then
             query=$last_part
         fi
-        result=$($field_selector_autocomplete_fun $filepath $context $split_by_namespace $query)
+        result=$($field_selector_autocomplete_fun $filepath $context $query)
         __build_namespaced_compreply "${result[@]}"
         return
     fi
@@ -729,7 +709,7 @@ __kubectl_parse_get()
             fi
     esac
 
-    result=$($autocomplete_fun $filepath $context $split_by_namespace $query)
+    result=$($autocomplete_fun $filepath $context $query)
     if [[ -z "$result" ]]; then
         return
     fi
