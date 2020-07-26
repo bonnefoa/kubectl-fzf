@@ -245,13 +245,13 @@ _fzf_get_exclude_pattern()
 _fzf_get_node_to_pods()
 {
     local context="$1"
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_resource"
     local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
 
     local daemonsets_file="${KUBECTL_FZF_CACHE}/${context}/daemonsets"
-    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | sort | uniq)
+    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | uniq)
     local exclude_pods=""
     for daemonset in $daemonsets ; do
         if [[ -z $exclude_pods ]]; then
@@ -262,8 +262,7 @@ _fzf_get_node_to_pods()
     done
 
     grep -v $exclude_pods $pod_file \
-        | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } " \
-        | sort
+        | awk "{ if(a[\$$node_name_field]==\"\") {a[\$$node_name_field]=\$$pod_name_field} else { a[\$$node_name_field]=\$$pod_name_field \":\" a[\$$node_name_field] } } END { for (i in a) { print i \" \"  substr(a[i], 0, 1800) } } "
 }
 
 _fzf_kubectl_pv_complete()
@@ -281,7 +280,7 @@ _fzf_kubectl_pv_complete()
     local header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
     header="$header MountedBy"
 
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods"
+    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_resource"
     local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
     local claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
@@ -330,8 +329,10 @@ _fzf_kubectl_complete()
 {
     local end_print=$1
     local is_flag="$2"
-    local file="$3"
-    local header_file="$3_header"
+    local prefix="$3"
+    local resource_file="${prefix}_resource"
+    local header_file="${prefix}_header"
+    local label_file="${prefix}_label"
     local context="$4"
     local query=$5
     local namespace="$6"
@@ -341,15 +342,13 @@ _fzf_kubectl_complete()
 
     if [[ $is_flag == "with_namespace" ]]; then
         local header="Namespace Labels Occurrences"
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) {print \$1,a[i]}}" $file | sort | uniq -c | sort -n -r \
-            | awk '{print $2,$3,$1}')
+        local data=$(cat $label_file)
     elif [[ $is_flag == "without_namespace" ]]; then
         local header="Labels Occurrences"
-        local data=$(awk "{split(\$$label_field,a,\",\"); for (i in a) print a[i]}" $file | sort | uniq -c | sort -n -r \
-            | awk '{for(i=2; i<=NF; i++) { printf $i " " } ; print $1 } ')
+        local data=$(cat $label_file)
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
-        local data=$(cut -d ' ' -f 1-$end_field $file)
+        local data=$(cut -d ' ' -f 1-$end_field $resource_file)
     fi
 
     if [[ -n $namespace ]]; then
@@ -376,8 +375,8 @@ _fzf_kubectl_complete()
 _fzf_field_selector_complete()
 {
     local end_print=$1
-    local file="$2"
-    local header_file="$2_header"
+    local resource_prefix="$2"
+    local header_file="${resource_prefix}_header"
     local context="$3"
     local query=$4
     local namespace="$5"
@@ -385,8 +384,8 @@ _fzf_field_selector_complete()
     local main_header=$(_fzf_get_main_header $context $namespace)
 
     local header="Namespace FieldSelector Occurrences"
-    local data=$(cut -d' ' -f 1,$field_selector_field $file \
-        | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | sort | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
+    local data=$(cut -d' ' -f 1,$field_selector_field $resource_prefix \
+        | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
 
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
@@ -446,8 +445,7 @@ __kubectl_get_containers()
     local current_context=$(kubectl config current-context)
     local main_header=$(_fzf_get_main_header $current_context "")
     local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
-        | tr ',' '\n' \
-        | sort)
+        | tr ',' '\n')
     if [[ $data == "" ]]; then
         ___kubectl_get_containers $*
         return
@@ -501,7 +499,7 @@ __build_namespaced_compreply()
 __kubectl_get_resource()
 {
     local current_context=$(kubectl config current-context)
-    local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources"
+    local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_resource"
     local header_file="${apiresources_file}_header"
 
     _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"

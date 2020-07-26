@@ -1,7 +1,9 @@
 package util
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -10,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
@@ -42,17 +45,37 @@ func GetDestFileName(cacheDir string, cluster string, resourceName string) strin
 	return destFileName
 }
 
-// WriteHeaderFile writes the header file content
-func WriteHeaderFile(header string, destFileName string) error {
-	headerFileName := fmt.Sprintf("%s_header", destFileName)
-	headerFile, err := os.Create(headerFileName)
+// WriteStringToFile writes string to the given file and sync file
+func WriteStringToFile(str string, destDir string, resourceName string, suffix string) error {
+	err := os.MkdirAll(destDir, os.ModePerm)
+	FatalIf(err)
+	name := fmt.Sprintf("%s_%s", resourceName, suffix)
+	glog.V(6).Infof("Writing file %s", name)
+	tempFile, err := ioutil.TempFile(destDir, name)
 	if err != nil {
-		return errors.Wrapf(err, "Error creating header file %s", headerFileName)
+		return errors.Wrapf(err, "Error creating temp file in %s for resource %s",
+			destDir, name)
 	}
-	headerFile.WriteString(header)
-	err = headerFile.Close()
+	w := bufio.NewWriter(tempFile)
+	_, err = w.WriteString(str)
 	if err != nil {
-		return errors.Wrapf(err, "Error closing header file %s", headerFileName)
+		return errors.Wrapf(err, "Error writing bytes to file %s",
+			tempFile.Name())
+	}
+	err = w.Flush()
+	if err != nil {
+		tempFile.Close()
+		return errors.Wrapf(err, "Error flushing buffer")
+	}
+	err = tempFile.Sync()
+	if err != nil {
+		tempFile.Close()
+		return errors.Wrapf(err, "Error syncing file")
+	}
+	err = os.Rename(tempFile.Name(), path.Join(destDir, name))
+	tempFile.Close()
+	if err != nil {
+		return err
 	}
 	return nil
 }
