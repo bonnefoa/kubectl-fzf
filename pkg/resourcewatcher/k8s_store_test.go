@@ -2,13 +2,16 @@ package resourcewatcher
 
 import (
 	"bufio"
-	"fmt"
+	"context"
 	"io/ioutil"
 	"os"
+	"path"
+	"strings"
 	"testing"
 	"time"
 
 	"kubectlfzf/pkg/k8sresources"
+
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,13 +21,16 @@ func TestDumpFullState(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cfg := watchConfig{
+	cfg := WatchConfig{
 		resourceName: "pods",
 	}
 	storeConfig := StoreConfig{
 		CacheDir: tempDir,
 	}
-	k, err := NewK8sStore(cfg, storeConfig)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctorConfig := k8sresources.CtorConfig{}
+	k, err := NewK8sStore(ctx, cfg, storeConfig, ctorConfig)
 	assert.Nil(t, err)
 
 	meta1 := metav1.ObjectMeta{Name: "Test",
@@ -39,12 +45,19 @@ func TestDumpFullState(t *testing.T) {
 	k.data["test"] = pod1
 	k.data["test2"] = pod2
 
-	k.DumpFullState()
+	err = k.DumpFullState()
+	assert.Nil(t, err)
 
-	k.currentFile.Seek(0, 0)
-	scanner := bufio.NewScanner(k.currentFile)
+	f, err := os.OpenFile(path.Join(tempDir, "pods_resource"), os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	scanner := bufio.NewScanner(f)
+	lines := make([]string, 0)
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
+		lines = append(lines, scanner.Text())
 	}
+	assert.Equal(t, len(lines), 2)
+	assert.Contains(t, strings.Split(lines[0], " "), "Test")
+	assert.Contains(t, strings.Split(lines[1], " "), "Test2")
 	assert.NoError(t, scanner.Err(), "Scanner")
 }
