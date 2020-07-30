@@ -13,16 +13,32 @@ import (
 	"kubectlfzf/pkg/k8sresources"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestDumpFullState(t *testing.T) {
+func podResource(name string, ns string, labels map[string]string) corev1.Pod {
+	meta := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{Kind: "Pod"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              name,
+			Namespace:         ns,
+			Labels:            labels,
+			CreationTimestamp: metav1.Time{Time: time.Now()},
+		},
+		Spec:   corev1.PodSpec{},
+		Status: corev1.PodStatus{},
+	}
+	return meta
+}
+
+func getK8sStore(t *testing.T) (string, *K8sStore) {
 	tempDir, err := ioutil.TempDir("/tmp/", "cacheTest")
 	assert.Nil(t, err)
 	defer os.RemoveAll(tempDir)
 
 	cfg := WatchConfig{
-		resourceName: "pods",
+		k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), nil, &corev1.Pod{}, true, true, 0,
 	}
 	storeConfig := StoreConfig{
 		CacheDir: tempDir,
@@ -33,19 +49,22 @@ func TestDumpFullState(t *testing.T) {
 	k, err := NewK8sStore(ctx, cfg, storeConfig, ctorConfig)
 	assert.Nil(t, err)
 
-	meta1 := metav1.ObjectMeta{Name: "Test",
-		CreationTimestamp: metav1.Time{Time: time.Now()}}
-	meta2 := metav1.ObjectMeta{Name: "Test2",
-		CreationTimestamp: metav1.Time{Time: time.Now()}}
+	pods := []corev1.Pod{
+		podResource("Test1", "ns1", map[string]string{"app": "app1"}),
+		podResource("Test2", "ns2", map[string]string{"app": "app2"}),
+		podResource("Test3", "ns2", map[string]string{"app": "app2"}),
+		podResource("Test4", "ns2", map[string]string{"app": "app3"}),
+	}
 
-	pod1 := &k8sresources.Pod{}
-	pod1.FromObjectMeta(meta1)
-	pod2 := &k8sresources.Pod{}
-	pod2.FromObjectMeta(meta2)
-	k.data["test"] = pod1
-	k.data["test2"] = pod2
+	for _, pod := range pods {
+		k.AddResource(&pod)
+	}
+	return tempDir, &k
+}
 
-	err = k.DumpFullState()
+func TestDumpFullState(t *testing.T) {
+	tempDir, k := getK8sStore(t)
+	err := k.DumpFullState()
 	assert.Nil(t, err)
 
 	f, err := os.OpenFile(path.Join(tempDir, "pods_resource"), os.O_RDONLY, 0644)
@@ -56,8 +75,20 @@ func TestDumpFullState(t *testing.T) {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-	assert.Equal(t, len(lines), 2)
-	assert.Contains(t, strings.Split(lines[0], " "), "Test")
+	assert.Equal(t, len(lines), 4)
+	assert.Contains(t, strings.Split(lines[0], " "), "Test1")
 	assert.Contains(t, strings.Split(lines[1], " "), "Test2")
 	assert.NoError(t, scanner.Err(), "Scanner")
+}
+
+func TestSortedPairList(t *testing.T) {
+	_, k := getK8sStore(t)
+	labelStr, err := k.generateLabel()
+	assert.NoError(t, err, "Generate label")
+	split := strings.Split(labelStr, "\n")
+	t.Log(labelStr)
+	assert.Equal(t, len(split), 3)
+	assert.Contains(t, split[0], "app2")
+	assert.Contains(t, split[1], "app1")
+	assert.Contains(t, split[2], "app3")
 }

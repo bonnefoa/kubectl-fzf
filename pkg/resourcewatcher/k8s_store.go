@@ -37,7 +37,7 @@ func (p LabelPairList) Less(i, j int) bool {
 	if p[i].Occurrences == p[j].Occurrences {
 		return p[i].Key.Namespace < p[j].Key.Namespace && p[i].Key.Label < p[j].Key.Label
 	}
-	return p[i].Occurrences < p[j].Occurrences
+	return p[i].Occurrences > p[j].Occurrences
 }
 func (p LabelPairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
@@ -260,7 +260,7 @@ func (k *K8sStore) generateLabel() (string, error) {
 		pl[i] = LabelPair{key, occurrences}
 		i++
 	}
-	sort.Sort(sort.Reverse(pl))
+	sort.Sort(pl)
 	var res strings.Builder
 	for _, pair := range pl {
 		var str string
@@ -277,7 +277,7 @@ func (k *K8sStore) generateLabel() (string, error) {
 				str)
 		}
 	}
-	return res.String(), nil
+	return strings.Trim(res.String(), "\n"), nil
 }
 
 func (k *K8sStore) generateOutput() (string, error) {
