@@ -251,7 +251,10 @@ _fzf_get_node_to_pods()
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
 
     local daemonsets_file="${KUBECTL_FZF_CACHE}/${context}/daemonsets"
-    local daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | uniq)
+    local daemonsets=""
+    if [[ -f $daemonsets_file ]]; then
+        daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | uniq)
+    fi
     local exclude_pods=""
     for daemonset in $daemonsets ; do
         if [[ -z $exclude_pods ]]; then
@@ -267,13 +270,14 @@ _fzf_get_node_to_pods()
 
 _fzf_kubectl_pv_complete()
 {
-    local pv_file="$1"
+    local resource_name="$1"
     local context="$2"
     local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
 
-    local pv_header_file="${pv_file}_header"
+    local pv_resource_file="${resource_name}_resource"
+    local pv_header_file="${resource_name}_header"
     local label_field=$(_fzf_get_header_position $pv_header_file "Labels")
     local claim_field_pv_file=$(_fzf_get_header_position $pv_header_file "Claim")
     local end_field=$((label_field - 1))
@@ -287,7 +291,7 @@ _fzf_kubectl_pv_complete()
     local pod_namespace_field=$(_fzf_get_header_position $pod_header_file "Namespace")
 
     local data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.2' -1 $claim_field_pv_file -2 1 -e None \
-        <(cut -d ' ' -f 1-$end_field "$pv_file" | sort -k $claim_field_pv_file) \
+        <(cut -d ' ' -f 1-$end_field "$pv_resource_file" | sort -k $claim_field_pv_file) \
         <(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_file | sort))
     local num_fields=$(echo $header | wc -w | sed 's/  *//g')
 
@@ -299,19 +303,20 @@ _fzf_kubectl_pv_complete()
 
 _fzf_kubectl_node_complete()
 {
-    local node_file="$1"
+    local resource_name="$1"
     local context="$2"
     local query="$3"
 
     local main_header=$(_fzf_get_main_header $context $namespace)
-    local node_header_file="${node_file}_header"
+    local node_resource_file="${resource_name}_resource"
+    local node_header_file="${resource_name}_header"
     local label_field=$(_fzf_get_header_position $node_header_file "Labels")
     local end_field=$((label_field - 1))
     local header=$(cut -d ' ' -f 1-$end_field "$node_header_file")
     header="$header Pods"
 
     local node_to_pods=$(_fzf_get_node_to_pods $context)
-    local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_file") <(echo "$node_to_pods"))
+    local data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_resource_file") <(echo "$node_to_pods"))
     local num_fields=$(echo $header | wc -w | sed 's/  *//g')
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
