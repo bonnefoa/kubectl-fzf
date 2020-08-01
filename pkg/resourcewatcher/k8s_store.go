@@ -35,7 +35,10 @@ type LabelPairList []LabelPair
 func (p LabelPairList) Len() int { return len(p) }
 func (p LabelPairList) Less(i, j int) bool {
 	if p[i].Occurrences == p[j].Occurrences {
-		return p[i].Key.Namespace < p[j].Key.Namespace && p[i].Key.Label < p[j].Key.Label
+		if p[i].Key.Namespace == p[j].Key.Namespace {
+			return p[i].Key.Label < p[j].Key.Label
+		}
+		return p[i].Key.Namespace < p[j].Key.Namespace
 	}
 	return p[i].Occurrences > p[j].Occurrences
 }

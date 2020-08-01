@@ -53,7 +53,7 @@ func getK8sStore(t *testing.T) (string, *K8sStore) {
 		podResource("Test1", "ns1", map[string]string{"app": "app1"}),
 		podResource("Test2", "ns2", map[string]string{"app": "app2"}),
 		podResource("Test3", "ns2", map[string]string{"app": "app2"}),
-		podResource("Test4", "ns2", map[string]string{"app": "app3"}),
+		podResource("Test4", "aaa", map[string]string{"app": "app3"}),
 	}
 
 	for _, pod := range pods {
@@ -76,8 +76,8 @@ func TestDumpFullState(t *testing.T) {
 		lines = append(lines, scanner.Text())
 	}
 	assert.Equal(t, len(lines), 4)
-	assert.Contains(t, strings.Split(lines[0], " "), "Test1")
-	assert.Contains(t, strings.Split(lines[1], " "), "Test2")
+	assert.Contains(t, strings.Split(lines[0], " "), "Test4")
+	assert.Contains(t, strings.Split(lines[1], " "), "Test1")
 	assert.NoError(t, scanner.Err(), "Scanner")
 }
 
@@ -89,6 +89,6 @@ func TestSortedPairList(t *testing.T) {
 	t.Log(labelStr)
 	assert.Equal(t, len(split), 3)
 	assert.Contains(t, split[0], "app2")
-	assert.Contains(t, split[1], "app1")
-	assert.Contains(t, split[2], "app3")
+	assert.Contains(t, split[1], "app3")
+	assert.Contains(t, split[2], "app1")
 }
