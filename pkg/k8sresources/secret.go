@@ -29,7 +29,7 @@ func NewSecretFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 func (s *Secret) FromRuntime(obj interface{}, config CtorConfig) {
 	secret := obj.(*corev1.Secret)
 	glog.V(19).Infof("Reading meta %#v", secret)
-	s.FromObjectMeta(secret.ObjectMeta)
+	s.FromObjectMeta(secret.ObjectMeta, config)
 	s.secretType = string(secret.Type)
 	s.data = strconv.Itoa(len(secret.Data))
 }

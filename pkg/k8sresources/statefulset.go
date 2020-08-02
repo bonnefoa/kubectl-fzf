@@ -28,7 +28,7 @@ func NewStatefulSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (s *StatefulSet) FromRuntime(obj interface{}, config CtorConfig) {
 	statefulset := obj.(*appsv1.StatefulSet)
-	s.FromObjectMeta(statefulset.ObjectMeta)
+	s.FromObjectMeta(statefulset.ObjectMeta, config)
 	s.currentReplicas = int(statefulset.Status.CurrentReplicas)
 	s.replicas = int(statefulset.Status.Replicas)
 	s.selectors = util.JoinStringMap(statefulset.Spec.Selector.MatchLabels, ExcludedLabels, "=")

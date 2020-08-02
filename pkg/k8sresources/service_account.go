@@ -26,7 +26,7 @@ func NewServiceAccountFromRuntime(obj interface{}, config CtorConfig) K8sResourc
 // FromRuntime builds object from the informer's result
 func (s *ServiceAccount) FromRuntime(obj interface{}, config CtorConfig) {
 	serviceAccount := obj.(*corev1.ServiceAccount)
-	s.FromObjectMeta(serviceAccount.ObjectMeta)
+	s.FromObjectMeta(serviceAccount.ObjectMeta, config)
 	s.numberSecrets = strconv.Itoa(len(serviceAccount.Secrets))
 }
 

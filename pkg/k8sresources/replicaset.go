@@ -30,7 +30,7 @@ func NewReplicaSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (r *ReplicaSet) FromRuntime(obj interface{}, config CtorConfig) {
 	replicaSet := obj.(*appsv1.ReplicaSet)
-	r.FromObjectMeta(replicaSet.ObjectMeta)
+	r.FromObjectMeta(replicaSet.ObjectMeta, config)
 	r.replicas = strconv.Itoa(int(replicaSet.Status.Replicas))
 	r.readyReplicas = strconv.Itoa(int(replicaSet.Status.ReadyReplicas))
 	r.availableReplicas = strconv.Itoa(int(replicaSet.Status.AvailableReplicas))

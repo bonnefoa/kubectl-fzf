@@ -29,7 +29,7 @@ func NewCronJobFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 func (c *CronJob) FromRuntime(obj interface{}, config CtorConfig) {
 	cronJob := obj.(*batchbetav1.CronJob)
 	glog.V(19).Infof("Reading meta %#v", cronJob)
-	c.FromObjectMeta(cronJob.ObjectMeta)
+	c.FromObjectMeta(cronJob.ObjectMeta, config)
 	c.schedule = strings.ReplaceAll(cronJob.Spec.Schedule, " ", "_")
 	c.lastSchedule = ""
 	if cronJob.Status.LastScheduleTime != nil {

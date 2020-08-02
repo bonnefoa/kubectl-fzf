@@ -29,7 +29,7 @@ func NewHpaFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (h *Hpa) FromRuntime(obj interface{}, config CtorConfig) {
 	hpa := obj.(*autoscalingv1.HorizontalPodAutoscaler)
-	h.FromObjectMeta(hpa.ObjectMeta)
+	h.FromObjectMeta(hpa.ObjectMeta, config)
 	h.reference = fmt.Sprintf("%s/%s",
 		hpa.Spec.ScaleTargetRef.Kind,
 		hpa.Spec.ScaleTargetRef.Name)

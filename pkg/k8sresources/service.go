@@ -29,7 +29,7 @@ func NewServiceFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (s *Service) FromRuntime(obj interface{}, config CtorConfig) {
 	service := obj.(*corev1.Service)
-	s.FromObjectMeta(service.ObjectMeta)
+	s.FromObjectMeta(service.ObjectMeta, config)
 	s.serviceType = string(service.Spec.Type)
 	s.clusterIP = service.Spec.ClusterIP
 	s.ports = make([]string, len(service.Spec.Ports))

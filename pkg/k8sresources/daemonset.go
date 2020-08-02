@@ -33,7 +33,7 @@ func NewDaemonSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 func (d *DaemonSet) FromRuntime(obj interface{}, config CtorConfig) {
 	daemonset := obj.(*appsv1.DaemonSet)
 	glog.V(19).Infof("Reading meta %#v", daemonset)
-	d.FromObjectMeta(daemonset.ObjectMeta)
+	d.FromObjectMeta(daemonset.ObjectMeta, config)
 
 	status := daemonset.Status
 	d.desired = strconv.Itoa(int(status.DesiredNumberScheduled))

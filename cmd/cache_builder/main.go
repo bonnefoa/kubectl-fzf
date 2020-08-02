@@ -142,6 +142,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
 	ctorConfig := k8sresources.CtorConfig{
 		RoleBlacklist: roleBlacklistSet,
+		Cluster:       cluster,
 	}
 
 	glog.Infof("Start cache build on cluster %s", config.Host)

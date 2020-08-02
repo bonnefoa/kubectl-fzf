@@ -23,7 +23,7 @@ func NewIngressFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (ingress *Ingress) FromRuntime(obj interface{}, config CtorConfig) {
 	ingressFromRuntime := obj.(*betav1.Ingress)
-	ingress.FromObjectMeta(ingressFromRuntime.ObjectMeta)
+	ingress.FromObjectMeta(ingressFromRuntime.ObjectMeta, config)
 	for _, lb := range ingressFromRuntime.Status.LoadBalancer.Ingress {
 		ingress.address = append(ingress.address, lb.Hostname)
 	}

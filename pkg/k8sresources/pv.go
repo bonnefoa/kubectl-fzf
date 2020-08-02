@@ -32,7 +32,7 @@ func NewPersistentVolumeFromRuntime(obj interface{}, config CtorConfig) K8sResou
 // FromRuntime builds object from the informer's result
 func (pv *PersistentVolume) FromRuntime(obj interface{}, config CtorConfig) {
 	pvFromRuntime := obj.(*corev1.PersistentVolume)
-	pv.FromObjectMeta(pvFromRuntime.ObjectMeta)
+	pv.FromObjectMeta(pvFromRuntime.ObjectMeta, config)
 	pv.status = string(pvFromRuntime.Status.Phase)
 	var ok bool
 	pv.zone, ok = pv.labels["failure-domain.beta.kubernetes.io/zone"]

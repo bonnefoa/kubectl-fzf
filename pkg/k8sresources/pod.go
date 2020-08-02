@@ -10,7 +10,7 @@ import (
 )
 
 // PodHeader is the header for pod files
-const PodHeader = "Context Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels FieldSelectors\n"
+const PodHeader = "Cluster Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels FieldSelectors\n"
 
 // Pod is the summary of a kubernetes pod
 type Pod struct {
@@ -64,7 +64,7 @@ func NewPodFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	pod := obj.(*corev1.Pod)
 	glog.V(19).Infof("Reading meta %#v", pod)
-	p.FromObjectMeta(pod.ObjectMeta)
+	p.FromObjectMeta(pod.ObjectMeta, config)
 	p.hostIP = pod.Status.HostIP
 	p.podIP = pod.Status.PodIP
 	spec := pod.Spec

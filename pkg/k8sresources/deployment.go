@@ -29,7 +29,7 @@ func NewDeploymentFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (d *Deployment) FromRuntime(obj interface{}, config CtorConfig) {
 	deployment := obj.(*appsv1.Deployment)
-	d.FromObjectMeta(deployment.ObjectMeta)
+	d.FromObjectMeta(deployment.ObjectMeta, config)
 
 	status := deployment.Status
 	d.desiredReplicas = "1"

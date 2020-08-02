@@ -45,7 +45,7 @@ func getNodeStatus(node *corev1.Node) string {
 // FromRuntime builds object from the informer's result
 func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 	node := obj.(*corev1.Node)
-	n.FromObjectMeta(node.ObjectMeta)
+	n.FromObjectMeta(node.ObjectMeta, config)
 	for k := range n.labels {
 		nodePrefix := "node-role.kubernetes.io/"
 		if strings.HasPrefix(k, nodePrefix) {

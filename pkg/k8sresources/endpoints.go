@@ -29,7 +29,7 @@ func NewEndpointsFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (e *Endpoints) FromRuntime(obj interface{}, config CtorConfig) {
 	endpoints := obj.(*corev1.Endpoints)
-	e.FromObjectMeta(endpoints.ObjectMeta)
+	e.FromObjectMeta(endpoints.ObjectMeta, config)
 	for _, subsets := range endpoints.Subsets {
 		for _, v := range subsets.Addresses {
 			e.readyIps = append(e.readyIps, v.IP)

@@ -26,7 +26,7 @@ func NewPersistentVolumeClaimFromRuntime(obj interface{}, config CtorConfig) K8s
 // FromRuntime builds object from the informer's result
 func (pvc *PersistentVolumeClaim) FromRuntime(obj interface{}, config CtorConfig) {
 	pvcFromRuntime := obj.(*corev1.PersistentVolumeClaim)
-	pvc.FromObjectMeta(pvcFromRuntime.ObjectMeta)
+	pvc.FromObjectMeta(pvcFromRuntime.ObjectMeta, config)
 	pvc.status = string(pvcFromRuntime.Status.Phase)
 	if pvcFromRuntime.Spec.StorageClassName != nil {
 		pvc.storageClass = *pvcFromRuntime.Spec.StorageClassName

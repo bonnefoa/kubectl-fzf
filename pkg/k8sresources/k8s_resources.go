@@ -27,20 +27,20 @@ type ResourceMeta struct {
 }
 
 // FromObjectMeta copies meta information to the object
-func (r *ResourceMeta) FromObjectMeta(meta metav1.ObjectMeta) {
+func (r *ResourceMeta) FromObjectMeta(meta metav1.ObjectMeta, config CtorConfig) {
 	r.name = meta.Name
 	r.namespace = meta.Namespace
-	r.cluster = meta.ClusterName
+	r.cluster = config.Cluster
 	r.labels = meta.Labels
 	r.creationTime = meta.CreationTimestamp.Time
 }
 
 // FromDynamicMeta copies meta information to the object
-func (r *ResourceMeta) FromDynamicMeta(u *unstructured.Unstructured) {
+func (r *ResourceMeta) FromDynamicMeta(u *unstructured.Unstructured, config CtorConfig) {
 	metadata := u.Object["metadata"].(map[string]interface{})
 	r.name = metadata["name"].(string)
 	r.namespace = metadata["namespace"].(string)
-	r.cluster = metadata["cluster"].(string)
+	r.cluster = config.Cluster
 	var err error
 	var found bool
 	r.labels, found, err = unstructured.NestedStringMap(u.Object, "metadata", "labels")
