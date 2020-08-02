@@ -97,7 +97,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 	if err != nil {
 		return err
 	}
-	go r.watchResource(ctx, cfg, store, []string{})
+	go r.watchResource(ctx, cfg, store, []string{""})
 	return nil
 }
 
