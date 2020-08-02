@@ -4,6 +4,7 @@ eval "`declare -f __kubectl_parse_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_containers | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_get_resource | sed '1s/.*/_&/'`"
 eval "`declare -f __kubectl_handle_filename_extension_flag | sed '1s/.*/_&/'`"
+KUBECTL_FZF_CONF=${KUBECTL_FZF_CONF:-$HOME/.kubectl_fzf.sh}
 KUBECTL_FZF_EXCLUDE=${KUBECTL_FZF_EXCLUDE:-}
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort)
 # Cache time when no rsync service was detected
@@ -15,6 +16,25 @@ KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-3
 KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
 mkdir -p $KUBECTL_FZF_CACHE
+
+declare -A cluster_groups
+if [[ -f "$KUBECTL_FZF_CONF" ]]; then
+    source "$KUBECTL_FZF_CONF"
+fi
+
+declare -A context_to_cluster_group
+_fzf_init_context_mapping()
+{
+    if type emulate >/dev/null 2>/dev/null; then
+        emulate ksh;
+    fi
+	for cluster_group in ${cluster_groups[@]} ; do
+        local clusters=(${cluster_group//,/ })
+        for cluster in ${clusters[@]}; do
+            context_to_cluster_group[$cluster]=$cluster_group
+        done
+	done
+}
 
 # $1 is filename
 # $2 is header
@@ -40,7 +60,7 @@ _fzf_file_mtime_older_than()
     return 1
 }
 
-# $1 is context
+# $1 is contexts
 # $2 is cache time
 # $3 is resource name
 _fzf_fetch_rsynced_resource()
@@ -136,7 +156,7 @@ _fzf_check_direct_access()
             return
         fi
     fi
-    for ip in $(kubectl get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
+    for ip in $(kubectl get endpoints --context $context -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
         if _fzf_check_connection $ip ${KUBECTL_FZF_RSYNC_PORT}; then
             echo $ip > "$endpoint_file"
             echo "$ip $KUBECTL_FZF_RSYNC_PORT"
@@ -171,7 +191,7 @@ _fzf_get_service_namespace()
             return 0
         fi
     fi
-    kfzf_ns=($(kubectl get svc --all-namespaces -l app=kubectl-fzf -o=jsonpath='{.items[0].metadata.namespace}' 2> /dev/null))
+    kfzf_ns=($(kubectl get svc --context $context --all-namespaces -l app=kubectl-fzf -o=jsonpath='{.items[0].metadata.namespace}' 2> /dev/null))
     if [[ "$kfzf_ns" == "" ]]; then
         echo "No service" > "$service_file"
         return 1
@@ -199,7 +219,7 @@ _fzf_check_port_forward()
         return 1
     fi
 
-    (nohup kubectl port-forward svc/kubectl-fzf -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &)
+    (nohup kubectl port-forward svc/kubectl-fzf --context $context -n ${kfzf_ns} ${local_port}:${KUBECTL_FZF_RSYNC_PORT} &> $log_file &)
 
     for (( i = 0; i < 10; i++ )); do
         if _fzf_check_connection localhost $local_port; then
@@ -461,7 +481,7 @@ __kubectl_get_containers()
 
 __get_current_namespace()
 {
-    local namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+    local namespace=$(kubectl config --context $context view --minify --output 'jsonpath={..namespace}')
     echo "${namespace:-default}"
 }
 
@@ -504,15 +524,24 @@ __build_namespaced_compreply()
 __kubectl_get_resource()
 {
     local current_context=$(kubectl config current-context)
-    local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_resource"
-    local header_file="${apiresources_file}_header"
 
-    _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
-
-    if [[ ! -s ${apiresources_file} ]]; then
-        ___kubectl_get_resource $*
-        return
+    local contexts=($current_context)
+    local cluster_group=${context_to_cluster_group[$current_context]}
+    if [[ -n $cluster_group ]]; then
+        contexts=(${cluster_group//,/ })
     fi
+
+    for context in ${contexts[@]}; do
+        local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_resource"
+        local header_file="${apiresources_file}_header"
+
+        _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
+
+        if [[ ! -s ${apiresources_file} ]]; then
+            ___kubectl_get_resource $*
+            return
+        fi
+    done
 
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
     local last_char=${COMP_LINE: -1}
