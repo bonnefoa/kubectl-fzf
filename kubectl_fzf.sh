@@ -70,7 +70,7 @@ _fzf_fetch_rsynced_resource()
     shift 2
     local resources=($@)
 
-    if pgrep --ns $$ -x cache_builder > /dev/null; then
+    if pgrep -x cache_builder > /dev/null; then
         return
     fi
 
