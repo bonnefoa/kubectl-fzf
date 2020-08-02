@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const SecretHeader = "Namespace Name Type Data Age Labels\n"
+const SecretHeader = "Cluster Namespace Name Type Data Age Labels\n"
 
 // Secret is the summary of a kubernetes secret
 type Secret struct {
@@ -41,7 +41,9 @@ func (s *Secret) HasChanged(k K8sResource) bool {
 
 // ToString serializes the object to strings
 func (s *Secret) ToString() string {
-	line := strings.Join([]string{s.namespace,
+	line := strings.Join([]string{
+		s.cluster,
+		s.namespace,
 		s.name,
 		s.secretType,
 		s.data,

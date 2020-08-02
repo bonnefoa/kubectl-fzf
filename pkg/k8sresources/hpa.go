@@ -7,7 +7,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 )
 
-const HpaHeader = "Namespace Name Reference Targets MinPods MaxPods Replicas Age Labels\n"
+const HpaHeader = "Cluster Namespace Name Reference Targets MinPods MaxPods Replicas Age Labels\n"
 
 // Hpa is the summary of a kubernetes horizontal pod autoscaler
 type Hpa struct {
@@ -48,7 +48,9 @@ func (h *Hpa) HasChanged(k K8sResource) bool {
 
 // ToString serializes the object to strings
 func (h *Hpa) ToString() string {
-	line := strings.Join([]string{h.namespace,
+	line := strings.Join([]string{
+		h.cluster,
+		h.namespace,
 		h.name,
 		h.reference,
 		h.targets,

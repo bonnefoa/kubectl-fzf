@@ -523,6 +523,7 @@ __build_namespaced_compreply()
 
 __kubectl_get_resource()
 {
+    _fzf_init_context_mapping
     local current_context=$(kubectl config current-context)
 
     local contexts=($current_context)
@@ -531,9 +532,10 @@ __kubectl_get_resource()
         contexts=(${cluster_group//,/ })
     fi
 
+    local header_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_header"
+    local data=""
     for context in ${contexts[@]}; do
-        local apiresources_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_resource"
-        local header_file="${apiresources_file}_header"
+        local apiresources_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_resource"
 
         _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
 
@@ -541,6 +543,7 @@ __kubectl_get_resource()
             ___kubectl_get_resource $*
             return
         fi
+        data="${data}$(cat $apiresources_file)"
     done
 
     local last_part=$(echo $COMP_LINE | awk '{print $(NF)}')
@@ -562,7 +565,6 @@ __kubectl_get_resource()
     local main_header=$(_fzf_get_main_header $context $namespace)
 
     local header=$(cat $header_file)
-    local data=$(cat $apiresources_file)
 
     result=$( (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
         | fzf ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \

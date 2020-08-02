@@ -1,14 +1,14 @@
 package k8sresources
 
 import (
-	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	batchbetav1 "k8s.io/api/batch/v1beta1"
+	"kubectlfzf/pkg/util"
 	"strings"
 )
 
 // CronJobHeader is the headers for cronjob files
-const CronJobHeader = "Namespace Name Schedule LastSchedule Containers Age Labels\n"
+const CronJobHeader = "Cluster Namespace Name Schedule LastSchedule Containers Age Labels\n"
 
 // CronJob is the summary of a kubernetes cronJob
 type CronJob struct {
@@ -53,6 +53,7 @@ func (c *CronJob) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (c *CronJob) ToString() string {
 	lst := []string{
+		c.cluster,
 		c.namespace,
 		c.name,
 		c.schedule,

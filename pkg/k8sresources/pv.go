@@ -3,8 +3,8 @@ package k8sresources
 import (
 	"fmt"
 
-	"kubectlfzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	"kubectlfzf/pkg/util"
 )
 
 // PersistentVolumeHeader is the header for pvc csv
@@ -69,6 +69,7 @@ func (pv *PersistentVolume) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (pv *PersistentVolume) ToString() string {
 	lst := []string{
+		pv.cluster,
 		pv.name,
 		pv.status,
 		pv.storageClass,

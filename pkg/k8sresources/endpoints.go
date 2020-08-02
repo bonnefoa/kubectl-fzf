@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"kubectlfzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	"kubectlfzf/pkg/util"
 )
 
-const EndpointsHeader = "Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
+const EndpointsHeader = "Cluster Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
 
 // Endpoints is the summary of a kubernetes endpoints
 type Endpoints struct {
@@ -57,7 +57,9 @@ func (e *Endpoints) HasChanged(k K8sResource) bool {
 
 // ToString serializes the object to strings
 func (e *Endpoints) ToString() string {
-	line := strings.Join([]string{e.namespace,
+	line := strings.Join([]string{
+		e.cluster,
+		e.namespace,
 		e.name,
 		e.resourceAge(),
 		util.JoinSlicesWithMaxOrNone(e.readyIps, 20, ","),

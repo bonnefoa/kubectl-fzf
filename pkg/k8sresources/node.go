@@ -5,12 +5,12 @@ import (
 	"sort"
 	"strings"
 
-	"kubectlfzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	"kubectlfzf/pkg/util"
 )
 
 // NodeHeader is the header line of csv result
-const NodeHeader = "Name Roles Status InstanceType Zone InternalIp Taints InstanceID Age Labels\n"
+const NodeHeader = "Cluster Name Roles Status InstanceType Zone InternalIp Taints InstanceID Age Labels\n"
 
 // Node is the summary of a kubernetes node
 type Node struct {
@@ -91,7 +91,9 @@ func (n *Node) HasChanged(k K8sResource) bool {
 
 // ToString serializes the object to strings
 func (n *Node) ToString() string {
-	line := strings.Join([]string{n.name,
+	line := strings.Join([]string{
+		n.cluster,
+		n.name,
 		util.JoinSlicesOrNone(n.roles, ","),
 		n.status,
 		n.instanceType,

@@ -10,7 +10,7 @@ import (
 )
 
 // PodHeader is the header for pod files
-const PodHeader = "Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels FieldSelectors\n"
+const PodHeader = "Context Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels FieldSelectors\n"
 
 // Pod is the summary of a kubernetes pod
 type Pod struct {
@@ -123,6 +123,7 @@ func (p *Pod) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (p *Pod) ToString() string {
 	lst := []string{
+		p.cluster,
 		p.namespace,
 		p.name,
 		p.podIP,

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"kubectlfzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	"kubectlfzf/pkg/util"
 )
 
-const ServiceHeader = "Namespace Name Type ClusterIp Ports Selector Age Labels\n"
+const ServiceHeader = "Cluster Namespace Name Type ClusterIp Ports Selector Age Labels\n"
 
 // Service is the summary of a kubernetes service
 type Service struct {
@@ -55,7 +55,9 @@ func (s *Service) HasChanged(k K8sResource) bool {
 func (s *Service) ToString() string {
 	portList := util.JoinSlicesOrNone(s.ports, ",")
 	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
-	line := strings.Join([]string{s.namespace,
+	line := strings.Join([]string{
+		s.cluster,
+		s.namespace,
 		s.name,
 		s.serviceType,
 		s.clusterIP,

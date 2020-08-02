@@ -1,11 +1,11 @@
 package k8sresources
 
 import (
-	"kubectlfzf/pkg/util"
 	corev1 "k8s.io/api/core/v1"
+	"kubectlfzf/pkg/util"
 )
 
-const PersistentVolumeClaimHeader = "Namespace Name Status Capacity VolumeName StorageClass Age Labels\n"
+const PersistentVolumeClaimHeader = "Cluster Namespace Name Status Capacity VolumeName StorageClass Age Labels\n"
 
 // PersistentVolumeClaim is the summary of a kubernetes physical volume claim
 type PersistentVolumeClaim struct {
@@ -43,7 +43,9 @@ func (pvc *PersistentVolumeClaim) HasChanged(k K8sResource) bool {
 
 // ToString serializes the object to strings
 func (pvc *PersistentVolumeClaim) ToString() string {
-	lst := []string{pvc.namespace,
+	lst := []string{
+		pvc.cluster,
+		pvc.namespace,
 		pvc.name,
 		pvc.status,
 		pvc.capacity,

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
+	"kubectlfzf/pkg/util"
 )
 
 // DaemonSetHeader is the header file for daemonset
-const DaemonSetHeader = "Namespace Name Desired Current Ready LabelSelector Containers Age Labels\n"
+const DaemonSetHeader = "Cluster Namespace Name Desired Current Ready LabelSelector Containers Age Labels\n"
 
 // DaemonSet is the summary of a kubernetes daemonset
 type DaemonSet struct {
@@ -62,6 +62,7 @@ func (d *DaemonSet) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (d *DaemonSet) ToString() string {
 	lst := []string{
+		d.cluster,
 		d.namespace,
 		d.name,
 		d.desired,

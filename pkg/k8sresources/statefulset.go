@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"kubectlfzf/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
+	"kubectlfzf/pkg/util"
 )
 
-const StatefulSetHeader = "Namespace Name Replicas Selector Age Labels\n"
+const StatefulSetHeader = "Cluster Namespace Name Replicas Selector Age Labels\n"
 
 // StatefulSet is the summary of a kubernetes statefulset
 type StatefulSet struct {
@@ -46,7 +46,9 @@ func (s *StatefulSet) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (s *StatefulSet) ToString() string {
 	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
-	line := strings.Join([]string{s.namespace,
+	line := strings.Join([]string{
+		s.cluster,
+		s.namespace,
 		s.name,
 		fmt.Sprintf("%d/%d", s.currentReplicas, s.replicas),
 		selectorList,

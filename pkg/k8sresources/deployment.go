@@ -3,12 +3,12 @@ package k8sresources
 import (
 	"strconv"
 
-	"kubectlfzf/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
+	"kubectlfzf/pkg/util"
 )
 
 // DeploymentHeader is the header file for deployment
-const DeploymentHeader = "Namespace Name Desired Current Up-to-date Available Age Labels\n"
+const DeploymentHeader = "Cluster Namespace Name Desired Current Up-to-date Available Age Labels\n"
 
 // Deployment is the summary of a kubernetes deployment
 type Deployment struct {
@@ -48,7 +48,9 @@ func (d *Deployment) HasChanged(k K8sResource) bool {
 
 // ToString serializes the object to strings
 func (d *Deployment) ToString() string {
-	line := []string{d.namespace,
+	line := []string{
+		d.cluster,
+		d.namespace,
 		d.name,
 		d.desiredReplicas,
 		d.currentReplicas,

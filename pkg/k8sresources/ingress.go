@@ -1,11 +1,11 @@
 package k8sresources
 
 import (
-	"kubectlfzf/pkg/util"
 	betav1 "k8s.io/api/extensions/v1beta1"
+	"kubectlfzf/pkg/util"
 )
 
-const IngressHeader = "Namespace Name Address Age Labels\n"
+const IngressHeader = "Cluster Namespace Name Address Age Labels\n"
 
 // Ingress is the summary of a kubernetes ingress
 type Ingress struct {
@@ -38,6 +38,7 @@ func (ingress *Ingress) HasChanged(k K8sResource) bool {
 func (ingress *Ingress) ToString() string {
 	addressList := util.JoinSlicesOrNone(ingress.address, ",")
 	lst := []string{
+		ingress.cluster,
 		ingress.namespace,
 		ingress.name,
 		addressList,

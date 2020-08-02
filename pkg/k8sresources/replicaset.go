@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"kubectlfzf/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
+	"kubectlfzf/pkg/util"
 )
 
-const ReplicaSetHeader = "Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels\n"
+const ReplicaSetHeader = "Cluster Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels\n"
 
 // ReplicaSet is the summary of a kubernetes replicaSet
 type ReplicaSet struct {
@@ -51,7 +51,9 @@ func (r *ReplicaSet) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (r *ReplicaSet) ToString() string {
 	selectorList := util.JoinSlicesOrNone(r.selectors, ",")
-	line := strings.Join([]string{r.namespace,
+	line := strings.Join([]string{
+		r.cluster,
+		r.namespace,
 		r.name,
 		r.replicas,
 		r.availableReplicas,

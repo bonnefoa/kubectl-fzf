@@ -3,13 +3,13 @@ package k8sresources
 import (
 	"fmt"
 
-	"kubectlfzf/pkg/util"
 	"github.com/golang/glog"
 	batchv1 "k8s.io/api/batch/v1"
+	"kubectlfzf/pkg/util"
 )
 
 // JobHeader is the headers for job files
-const JobHeader = "Namespace Name Completions Containers Age Labels\n"
+const JobHeader = "Cluster Namespace Name Completions Containers Age Labels\n"
 
 // Job is the summary of a kubernetes Job
 type Job struct {
@@ -55,6 +55,7 @@ func (j *Job) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (j *Job) ToString() string {
 	lst := []string{
+		j.cluster,
 		j.namespace,
 		j.name,
 		j.completions,

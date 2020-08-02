@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"kubectlfzf/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kubectlfzf/pkg/util"
 )
 
 // K8sResource is the generic information of a k8s entity
@@ -21,6 +21,7 @@ type K8sResource interface {
 type ResourceMeta struct {
 	name         string
 	namespace    string
+	cluster      string
 	labels       map[string]string
 	creationTime time.Time
 }
@@ -29,6 +30,7 @@ type ResourceMeta struct {
 func (r *ResourceMeta) FromObjectMeta(meta metav1.ObjectMeta) {
 	r.name = meta.Name
 	r.namespace = meta.Namespace
+	r.cluster = meta.ClusterName
 	r.labels = meta.Labels
 	r.creationTime = meta.CreationTimestamp.Time
 }
@@ -38,6 +40,7 @@ func (r *ResourceMeta) FromDynamicMeta(u *unstructured.Unstructured) {
 	metadata := u.Object["metadata"].(map[string]interface{})
 	r.name = metadata["name"].(string)
 	r.namespace = metadata["namespace"].(string)
+	r.cluster = metadata["cluster"].(string)
 	var err error
 	var found bool
 	r.labels, found, err = unstructured.NestedStringMap(u.Object, "metadata", "labels")
