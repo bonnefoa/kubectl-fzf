@@ -56,8 +56,10 @@ type K8sStore struct {
 	storeConfig  StoreConfig
 	firstWrite   bool
 	destDir      string
-	dataMutex    sync.Mutex
-	labelMutex   sync.Mutex
+
+	dataMutex  sync.Mutex
+	labelMutex sync.Mutex
+	fileMutex  sync.Mutex
 
 	labelToDump   bool
 	lastFullDump  time.Time
@@ -123,11 +125,11 @@ func (k *K8sStore) periodicLabelDump(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			k.labelMutex.Lock()
 			if k.labelToDump {
-				continue
+				k.dumpLabel()
 			}
-			k.dumpLabel()
-			k.labelToDump = true
+			k.labelMutex.Unlock()
 		}
 	}
 }
@@ -227,30 +229,34 @@ func (k *K8sStore) updateCurrentFile() (err error) {
 
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
+	k.fileMutex.Lock()
 	if k.currentFile == nil {
 		var err error
 		err = util.WriteStringToFile(resource.ToString(), k.destDir, k.resourceName, "resource")
 		if err != nil {
+			k.fileMutex.Unlock()
 			return err
 		}
 		err = k.updateCurrentFile()
 		if err != nil {
+			k.fileMutex.Unlock()
 			return err
 		}
 		glog.Infof("Initial write of %s", k.currentFile.Name())
 	}
 	_, err := k.currentFile.WriteString(resource.ToString())
+	k.fileMutex.Unlock()
 	if err != nil {
 		return err
 	}
 
 	now := time.Now()
+	k.labelMutex.Lock()
 	delta := now.Sub(k.lastLabelDump)
-	if delta > time.Second {
-	} else {
+	if delta < time.Second {
 		k.labelToDump = true
-		k.dumpLabel()
 	}
+	k.labelMutex.Unlock()
 	return nil
 }
 
