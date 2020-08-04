@@ -48,6 +48,7 @@ spec:
             cpu: {{ $.Values.resources.cache_builder.cpu }}
         args:
           - --in-cluster
+          - --cluster-name=$(K8S_CLUSTER_INFRA_DOMAIN)
 
       - name: rsyncd
         image: {{ $.Values.image.rsyncd.name }}:{{ $.Values.image.rsyncd.tag }}
