@@ -36,6 +36,7 @@ var (
 
 	displayVersion         bool
 	cpuProfile             bool
+	clusterName            string
 	inCluster              bool
 	kubeconfig             string
 	excludedNamespaces     []string
@@ -68,6 +69,7 @@ func init() {
 	flag.Bool("cpu-profile", false, "Start with cpu profiling")
 	flag.Bool("in-cluster", false, "Use in-cluster configuration")
 	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by comma")
+	flag.String("cluster-name", "incluster", "The cluster name. Needed for cross-cluster completion.")
 	flag.String("cache-dir", defaultCacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.String("role-blacklist", "", "List of roles to hide from node list, separated by commas")
 	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
@@ -103,6 +105,7 @@ func init() {
 	kubeconfig = viper.GetString("kubeconfig")
 	cacheDir = viper.GetString("cache-dir")
 	roleBlacklist = viper.GetStringSlice("role-blacklist")
+	clusterName = viper.GetString("cluster-name")
 	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
 	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 	nodePollingPeriod = viper.GetDuration("node-polling-period")
@@ -131,10 +134,14 @@ func termHandler(sig os.Signal) error {
 	return daemon.ErrStop
 }
 
-func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
+func startWatchOnCluster(ctx context.Context, config *restclient.Config, inCluster bool, cluster string) resourcewatcher.ResourceWatcher {
+	clusterDir := cluster
+	if inCluster {
+		clusterDir = "incluster"
+	}
 	storeConfig := resourcewatcher.StoreConfig{
 		CacheDir:            cacheDir,
-		Cluster:             cluster,
+		ClusterDir:          clusterDir,
 		TimeBetweenFullDump: timeBetweenFullDump,
 	}
 	watcher := resourcewatcher.NewResourceWatcher(config, storeConfig, excludedNamespaces)
@@ -145,7 +152,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 		Cluster:       cluster,
 	}
 
-	glog.Infof("Start cache build on cluster %s", config.Host)
+	glog.Infof("Start cache build on cluster %s", cluster)
 	for _, watchConfig := range watchConfigs {
 		err := watcher.Start(ctx, watchConfig, ctorConfig)
 		util.FatalIf(err)
@@ -159,7 +166,7 @@ func getClientConfigAndCluster() (*rest.Config, string) {
 	if inCluster {
 		restConfig, err := rest.InClusterConfig()
 		util.FatalIf(err)
-		return restConfig, "incluster"
+		return restConfig, clusterName
 	}
 
 	configInBytes, err := ioutil.ReadFile(kubeconfig)
@@ -210,7 +217,7 @@ func start() {
 	go handleSignals(cancel)
 
 	currentRestConfig, currentCluster := getClientConfigAndCluster()
-	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster)
+	watcher := startWatchOnCluster(ctx, currentRestConfig, inCluster, currentCluster)
 	ticker := time.NewTicker(time.Second * 5)
 
 	for {
@@ -223,7 +230,7 @@ func start() {
 			if restConfig.Host != currentRestConfig.Host {
 				glog.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
-				watcher = startWatchOnCluster(ctx, restConfig, cluster)
+				watcher = startWatchOnCluster(ctx, restConfig, inCluster, cluster)
 				currentRestConfig = restConfig
 				currentCluster = cluster
 			}
