@@ -64,7 +64,7 @@ _fzf_get_filepath()
 {
     local context="$1"
     local resource_name="$2"
-    local suffix="$3"
+    local suffix="${3:-}"
     echo "${KUBECTL_FZF_CACHE}/${context}/${resource_name}${suffix}"
 }
 
@@ -74,7 +74,7 @@ _fzf_get_filepaths()
     local resource_name="$2"
     local suffix="$3"
     local files=()
-    for context in contexts; do
+    for context in $contexts; do
         files+="${KUBECTL_FZF_CACHE}/${context}/${resource_name}${suffix}"
     done
     echo ${files[@]}
@@ -261,7 +261,7 @@ _fzf_check_port_forward()
 _fzf_get_main_header()
 {
     local context="$1"
-    local namespace="$2"
+    local namespace="${2:-}"
     local main_header="Context:$context"
     if [[ -n $namespace ]]; then
         main_header="$main_header, Namespace:$namespace"
@@ -313,6 +313,7 @@ _fzf_kubectl_pv_complete()
     local resource_name="$1"
     local context="$2"
     local query="$3"
+    local namespace=$(__get_parameter_in_query --namespace -n)
 
     local main_header=$(_fzf_get_main_header $context $namespace)
 
@@ -450,7 +451,7 @@ _fzf_field_selector_complete()
 _fzf_with_namespace()
 {
     local namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "${3:-}" "$namespace_in_query"
 }
 
 # $1 is resource_name
@@ -491,7 +492,7 @@ __kubectl_get_containers()
 {
     local pod=$(echo $COMP_LINE | awk '{print $(NF)}')
     local current_context=$(kubectl config current-context)
-    local main_header=$(_fzf_get_main_header $current_context "")
+    local main_header=$(_fzf_get_main_header $current_context)
     local data=$(awk "(\$2 == \"$pod\") {print \$7}" ${KUBECTL_FZF_CACHE}/${current_context}/pods \
         | tr ',' '\n')
     if [[ $data == "" ]]; then
@@ -546,12 +547,14 @@ __build_namespaced_compreply()
 
 __kubectl_get_resource()
 {
+    #set -ue
+
     _fzf_init_context_mapping
-    local current_context=$(kubectl config current-context)
-    local header_file="${KUBECTL_FZF_CACHE}/${current_context}/apiresources_header"
+    local context=$(kubectl config current-context)
+    local header_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_header"
     local apiresources_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_resource"
 
-    _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
+    _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
     if [[ ! -f ${apiresources_file} ]]; then
         ___kubectl_get_resource $*
         return
@@ -597,9 +600,9 @@ __kubectl_parse_get()
     local autocomplete_fun
     local flag_autocomplete_fun
     local field_selector_autocomplete_fun
-    local resource_name=$1
+    local resource_arg=$1
 
-    case $resource_name in
+    case $resource_arg in
         all )
             resource_name="pods"
             ;;
@@ -696,7 +699,10 @@ __kubectl_parse_get()
     esac
 
     local contexts=($current_context)
-    local cluster_group=${context_to_cluster_group[$current_context]}
+    local cluster_group
+    if [[ -v "context_to_cluster_group[$current_context]" ]] ; then
+        cluster_group=${context_to_cluster_group[$current_context]}
+    fi
     local context_array=($current_context)
     if [[ -n $cluster_group ]]; then
         contexts=${cluster_group//,/ }
@@ -710,7 +716,7 @@ __kubectl_parse_get()
         fi
     done
 
-    local header_path=$(_fzf_get_filepath ${current_context} $resource_name)
+    local header_path=$(_fzf_get_filepath ${current_context} $resource_name "_header")
     if [[ ! -f ${header_path} ]]; then
         ___kubectl_parse_get $*
         return
