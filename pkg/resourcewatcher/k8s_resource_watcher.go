@@ -141,7 +141,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	return watchConfigs
 }
 
-func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore K8sStore) {
+func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore *K8sStore) {
 	obj, err := watchlist.List(metav1.ListOptions{})
 	if err != nil {
 		glog.Warningf("Error on listing %s: %v", k8sStore.resourceName, err)
@@ -173,7 +173,7 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 // DumpAPIResources dumps api resources file
 func (r *ResourceWatcher) DumpAPIResources() error {
 	resourceName := "apiresources"
-	destDir := path.Join(r.storeConfig.CacheDir, r.storeConfig.Cluster)
+	destDir := path.Join(r.storeConfig.CacheDir, r.storeConfig.ClusterDir)
 	err := util.WriteStringToFile(k8sresources.APIResourceHeader, destDir, resourceName, "header")
 	if err != nil {
 		return err
@@ -200,7 +200,7 @@ func (r *ResourceWatcher) DumpAPIResources() error {
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,
-	cfg WatchConfig, k8sStore K8sStore) {
+	cfg WatchConfig, k8sStore *K8sStore) {
 	glog.V(4).Infof("Start poller for %s", k8sStore.resourceName)
 	namespace := ""
 	watchlist := cache.NewListWatchFromClient(cfg.getter,
@@ -220,7 +220,7 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 }
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
-	cfg WatchConfig, k8sStore K8sStore, namespaces []string) {
+	cfg WatchConfig, k8sStore *K8sStore, namespaces []string) {
 	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, namespaces)
 
 	stop := make(chan struct{})

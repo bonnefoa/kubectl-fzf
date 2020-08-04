@@ -7,6 +7,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"kubectlfzf/pkg/k8sresources"
@@ -55,6 +56,8 @@ type K8sStore struct {
 	storeConfig  StoreConfig
 	firstWrite   bool
 	destDir      string
+	dataMutex    sync.Mutex
+	labelMutex   sync.Mutex
 
 	labelToDump   bool
 	lastFullDump  time.Time
@@ -63,15 +66,15 @@ type K8sStore struct {
 
 // StoreConfig defines parameters used for the cache location
 type StoreConfig struct {
-	Cluster             string
+	ClusterDir          string
 	CacheDir            string
 	TimeBetweenFullDump time.Duration
 }
 
 // NewK8sStore creates a new store
-func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) (K8sStore, error) {
+func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) (*K8sStore, error) {
 	k := K8sStore{}
-	k.destDir = path.Join(storeConfig.CacheDir, storeConfig.Cluster)
+	k.destDir = path.Join(storeConfig.CacheDir, storeConfig.ClusterDir)
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.labelMap = make(map[LabelKey]int, 0)
 	k.resourceCtor = cfg.resourceCtor
@@ -86,10 +89,10 @@ func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig StoreConfig, 
 	go k.periodicLabelDump(ctx)
 	err := util.WriteStringToFile(cfg.header, k.destDir, k.resourceName, "header")
 	if err != nil {
-		return k, err
+		return &k, err
 	}
 
-	return k, nil
+	return &k, nil
 }
 
 func resourceKey(obj interface{}) (string, string, map[string]string) {
@@ -130,14 +133,16 @@ func (k *K8sStore) periodicLabelDump(ctx context.Context) {
 }
 
 func (k *K8sStore) updateLabelMap(namespace string, labels map[string]string) {
+	k.labelMutex.Lock()
 	for labelKey, labelValue := range labels {
 		k.labelMap[LabelKey{namespace, fmt.Sprintf("%s=%s", labelKey, labelValue)}]++
 	}
+	k.labelMutex.Unlock()
 }
 
 // AddResourceList clears current state add the objects to the store.
 // It will trigger a full dump
-// This is used for polled resources
+// This is used for polled resources, no need for mutex
 func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	for _, runtimeObject := range lstRuntime {
@@ -157,7 +162,9 @@ func (k *K8sStore) AddResource(obj interface{}) {
 	key, ns, labels := resourceKey(obj)
 	newObj := k.resourceCtor(obj, k.ctorConfig)
 	glog.V(11).Infof("%s added: %s", k.resourceName, key)
+	k.dataMutex.Lock()
 	k.data[key] = newObj
+	k.dataMutex.Unlock()
 	k.updateLabelMap(ns, labels)
 
 	err := k.AppendNewObject(newObj)
@@ -182,7 +189,9 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 		return
 	}
 	glog.V(11).Infof("%s deleted: %s", k.resourceName, key)
+	k.dataMutex.Lock()
 	delete(k.data, key)
+	k.dataMutex.Unlock()
 	k.updateLabelMap(ns, labels)
 
 	err := k.DumpFullState()
@@ -195,14 +204,18 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	key, ns, labels := resourceKey(newObj)
 	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
+	k.dataMutex.Lock()
 	if k8sObj.HasChanged(k.data[key]) {
 		glog.V(11).Infof("%s changed: %s", k.resourceName, key)
 		k.data[key] = k8sObj
+		k.dataMutex.Unlock()
 		k.updateLabelMap(ns, labels)
 		err := k.DumpFullState()
 		if err != nil {
 			glog.Warningf("Error when dumping state: %v", err)
 		}
+	} else {
+		k.dataMutex.Unlock()
 	}
 }
 
@@ -257,12 +270,14 @@ func (k *K8sStore) dumpLabel() error {
 }
 
 func (k *K8sStore) generateLabel() (string, error) {
+	k.labelMutex.Lock()
 	pl := make(LabelPairList, len(k.labelMap))
 	i := 0
 	for key, occurrences := range k.labelMap {
 		pl[i] = LabelPair{key, occurrences}
 		i++
 	}
+	k.labelMutex.Unlock()
 	sort.Sort(pl)
 	var res strings.Builder
 	for _, pair := range pl {
@@ -284,6 +299,7 @@ func (k *K8sStore) generateLabel() (string, error) {
 }
 
 func (k *K8sStore) generateOutput() (string, error) {
+	k.dataMutex.Lock()
 	var res strings.Builder
 	keys := make([]string, len(k.data))
 	i := 0
@@ -296,16 +312,18 @@ func (k *K8sStore) generateOutput() (string, error) {
 		v := k.data[key]
 		_, err := res.WriteString(v.ToString())
 		if err != nil {
+			k.dataMutex.Unlock()
 			return "", errors.Wrapf(err, "Error writing string %s",
 				v.ToString())
 		}
 	}
+	k.dataMutex.Unlock()
 	return res.String(), nil
 }
 
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
-	glog.Infof("Dump full state of %s", k.resourceName)
+	glog.V(8).Infof("Dump full state of %s", k.resourceName)
 	now := time.Now()
 	delta := now.Sub(k.lastFullDump)
 	if delta < k.storeConfig.TimeBetweenFullDump {
