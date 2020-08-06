@@ -289,11 +289,11 @@ func (k *K8sStore) generateLabel() (string, error) {
 	for _, pair := range pl {
 		var str string
 		if pair.Key.Namespace == "" {
-			str = fmt.Sprintf("%s %d\n",
-				pair.Key.Label, pair.Occurrences)
-		} else {
 			str = fmt.Sprintf("%s %s %d\n",
-				pair.Key.Namespace, pair.Key.Label, pair.Occurrences)
+				k.ctorConfig.Cluster, pair.Key.Label, pair.Occurrences)
+		} else {
+			str = fmt.Sprintf("%s %s %s %d\n",
+				k.ctorConfig.Cluster, pair.Key.Namespace, pair.Key.Label, pair.Occurrences)
 		}
 		_, err := res.WriteString(str)
 		if err != nil {
