@@ -12,7 +12,7 @@ KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIME=${KUBECTL_FZF_RSYNC_NO_SERVICE_CACHE_TIM
 # Cache time of api resource list
 KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME:-3600}
 # Cache time of every other resources
-KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-30}
+KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME=${KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME:-60}
 KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
 mkdir -p $KUBECTL_FZF_CACHE
@@ -284,12 +284,12 @@ _fzf_get_exclude_pattern()
 _fzf_get_node_to_pods()
 {
     local context="$1"
-    local pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_resource"
-    local pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
+    local pod_file=$(_fzf_get_filepath $current_context "pods" "_resource")
+    local pod_header_file=$(_fzf_get_filepath $current_context "pods" "_header")
     local node_name_field=$(_fzf_get_header_position $pod_header_file "NodeName")
     local pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
 
-    local daemonsets_file="${KUBECTL_FZF_CACHE}/${context}/daemonsets"
+    local daemonsets_file=$(_fzf_get_filepath $current_context "daemonsets" "")
     local daemonsets=""
     if [[ -f $daemonsets_file ]]; then
         daemonsets=$(cut -d' ' -f2 "$daemonsets_file" | uniq)
@@ -353,8 +353,9 @@ _fzf_kubectl_node_complete()
 
     local current_context=$(kubectl config current-context)
     local main_header=$(_fzf_get_main_header $current_context $contexts $namespace)
-    local node_resource_file="${resource_name}_resource"
-    local node_header_file="${resource_name}_header"
+    local node_resource_file=$(_fzf_get_filepaths $contexts $resource_name "_resource")
+    local node_header_file=$(_fzf_get_filepaths $contexts $resource_name "_header")
+
     local label_field=$(_fzf_get_header_position $node_header_file "Labels")
     local end_field=$((label_field - 1))
     local header=$(cut -d ' ' -f 1-$end_field "$node_header_file")
@@ -574,12 +575,12 @@ __kubectl_get_resource()
 {
     #set -ue
 
-    local context=$(kubectl config current-context)
-    local header_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_header"
-    local apiresources_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_resource"
+    local current_context=$(kubectl config current-context)
+    local header_file=$(_fzf_get_filepath $current_context "apiresources" "_header")
+    local apiresources_file=$(_fzf_get_filepath $current_context "apiresources" "_resource")
 
-    _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
-    if [[ ! -f ${apiresources_file} ]]; then
+    _fzf_fetch_rsynced_resource $current_context $KUBECTL_FZF_RSYNC_API_RESOURCE_CACHE_TIME "apiresources"
+    if [[ ! -f "${apiresources_file}" ]]; then
         ___kubectl_get_resource $*
         return
     fi
@@ -600,7 +601,7 @@ __kubectl_get_resource()
     fi
 
     # 'k get <TAB>' completion
-    local main_header=$(_fzf_get_main_header $context $context $namespace)
+    local main_header=$(_fzf_get_main_header $current_context $current_context $namespace)
 
     local header=$(cat $header_file)
     local data=$(cat $apiresources_file)
