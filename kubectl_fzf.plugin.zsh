@@ -17,21 +17,16 @@ KUBECTL_FZF_RSYNC_PORT=${KUBECTL_FZF_RSYNC_PORT:-80}
 KUBECTL_FZF_PORT_FORWARD_START=${KUBECTL_FZF_PORT_FORWARD_START:-9873}
 mkdir -p $KUBECTL_FZF_CACHE
 
-builtin declare -A cluster_groups
-if [[ -f "$KUBECTL_FZF_CONF" ]]; then
-    source "$KUBECTL_FZF_CONF"
-fi
-
-builtin declare -A context_to_cluster_group
 _fzf_init_context_mapping()
 {
-    if type emulate >/dev/null 2>/dev/null; then
-        emulate ksh;
+    if [[ -f "$KUBECTL_FZF_CONF" ]]; then
+        source "$KUBECTL_FZF_CONF"
     fi
+
 	for cluster_group in ${cluster_groups[@]} ; do
         local clusters; clusters=(${cluster_group//,/ })
         for cluster in ${clusters[@]}; do
-            context_to_cluster_group[$cluster]=$cluster_group
+            context_to_cluster_group[$cluster]="$cluster_group"
         done
 	done
 }
@@ -73,11 +68,11 @@ _fzf_get_filepaths()
     local contexts; contexts=(${1//,/ })
     local resource_name; resource_name="$2"
     local suffix; suffix="$3"
-    local files; files=()
-    for context in $contexts; do
-        files+="${KUBECTL_FZF_CACHE}/${context}/${resource_name}${suffix}"
+    local files; files=""
+    for context in ${contexts[@]}; do
+        files="$files ${KUBECTL_FZF_CACHE}/${context}/${resource_name}${suffix}"
     done
-    echo ${files[@]}
+    echo ${files:1}
 }
 
 # $1 is contexts
@@ -113,7 +108,7 @@ _fzf_fetch_rsynced_resource()
     fi
 
     if [[ -n "$rsync_endpoint" ]]; then
-        rsync -qPrz --delete ${include_param[@]} --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/"
+        rsync -qPrz --delete ${include_param[@]} --timeout=1 --exclude="*" "rsync://${rsync_endpoint[@]:0:1}:${rsync_endpoint[@]:1:1}/fzf_cache/" "${KUBECTL_FZF_CACHE}/${context}/" 2> /dev/null
 
         if [[ $? -eq 0 ]]; then
             for resource in ${resources[@]} ; do
@@ -260,9 +255,13 @@ _fzf_check_port_forward()
 # $2 is namespace
 _fzf_get_main_header()
 {
-    local context; context="$1"
-    local namespace; namespace="${2:-}"
-    local main_header; main_header="Context:$context"
+    local active_context; active_context="$1"
+    local contexts; contexts="$2"
+    local namespace; namespace="${3:-}"
+    local main_header; main_header="Active Context:$active_context"
+    if [[ $active_context != $contexts ]]; then
+        main_header="$main_header, Search contexts:$contexts"
+    fi
     if [[ -n $namespace ]]; then
         main_header="$main_header, Namespace:$namespace"
     fi
@@ -311,29 +310,33 @@ _fzf_get_node_to_pods()
 _fzf_kubectl_pv_complete()
 {
     local resource_name; resource_name="$1"
-    local context; context="$2"
+    local contexts; contexts="$2"
     local query; query="$3"
     local namespace; namespace=$(__get_parameter_in_query --namespace -n)
 
-    local main_header; main_header=$(_fzf_get_main_header $context $namespace)
+    local current_context; current_context=$(kubectl config current-context)
+    local main_header; main_header=$(_fzf_get_main_header $current_context $contexts $namespace)
 
-    local pv_resource_file; pv_resource_file="${resource_name}_resource"
-    local pv_header_file; pv_header_file="${resource_name}_header"
+    local pv_header_file; pv_header_file=$(_fzf_get_filepath $current_context $resource_name "_header")
+    local pv_resource_files; pv_resource_files=($(_fzf_get_filepaths $contexts $resource_name "_resource"))
+    local pv_label_files; pv_label_files=($(_fzf_get_filepaths $contexts $resource_name "_label"))
+
     local label_field; label_field=$(_fzf_get_header_position $pv_header_file "Labels")
     local claim_field_pv_file; claim_field_pv_file=$(_fzf_get_header_position $pv_header_file "Claim")
     local end_field; end_field=$((label_field - 1))
     local header; header=$(cut -d ' ' -f 1-$end_field "$pv_header_file")
     header="$header MountedBy"
 
-    local pod_file; pod_file="${KUBECTL_FZF_CACHE}/${context}/pods_resource"
-    local pod_header_file; pod_header_file="${KUBECTL_FZF_CACHE}/${context}/pods_header"
+    local pod_files; pod_files=($(_fzf_get_filepaths $contexts "pods" "_resource"))
+    local pod_header_file; pod_header_file=$(_fzf_get_filepath $current_context "pods" "_header")
+
     local claim_field_pod_file; claim_field_pod_file=$(_fzf_get_header_position $pod_header_file "Claims")
     local pod_name_field; pod_name_field=$(_fzf_get_header_position $pod_header_file "Name")
     local pod_namespace_field; pod_namespace_field=$(_fzf_get_header_position $pod_header_file "Namespace")
 
     local data; data=$(join -a1 -o'1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.2' -1 $claim_field_pv_file -2 1 -e None \
-        <(cut -d ' ' -f 1-$end_field "$pv_resource_file" | sort -k $claim_field_pv_file) \
-        <(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_file | sort))
+        <(cut -d ' ' -f 1-$end_field "$pv_resource_files" | sort -k $claim_field_pv_file) \
+        <(awk "(\$$claim_field_pod_file != \"None\"){split(\$$claim_field_pod_file,c,\",\"); for (i in c) { print c[i] \" \" \$$pod_namespace_field\"/\"\$$pod_name_field } }" $pod_files | sort))
     local num_fields; num_fields=$(echo $header | wc -w | sed 's/  *//g')
 
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
@@ -345,10 +348,11 @@ _fzf_kubectl_pv_complete()
 _fzf_kubectl_node_complete()
 {
     local resource_name; resource_name="$1"
-    local context; context="$2"
+    local contexts; contexts="$2"
     local query; query="$3"
 
-    local main_header; main_header=$(_fzf_get_main_header $context $namespace)
+    local current_context; current_context=$(kubectl config current-context)
+    local main_header; main_header=$(_fzf_get_main_header $current_context $contexts $namespace)
     local node_resource_file; node_resource_file="${resource_name}_resource"
     local node_header_file; node_header_file="${resource_name}_header"
     local label_field; label_field=$(_fzf_get_header_position $node_header_file "Labels")
@@ -380,23 +384,24 @@ _fzf_kubectl_complete()
     local query; query=$5
     local namespace; namespace="$6"
 
-    local resource_files; resource_files=$(_fzf_get_filepaths $contexts $resource_name "_resource")
-    local header_file; header_file=$(_fzf_get_filepath $contexts $resource_name "_header")
-    local label_files; label_files=$(_fzf_get_filepath $contexts $resource_name "_label")
+    local current_context; current_context=$(kubectl config current-context)
+    local header_file; header_file=$(_fzf_get_filepath $current_context $resource_name "_header")
+    local resource_files; resource_files=($(_fzf_get_filepaths $contexts $resource_name "_resource"))
+    local label_files; label_files=($(_fzf_get_filepaths $contexts $resource_name "_label"))
 
     local label_field; label_field=$(_fzf_get_header_position $header_file "Labels")
     local end_field; end_field=$((label_field - 1))
-    local main_header; main_header=$(_fzf_get_main_header $context $namespace)
+    local main_header; main_header=$(_fzf_get_main_header $current_context $current_context $namespace)
 
     if [[ $is_flag == "with_namespace" ]]; then
         local header; header="Namespace Labels Occurrences"
-        local data; data=$(cat $label_files)
+        local data; data=$(cat ${label_files[@]})
     elif [[ $is_flag == "without_namespace" ]]; then
         local header; header="Labels Occurrences"
-        local data; data=$(cat $label_files)
+        local data; data=$(cat ${label_files[@]})
     else
         local header; header=$(cut -d ' ' -f 1-$end_field "$header_file")
-        local data; data=$(cut -d ' ' -f 1-$end_field $resource_files)
+        local data; data=$(cut -d ' ' -f 1-$end_field ${resource_files[@]})
     fi
 
     if [[ -n $namespace ]]; then
@@ -424,17 +429,20 @@ _fzf_field_selector_complete()
 {
     local end_print; end_print=$1
     local resource_prefix; resource_prefix="$2"
-    local resource_file; resource_file="${resource_prefix}_resource"
-    local header_file; header_file="${resource_prefix}_header"
     local contexts; contexts="$3"
     local query; query=$4
     local namespace; namespace="$5"
-    local field_selector_field; field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
-    local main_header; main_header=$(_fzf_get_main_header $contexts $namespace)
 
-    local header; header="Namespace FieldSelector Occurrences"
-    local data; data=$(cut -d' ' -f 1,$field_selector_field $resource_file \
-        | awk '{split($2,c,","); for (i in c){print $1,c[i]; print "all-namespaces",c[i]}}' | uniq -c | awk '{print $2,$3,$1}' | sort -k 3 -n -r)
+    local current_context; current_context=$(kubectl config current-context)
+    local header_file; header_file=$(_fzf_get_filepath $current_context $resource_name "_header")
+    local resource_files; resource_files=($(_fzf_get_filepaths $contexts $resource_name "_resource"))
+
+    local field_selector_field; field_selector_field=$(_fzf_get_header_position $header_file "FieldSelectors")
+    local main_header; main_header=$(_fzf_get_main_header $current_context $contexts $namespace)
+
+    local header; header="Cluster Namespace FieldSelector Occurrences"
+    local data; data=$(cut -d' ' -f 1,2,$field_selector_field ${resource_files[@]} \
+        | awk '{split($3,c,","); for (i in c){print $1,$2,c[i]; print $1,"all-namespaces",c[i]}}' | sort | uniq -c | awk '{print $2,$3,$4,$1}' | sort -k 4 -n -r)
 
     if [[ -n $namespace ]]; then
         data=$(echo "$data" | grep -w "^$namespace")
@@ -451,7 +459,7 @@ _fzf_field_selector_complete()
 _fzf_with_namespace()
 {
     local namespace_in_query; namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "${3:-}" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2,$3}' "false" $1 "$2" "${3:-}" "$namespace_in_query"
 }
 
 # $1 is resource_name
@@ -459,7 +467,7 @@ _fzf_with_namespace()
 # $3 is query
 _fzf_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "false" $1 "$2" "$3"
+    _fzf_kubectl_complete '{print $1,$2}' "false" $1 "$2" "$3"
 }
 
 # $1 is resource_name
@@ -468,7 +476,7 @@ _fzf_without_namespace()
 _flag_selector_with_namespace()
 {
     local namespace_in_query; namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_kubectl_complete '{print $1,$2}' "with_namespace" $1 "$2" "$3" "$namespace_in_query"
+    _fzf_kubectl_complete '{print $1,$2,$3}' "with_namespace" $1 "$2" "$3" "$namespace_in_query"
 }
 
 # $1 is resource_name
@@ -476,7 +484,7 @@ _flag_selector_with_namespace()
 # $3 is contexts
 _flag_selector_without_namespace()
 {
-    _fzf_kubectl_complete '{print $1}' "without_namespace" $1 "$2" "$3"
+    _fzf_kubectl_complete '{print $1,$2}' "without_namespace" $1 "$2" "$3"
 }
 
 # $1 is resource_name
@@ -485,7 +493,7 @@ _flag_selector_without_namespace()
 _fzf_field_selector_with_namespace()
 {
     local namespace_in_query; namespace_in_query=$(__get_parameter_in_query --namespace -n)
-    _fzf_field_selector_complete '{print $1,$2}' $1 "$2" "$3" "$namespace_in_query"
+    _fzf_field_selector_complete '{print $1,$2,$3}' $1 "$2" "$3" "$namespace_in_query"
 }
 
 __kubectl_get_containers()
@@ -505,6 +513,7 @@ __kubectl_get_containers()
 
 __get_current_namespace()
 {
+    local context; context=$1
     local namespace; namespace=$(kubectl config --context $context view --minify --output 'jsonpath={..namespace}')
     echo "${namespace:-default}"
 }
@@ -529,17 +538,33 @@ __build_namespaced_compreply()
 {
     local result; result=("$@")
     result=($(echo $result | tr " " "\n"))
-    if [[ ${#result[@]} -eq 2 ]]; then
+    if [[ ${#result[@]} -eq 3 ]]; then
         # We have namespace in first position
-        local current_namespace; current_namespace=$(__get_current_namespace)
-        local namespace; namespace=${result[0]}
+        local context; context=${result[0]}
+        local namespace; namespace=${result[1]}
+        local current_namespace; current_namespace=$(__get_current_namespace $context)
+        local current_context; current_context=$(kubectl config current-context)
+
+        local namespace_option; namespace_option=""
         if [[ $namespace == "all-namespaces" ]]; then
-            COMPREPLY=( "${result[1]} --all-namespaces" )
+            namespace_option="--all-namespaces"
         elif [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
-            COMPREPLY=( "${result[1]} -n ${result[0]}" )
-        else
-            COMPREPLY=( ${result[1]} )
+            namespace_option="-n ${result[1]}"
         fi
+
+        local cluster_option; cluster_option=""
+        if [[ $context != $current_context && $COMP_LINE != *" --context"* ]]; then
+            context_option="--context $context"
+            # Always put the namespace if the context is different
+            if [[ $namespace == "all-namespaces" ]]; then
+                namespace_option="--all-namespaces"
+            elif [[ $namespace != $current_namespace && $COMP_LINE != *" -n"* && "$COMP_LINE" != *" --namespace"* ]]; then
+                namespace_option="-n ${result[1]}"
+            fi
+        fi
+
+        COMPREPLY=( "${result[2]} $context_option $namespace_option" )
+
     else
         COMPREPLY=( $result )
     fi
@@ -549,7 +574,6 @@ __kubectl_get_resource()
 {
     #set -ue
 
-    _fzf_init_context_mapping
     local context; context=$(kubectl config current-context)
     local header_file; header_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_header"
     local apiresources_file; apiresources_file="${KUBECTL_FZF_CACHE}/${context}/apiresources_resource"
@@ -576,7 +600,7 @@ __kubectl_get_resource()
     fi
 
     # 'k get <TAB>' completion
-    local main_header; main_header=$(_fzf_get_main_header $context $namespace)
+    local main_header; main_header=$(_fzf_get_main_header $context $context $namespace)
 
     local header; header=$(cat $header_file)
     local data; data=$(cat $apiresources_file)
@@ -698,6 +722,10 @@ __kubectl_parse_get()
             ;;
     esac
 
+    builtin declare -A cluster_groups
+    builtin declare -A context_to_cluster_group
+    _fzf_init_context_mapping
+
     local contexts; contexts=($current_context)
     local cluster_group
     if [[ -v "context_to_cluster_group[$current_context]" ]] ; then
@@ -705,16 +733,18 @@ __kubectl_parse_get()
     fi
     local context_array; context_array=($current_context)
     if [[ -n $cluster_group ]]; then
-        contexts=${cluster_group//,/ }
+        context_array=(${cluster_group//,/ })
+        contexts=$cluster_group
     fi
 
     for context in ${context_array[@]}; do
         if [[ "$resource_name" == "nodes" ]]; then
-            _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME "pods" "nodes" "daemonsets"
+            _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME "pods" "nodes" "daemonsets" &
         else
-            _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME $resource_name
+            _fzf_fetch_rsynced_resource $context $KUBECTL_FZF_RSYNC_RESOURCE_CACHE_TIME $resource_name &
         fi
     done
+    wait
 
     local header_path; header_path=$(_fzf_get_filepath ${current_context} $resource_name "_header")
     if [[ ! -f ${header_path} ]]; then
@@ -764,7 +794,7 @@ __kubectl_parse_get()
             fi
     esac
 
-    result=$($autocomplete_fun $resource_name $context $query)
+    result=$($autocomplete_fun $resource_name $contexts $query)
     if [[ -z "$result" ]]; then
         return
     fi
