@@ -342,7 +342,7 @@ _fzf_kubectl_pv_complete()
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
-        | cut -d' ' -f1
+        | awk '{print $2}'
 }
 
 _fzf_kubectl_node_complete()
@@ -367,7 +367,7 @@ _fzf_kubectl_node_complete()
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
         | fzf "${KUBECTL_FZF_PREVIEW_OPTIONS[@]}" ${KUBECTL_FZF_OPTIONS[@]} -q "$query" \
-        | cut -d' ' -f1
+        | awk '{print $2}'
 }
 
 # $1 is awk end print command
