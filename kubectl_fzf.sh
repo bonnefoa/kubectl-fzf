@@ -395,10 +395,10 @@ _fzf_kubectl_complete()
     local main_header=$(_fzf_get_main_header $current_context $current_context $namespace)
 
     if [[ $is_flag == "with_namespace" ]]; then
-        local header="Namespace Labels Occurrences"
+        local header="Cluster Namespace Labels Occurrences"
         local data=$(cat ${label_files[@]})
     elif [[ $is_flag == "without_namespace" ]]; then
-        local header="Labels Occurrences"
+        local header="Cluster Labels Occurrences"
         local data=$(cat ${label_files[@]})
     else
         local header=$(cut -d ' ' -f 1-$end_field "$header_file")
