@@ -50,8 +50,9 @@ func WriteStringToFile(str string, destDir string, resourceName string, suffix s
 	err := os.MkdirAll(destDir, os.ModePerm)
 	FatalIf(err)
 	name := fmt.Sprintf("%s_%s", resourceName, suffix)
+	tempPattern := fmt.Sprintf("_%s_%s", resourceName, suffix)
 	glog.V(6).Infof("Writing file %s", name)
-	tempFile, err := ioutil.TempFile(destDir, name)
+	tempFile, err := ioutil.TempFile(destDir, tempPattern)
 	if err != nil {
 		return errors.Wrapf(err, "Error creating temp file in %s for resource %s",
 			destDir, name)
@@ -59,22 +60,27 @@ func WriteStringToFile(str string, destDir string, resourceName string, suffix s
 	w := bufio.NewWriter(tempFile)
 	_, err = w.WriteString(str)
 	if err != nil {
+		tempFile.Close()
+		os.Remove(tempFile.Name())
 		return errors.Wrapf(err, "Error writing bytes to file %s",
 			tempFile.Name())
 	}
 	err = w.Flush()
 	if err != nil {
 		tempFile.Close()
+		os.Remove(tempFile.Name())
 		return errors.Wrapf(err, "Error flushing buffer")
 	}
 	err = tempFile.Sync()
 	if err != nil {
 		tempFile.Close()
+		os.Remove(tempFile.Name())
 		return errors.Wrapf(err, "Error syncing file")
 	}
 	err = os.Rename(tempFile.Name(), path.Join(destDir, name))
-	tempFile.Close()
 	if err != nil {
+		tempFile.Close()
+		os.Remove(tempFile.Name())
 		return err
 	}
 	return nil
