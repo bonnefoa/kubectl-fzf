@@ -539,12 +539,18 @@ __build_namespaced_compreply()
 {
     local result=("$@")
     result=($(echo $result | tr " " "\n"))
+    local context=${result[0]}
+    local current_context=$(kubectl config current-context)
+
+    context_option=""
+    if [[ $context != $current_context && $COMP_LINE != *" --context"* ]]; then
+        context_option="--context $context"
+    fi
+
     if [[ ${#result[@]} -eq 3 ]]; then
         # We have namespace in first position
-        local context=${result[0]}
         local namespace=${result[1]}
         local current_namespace=$(__get_current_namespace $context)
-        local current_context=$(kubectl config current-context)
 
         local namespace_option=""
         if [[ $namespace == "all-namespaces" ]]; then
@@ -555,7 +561,6 @@ __build_namespaced_compreply()
 
         local cluster_option=""
         if [[ $context != $current_context && $COMP_LINE != *" --context"* ]]; then
-            context_option="--context $context"
             # Always put the namespace if the context is different
             if [[ $namespace == "all-namespaces" ]]; then
                 namespace_option="--all-namespaces"
@@ -563,11 +568,9 @@ __build_namespaced_compreply()
                 namespace_option="-n ${result[1]}"
             fi
         fi
-
         COMPREPLY=( "${result[2]} $context_option $namespace_option" )
-
     else
-        COMPREPLY=( $result )
+        COMPREPLY=( ${result[1]} $context_option )
     fi
 }
 
