@@ -171,7 +171,7 @@ _fzf_check_direct_access()
             return
         fi
     fi
-    for ip in $(kubectl get endpoints --context $context -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}'); do
+    for ip in $(kubectl get svc  -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].spec.clusterIP}'); do
         if _fzf_check_connection $ip ${KUBECTL_FZF_RSYNC_PORT}; then
             echo $ip > "$endpoint_file"
             echo "$ip $KUBECTL_FZF_RSYNC_PORT"
