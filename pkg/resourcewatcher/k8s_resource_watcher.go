@@ -110,7 +110,7 @@ func (r *ResourceWatcher) Stop() {
 }
 
 // GetWatchConfigs creates the list of k8s to watch
-func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration) []WatchConfig {
+func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, namespacePollingPeriod time.Duration, excludedResources []string) []WatchConfig {
 	coreGetter := r.clientset.CoreV1().RESTClient()
 	appsGetter := r.clientset.AppsV1().RESTClient()
 	autoscalingGetter := r.clientset.AutoscalingV1().RESTClient()
@@ -118,7 +118,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	batchGetterV1Beta := r.clientset.BatchV1beta1().RESTClient()
 	batchGetter := r.clientset.BatchV1().RESTClient()
 
-	watchConfigs := []WatchConfig{
+	allWatchConfigs := []WatchConfig{
 		{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, true, 0},
 		{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, true, 0},
 		{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, false, 0},
@@ -138,6 +138,16 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 		{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, false, nodePollingPeriod},
 		{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, false, namespacePollingPeriod},
 	}
+	watchConfigs := []WatchConfig{}
+	excludedResourcesSet := util.StringSliceToSet(excludedResources)
+	glog.Infof("%d Resources will be excluded: %s", len(excludedResources), excludedResources)
+	for _, w := range allWatchConfigs {
+		if _, ok := excludedResourcesSet[w.resourceName]; ok {
+			continue
+		}
+		watchConfigs = append(watchConfigs, w)
+	}
+
 	return watchConfigs
 }
 

@@ -39,6 +39,7 @@ var (
 	clusterName            string
 	inCluster              bool
 	kubeconfig             string
+	excludedResources      []string
 	excludedNamespaces     []string
 	cacheDir               string
 	roleBlacklist          []string
@@ -68,7 +69,8 @@ func init() {
 	flag.Bool("version", false, "Display version and exit")
 	flag.Bool("cpu-profile", false, "Start with cpu profiling")
 	flag.Bool("in-cluster", false, "Use in-cluster configuration")
-	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by comma")
+	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by space")
+	flag.String("excluded-resources", "", "Resources to exclude, separated by space. To exclude everything: pods configmaps services serviceaccounts replicasets daemonsets secrets statefulsets deployments endpoints ingresses cronjobs jobs horizontalpodautoscalers persistentvolumes persistentvolumeclaims nodes namespaces")
 	flag.String("cluster-name", "incluster", "The cluster name. Needed for cross-cluster completion.")
 	flag.String("cache-dir", defaultCacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.String("role-blacklist", "", "List of roles to hide from node list, separated by commas")
@@ -107,6 +109,7 @@ func init() {
 	roleBlacklist = viper.GetStringSlice("role-blacklist")
 	clusterName = viper.GetString("cluster-name")
 	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
+	excludedResources = viper.GetStringSlice("excluded-resources")
 	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 	nodePollingPeriod = viper.GetDuration("node-polling-period")
 	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
@@ -146,7 +149,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, inClust
 	}
 	watcher := resourcewatcher.NewResourceWatcher(config, storeConfig, excludedNamespaces)
 	watcher.FetchNamespaces(ctx)
-	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod)
+	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod, excludedResources)
 	ctorConfig := k8sresources.CtorConfig{
 		RoleBlacklist: roleBlacklistSet,
 		Cluster:       cluster,
