@@ -209,12 +209,20 @@ func (r *ResourceWatcher) DumpAPIResources() error {
 	return err
 }
 
+func (r *ResourceWatcher) getWatchList(cfg WatchConfig, k8sStore *K8sStore, namespace string) *cache.ListWatch {
+	optionsModifier := func(options *metav1.ListOptions) {
+		options.FieldSelector = fields.Everything().String()
+		options.ResourceVersion = "0"
+	}
+	watchlist := cache.NewFilteredListWatchFromClient(cfg.getter,
+		k8sStore.resourceName, namespace, optionsModifier)
+	return watchlist
+}
+
 func (r *ResourceWatcher) pollResource(ctx context.Context,
 	cfg WatchConfig, k8sStore *K8sStore) {
 	glog.V(4).Infof("Start poller for %s", k8sStore.resourceName)
-	namespace := ""
-	watchlist := cache.NewListWatchFromClient(cfg.getter,
-		k8sStore.resourceName, namespace, fields.Everything())
+	watchlist := r.getWatchList(cfg, k8sStore, "")
 
 	r.doPoll(watchlist, k8sStore)
 	ticker := time.NewTicker(cfg.pollingPeriod)
@@ -229,23 +237,28 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 	}
 }
 
+func (r *ResourceWatcher) startWatch(cfg WatchConfig,
+	k8sStore *K8sStore, namespace string, stop chan struct{}) {
+	watchlist := r.getWatchList(cfg, k8sStore, namespace)
+	_, controller := cache.NewInformer(
+		watchlist, cfg.runtimeObject, time.Second*0,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc:    k8sStore.AddResource,
+			DeleteFunc: k8sStore.DeleteResource,
+			UpdateFunc: k8sStore.UpdateResource,
+		},
+	)
+
+	controller.Run(stop)
+}
+
 func (r *ResourceWatcher) watchResource(ctx context.Context,
 	cfg WatchConfig, k8sStore *K8sStore, namespaces []string) {
 	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, namespaces)
 
 	stop := make(chan struct{})
 	for _, ns := range namespaces {
-		watchlist := cache.NewListWatchFromClient(cfg.getter,
-			k8sStore.resourceName, ns, fields.Everything())
-		_, controller := cache.NewInformer(
-			watchlist, cfg.runtimeObject, time.Second*0,
-			cache.ResourceEventHandlerFuncs{
-				AddFunc:    k8sStore.AddResource,
-				DeleteFunc: k8sStore.DeleteResource,
-				UpdateFunc: k8sStore.UpdateResource,
-			},
-		)
-		go controller.Run(stop)
+		go r.startWatch(cfg, k8sStore, ns, stop)
 	}
 
 	<-ctx.Done()
