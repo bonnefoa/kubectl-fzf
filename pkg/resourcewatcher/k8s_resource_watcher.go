@@ -122,7 +122,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 		{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, true, 0},
 		{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, true, 0},
 		{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, false, 0},
-		{k8sresources.NewServiceAccountFromRuntime, k8sresources.ServiceAccountHeader, "serviceaccounts", coreGetter, &corev1.Service{}, true, false, 0},
+		{k8sresources.NewServiceAccountFromRuntime, k8sresources.ServiceAccountHeader, "serviceaccounts", coreGetter, &corev1.ServiceAccount{}, true, false, 0},
 		{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
 		{k8sresources.NewDaemonSetFromRuntime, k8sresources.DaemonSetHeader, "daemonsets", appsGetter, &appsv1.DaemonSet{}, true, false, 0},
 		{k8sresources.NewSecretFromRuntime, k8sresources.SecretHeader, "secrets", coreGetter, &corev1.Secret{}, true, false, 0},
