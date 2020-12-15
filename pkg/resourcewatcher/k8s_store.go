@@ -134,10 +134,16 @@ func (k *K8sStore) periodicLabelDump(ctx context.Context) {
 	}
 }
 
-func (k *K8sStore) updateLabelMap(namespace string, labels map[string]string) {
+func (k *K8sStore) resetLabelMap() {
+	k.labelMutex.Lock()
+	k.labelMap = make(map[LabelKey]int, 0)
+	k.labelMutex.Unlock()
+}
+
+func (k *K8sStore) updateLabelMap(namespace string, labels map[string]string, delta int) {
 	k.labelMutex.Lock()
 	for labelKey, labelValue := range labels {
-		k.labelMap[LabelKey{namespace, fmt.Sprintf("%s=%s", labelKey, labelValue)}]++
+		k.labelMap[LabelKey{namespace, fmt.Sprintf("%s=%s", labelKey, labelValue)}] += delta
 	}
 	k.labelMutex.Unlock()
 }
@@ -147,11 +153,12 @@ func (k *K8sStore) updateLabelMap(namespace string, labels map[string]string) {
 // This is used for polled resources, no need for mutex
 func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 	k.data = make(map[string]k8sresources.K8sResource, 0)
+	k.resetLabelMap()
 	for _, runtimeObject := range lstRuntime {
 		key, ns, labels := resourceKey(runtimeObject)
 		resource := k.resourceCtor(runtimeObject, k.ctorConfig)
 		k.data[key] = resource
-		k.updateLabelMap(ns, labels)
+		k.updateLabelMap(ns, labels, 1)
 	}
 	err := k.DumpFullState()
 	if err != nil {
@@ -167,7 +174,7 @@ func (k *K8sStore) AddResource(obj interface{}) {
 	k.dataMutex.Lock()
 	k.data[key] = newObj
 	k.dataMutex.Unlock()
-	k.updateLabelMap(ns, labels)
+	k.updateLabelMap(ns, labels, 1)
 
 	err := k.AppendNewObject(newObj)
 	if err != nil {
@@ -194,7 +201,7 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 	k.dataMutex.Lock()
 	delete(k.data, key)
 	k.dataMutex.Unlock()
-	k.updateLabelMap(ns, labels)
+	k.updateLabelMap(ns, labels, -1)
 
 	err := k.DumpFullState()
 	if err != nil {
@@ -204,14 +211,15 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 
 // UpdateResource update an existing k8s object
 func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
-	key, ns, labels := resourceKey(newObj)
+	key, _, _ := resourceKey(newObj)
 	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
 	k.dataMutex.Lock()
 	if k8sObj.HasChanged(k.data[key]) {
 		glog.V(11).Infof("%s changed: %s", k.resourceName, key)
 		k.data[key] = k8sObj
 		k.dataMutex.Unlock()
-		k.updateLabelMap(ns, labels)
+		// TODO Handle label diff
+		// k.updateLabelMap(ns, labels, 1)
 		err := k.DumpFullState()
 		if err != nil {
 			glog.Warningf("Error when dumping state: %v", err)
