@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"kubectlfzf/pkg/util"
+
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
-	"kubectlfzf/pkg/util"
 )
 
 // PodHeader is the header for pod files
-const PodHeader = "Cluster Namespace Name PodIp HostIp NodeName Phase Containers Tolerations Claims Age Labels FieldSelectors\n"
+const PodHeader = "Cluster Namespace Name PodIp HostIp NodeName Phase QOSClass Containers Tolerations Claims Age Labels FieldSelectors\n"
 
 // Pod is the summary of a kubernetes pod
 type Pod struct {
@@ -23,6 +24,8 @@ type Pod struct {
 	claims         []string
 	phase          string
 	fieldSelectors string
+	qosClass       string
+	resource       string
 }
 
 func getPhase(p *corev1.Pod) string {
@@ -70,6 +73,7 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	spec := pod.Spec
 	p.nodeName = spec.NodeName
 	p.phase = getPhase(pod)
+	p.qosClass = string(pod.Status.QOSClass)
 
 	fieldSelectors := make([]string, 0)
 	if p.nodeName != "" {
@@ -130,6 +134,7 @@ func (p *Pod) ToString() string {
 		p.hostIP,
 		p.nodeName,
 		p.phase,
+		p.qosClass,
 		util.TruncateString(util.JoinSlicesOrNone(p.containers, ","), 300),
 		util.JoinSlicesOrNone(p.tolerations, ","),
 		util.JoinSlicesOrNone(p.claims, ","),
