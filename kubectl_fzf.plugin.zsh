@@ -362,7 +362,7 @@ _fzf_kubectl_node_complete()
     header="$header Pods"
 
     local node_to_pods; node_to_pods=$(_fzf_get_node_to_pods $context)
-    local data; data=$(join -a1 -oauto -e None <(cut -d ' ' -f 1-$end_field "$node_resource_file") <(echo "$node_to_pods"))
+    local data; data=$(join -a1 -e None <(cut -d ' ' -f 1-$end_field "$node_resource_file") <(echo "$node_to_pods"))
     local num_fields; num_fields=$(echo $header | wc -w | sed 's/  *//g')
     KUBECTL_FZF_PREVIEW_OPTIONS=(--preview-window=down:$num_fields --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
     (printf "${main_header}\n"; printf "${header}\n${data}\n" | column -t) \
