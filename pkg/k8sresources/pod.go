@@ -16,16 +16,16 @@ const PodHeader = "Cluster Namespace Name PodIp HostIp NodeName Phase QOSClass C
 // Pod is the summary of a kubernetes pod
 type Pod struct {
 	ResourceMeta
-	hostIP         string
-	podIP          string
-	nodeName       string
-	tolerations    []string
-	containers     []string
-	claims         []string
-	phase          string
-	fieldSelectors string
-	qosClass       string
-	resource       string
+	HostIP         string
+	PodIP          string
+	NodeName       string
+	Tolerations    []string
+	Containers     []string
+	Claims         []string
+	Phase          string
+	FieldSelectors string
+	QosClass       string
+	Resource       string
 }
 
 func getPhase(p *corev1.Pod) string {
@@ -68,37 +68,37 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	pod := obj.(*corev1.Pod)
 	glog.V(19).Infof("Reading meta %#v", pod)
 	p.FromObjectMeta(pod.ObjectMeta, config)
-	p.hostIP = pod.Status.HostIP
-	p.podIP = pod.Status.PodIP
+	p.HostIP = pod.Status.HostIP
+	p.PodIP = pod.Status.PodIP
 	spec := pod.Spec
-	p.nodeName = spec.NodeName
-	p.phase = getPhase(pod)
-	p.qosClass = string(pod.Status.QOSClass)
+	p.NodeName = spec.NodeName
+	p.Phase = getPhase(pod)
+	p.QosClass = string(pod.Status.QOSClass)
 
 	fieldSelectors := make([]string, 0)
-	if p.nodeName != "" {
-		fieldSelectors = append(fieldSelectors, fmt.Sprintf("spec.nodeName=%s", p.nodeName))
+	if p.NodeName != "" {
+		fieldSelectors = append(fieldSelectors, fmt.Sprintf("spec.nodeName=%s", p.NodeName))
 	}
 	fieldSelectors = append(fieldSelectors, fmt.Sprintf("status.phase=%s", pod.Status.Phase))
-	p.fieldSelectors = util.JoinSlicesOrNone(fieldSelectors, ",")
+	p.FieldSelectors = util.JoinSlicesOrNone(fieldSelectors, ",")
 
 	containers := spec.Containers
 	containers = append(containers, spec.InitContainers...)
-	p.containers = make([]string, len(containers))
+	p.Containers = make([]string, len(containers))
 	for k, v := range containers {
-		p.containers[k] = v.Name
+		p.Containers[k] = v.Name
 	}
 
 	volumes := spec.Volumes
 	for _, v := range volumes {
 		if v.PersistentVolumeClaim != nil {
-			fullClaimName := fmt.Sprintf("%s/%s", p.ResourceMeta.namespace,
+			fullClaimName := fmt.Sprintf("%s/%s", p.ResourceMeta.Namespace,
 				v.PersistentVolumeClaim.ClaimName)
-			p.claims = append(p.claims, fullClaimName)
+			p.Claims = append(p.Claims, fullClaimName)
 		}
 	}
 	tolerations := spec.Tolerations
-	p.tolerations = make([]string, 0)
+	p.Tolerations = make([]string, 0)
 	for _, v := range tolerations {
 		if strings.HasPrefix(v.Key, "node.kubernetes.io") {
 			continue
@@ -111,36 +111,15 @@ func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 		} else {
 			toleration = fmt.Sprintf("%s:%s", v.Key, v.Effect)
 		}
-		p.tolerations = append(p.tolerations, toleration)
+		p.Tolerations = append(p.Tolerations, toleration)
 	}
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (p *Pod) HasChanged(k K8sResource) bool {
 	oldPod := k.(*Pod)
-	return (p.podIP != oldPod.podIP ||
-		p.phase != oldPod.phase ||
-		util.StringMapsEqual(p.labels, oldPod.labels) ||
-		p.nodeName != oldPod.nodeName)
-}
-
-// ToString serializes the object to strings
-func (p *Pod) ToString() string {
-	lst := []string{
-		p.cluster,
-		p.namespace,
-		p.name,
-		p.podIP,
-		p.hostIP,
-		p.nodeName,
-		p.phase,
-		p.qosClass,
-		util.TruncateString(util.JoinSlicesOrNone(p.containers, ","), 300),
-		util.JoinSlicesOrNone(p.tolerations, ","),
-		util.JoinSlicesOrNone(p.claims, ","),
-		p.resourceAge(),
-		p.labelsString(),
-		p.fieldSelectors,
-	}
-	return util.DumpLine(lst)
+	return (p.PodIP != oldPod.PodIP ||
+		p.Phase != oldPod.Phase ||
+		util.StringMapsEqual(p.Labels, oldPod.Labels) ||
+		p.NodeName != oldPod.NodeName)
 }

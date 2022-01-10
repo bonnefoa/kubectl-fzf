@@ -3,8 +3,9 @@ package k8sresources
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"kubectlfzf/pkg/util"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // PersistentVolumeHeader is the header for pvc csv
@@ -35,7 +36,7 @@ func (pv *PersistentVolume) FromRuntime(obj interface{}, config CtorConfig) {
 	pv.FromObjectMeta(pvFromRuntime.ObjectMeta, config)
 	pv.status = string(pvFromRuntime.Status.Phase)
 	var ok bool
-	pv.zone, ok = pv.labels["failure-domain.beta.kubernetes.io/zone"]
+	pv.zone, ok = pv.Labels["failure-domain.beta.kubernetes.io/zone"]
 	if !ok {
 		pv.zone = "None"
 	}
@@ -64,21 +65,4 @@ func (pv *PersistentVolume) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (pv *PersistentVolume) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (pv *PersistentVolume) ToString() string {
-	lst := []string{
-		pv.cluster,
-		pv.name,
-		pv.status,
-		pv.storageClass,
-		pv.zone,
-		pv.claim,
-		pv.volume,
-		util.JoinSlicesOrNone(pv.affinities, ","),
-		pv.resourceAge(),
-		pv.labelsString(),
-	}
-	return util.DumpLine(lst)
 }

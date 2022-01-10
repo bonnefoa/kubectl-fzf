@@ -5,7 +5,6 @@ import (
 
 	"github.com/golang/glog"
 	batchv1 "k8s.io/api/batch/v1"
-	"kubectlfzf/pkg/util"
 )
 
 // JobHeader is the headers for job files
@@ -50,18 +49,4 @@ func (j *Job) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (j *Job) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (j *Job) ToString() string {
-	lst := []string{
-		j.cluster,
-		j.namespace,
-		j.name,
-		j.completions,
-		util.JoinSlicesOrNone(j.containers, ","),
-		j.resourceAge(),
-		j.labelsString(),
-	}
-	return util.DumpLine(lst)
 }

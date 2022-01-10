@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"kubectlfzf/pkg/util"
 )
 
 // DeploymentHeader is the header file for deployment
@@ -44,20 +43,4 @@ func (d *Deployment) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (d *Deployment) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (d *Deployment) ToString() string {
-	line := []string{
-		d.cluster,
-		d.namespace,
-		d.name,
-		d.desiredReplicas,
-		d.currentReplicas,
-		d.updatedReplicas,
-		d.availableReplicas,
-		d.resourceAge(),
-		d.labelsString(),
-	}
-	return util.DumpLine(line)
 }

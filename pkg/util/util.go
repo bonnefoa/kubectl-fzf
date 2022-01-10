@@ -12,9 +12,43 @@ import (
 	"strings"
 	"time"
 
+	"bytes"
+	"encoding/base64"
+	"encoding/gob"
+
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
+
+type SX map[string]interface{}
+
+// go binary encoder
+func ToGOB64(m SX) string {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(m)
+	if err != nil {
+		fmt.Println(`failed gob Encode`, err)
+	}
+	return base64.StdEncoding.EncodeToString(b.Bytes())
+}
+
+// go binary decoder
+func FromGOB64(str string) SX {
+	m := SX{}
+	by, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		fmt.Println(`failed base64 Decode`, err)
+	}
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&m)
+	if err != nil {
+		fmt.Println(`failed gob Decode`, err)
+	}
+	return m
+}
 
 // JoinStringMap generates a list of map element separated by string excluding keys in excluded maps
 func JoinStringMap(m map[string]string, exclude map[string]string, sep string) []string {
@@ -47,8 +81,6 @@ func GetDestFileName(cacheDir string, cluster string, resourceName string) strin
 
 // WriteStringToFile writes string to the given file and sync file
 func WriteStringToFile(str string, destDir string, resourceName string, suffix string) error {
-	err := os.MkdirAll(destDir, os.ModePerm)
-	FatalIf(err)
 	name := fmt.Sprintf("%s_%s", resourceName, suffix)
 	tempPattern := fmt.Sprintf("_%s_%s", resourceName, suffix)
 	glog.V(6).Infof("Writing file %s", name)

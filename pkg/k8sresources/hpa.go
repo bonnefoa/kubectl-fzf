@@ -2,7 +2,6 @@ package k8sresources
 
 import (
 	"fmt"
-	"strings"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 )
@@ -44,21 +43,4 @@ func (h *Hpa) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource'h dump needs to be updated
 func (h *Hpa) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (h *Hpa) ToString() string {
-	line := strings.Join([]string{
-		h.cluster,
-		h.namespace,
-		h.name,
-		h.reference,
-		h.targets,
-		h.minPods,
-		h.maxPods,
-		h.currentReplicas,
-		h.resourceAge(),
-		h.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
 }

@@ -1,11 +1,9 @@
 package k8sresources
 
 import (
-	"fmt"
-	"strings"
+	"kubectlfzf/pkg/util"
 
 	corev1 "k8s.io/api/core/v1"
-	"kubectlfzf/pkg/util"
 )
 
 const EndpointsHeader = "Cluster Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
@@ -53,20 +51,4 @@ func (e *Endpoints) HasChanged(k K8sResource) bool {
 		util.StringSlicesEqual(e.readyPods, oldE.readyPods) ||
 		util.StringSlicesEqual(e.notReadyIps, oldE.notReadyIps) ||
 		util.StringSlicesEqual(e.notReadyIps, oldE.notReadyIps))
-}
-
-// ToString serializes the object to strings
-func (e *Endpoints) ToString() string {
-	line := strings.Join([]string{
-		e.cluster,
-		e.namespace,
-		e.name,
-		e.resourceAge(),
-		util.JoinSlicesWithMaxOrNone(e.readyIps, 20, ","),
-		util.JoinSlicesWithMaxOrNone(e.readyPods, 20, ","),
-		util.JoinSlicesWithMaxOrNone(e.notReadyIps, 20, ","),
-		util.JoinSlicesWithMaxOrNone(e.notReadyPods, 20, ","),
-		e.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
 }

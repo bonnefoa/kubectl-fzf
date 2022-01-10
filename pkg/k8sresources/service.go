@@ -2,10 +2,10 @@ package k8sresources
 
 import (
 	"fmt"
-	"strings"
+
+	"kubectlfzf/pkg/util"
 
 	corev1 "k8s.io/api/core/v1"
-	"kubectlfzf/pkg/util"
 )
 
 const ServiceHeader = "Cluster Namespace Name Type ClusterIp Ports Selector Age Labels\n"
@@ -48,23 +48,5 @@ func (s *Service) HasChanged(k K8sResource) bool {
 	oldService := k.(*Service)
 	return (util.StringSlicesEqual(s.ports, oldService.ports) ||
 		util.StringSlicesEqual(s.selectors, oldService.selectors) ||
-		util.StringMapsEqual(s.labels, oldService.labels))
-}
-
-// ToString serializes the object to strings
-func (s *Service) ToString() string {
-	portList := util.JoinSlicesOrNone(s.ports, ",")
-	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
-	line := strings.Join([]string{
-		s.cluster,
-		s.namespace,
-		s.name,
-		s.serviceType,
-		s.clusterIP,
-		portList,
-		selectorList,
-		s.resourceAge(),
-		s.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
+		util.StringMapsEqual(s.Labels, oldService.Labels))
 }

@@ -21,6 +21,9 @@ func NewConfigMapFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 	return c
 }
 
+func (c *ConfigMap) FromString(s string) {
+}
+
 // FromRuntime builds object from the informer's result
 func (c *ConfigMap) FromRuntime(obj interface{}, config CtorConfig) {
 	configMap := obj.(*corev1.ConfigMap)
@@ -35,9 +38,9 @@ func (c *ConfigMap) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (c *ConfigMap) ToString() string {
 	line := strings.Join([]string{
-		c.cluster,
-		c.namespace,
-		c.name,
+		c.Cluster,
+		c.Namespace,
+		c.Name,
 		c.resourceAge(),
 		c.labelsString(),
 	}, " ")

@@ -1,11 +1,9 @@
 package k8sresources
 
 import (
-	"fmt"
-	"strings"
+	"kubectlfzf/pkg/util"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"kubectlfzf/pkg/util"
 )
 
 const StatefulSetHeader = "Cluster Namespace Name Replicas Selector Age Labels\n"
@@ -40,20 +38,5 @@ func (s *StatefulSet) HasChanged(k K8sResource) bool {
 	return (s.currentReplicas != oldSts.currentReplicas ||
 		s.replicas != oldSts.replicas ||
 		util.StringSlicesEqual(s.selectors, oldSts.selectors) ||
-		util.StringMapsEqual(s.labels, oldSts.labels))
-}
-
-// ToString serializes the object to strings
-func (s *StatefulSet) ToString() string {
-	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
-	line := strings.Join([]string{
-		s.cluster,
-		s.namespace,
-		s.name,
-		fmt.Sprintf("%d/%d", s.currentReplicas, s.replicas),
-		selectorList,
-		s.resourceAge(),
-		s.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
+		util.StringMapsEqual(s.Labels, oldSts.Labels))
 }

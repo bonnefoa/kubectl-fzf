@@ -2,7 +2,6 @@ package k8sresources
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"kubectlfzf/pkg/util"
 )
 
 const PersistentVolumeClaimHeader = "Cluster Namespace Name Status Capacity VolumeName StorageClass Age Labels\n"
@@ -39,20 +38,4 @@ func (pvc *PersistentVolumeClaim) FromRuntime(obj interface{}, config CtorConfig
 // HasChanged returns true if the resource's dump needs to be updated
 func (pvc *PersistentVolumeClaim) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (pvc *PersistentVolumeClaim) ToString() string {
-	lst := []string{
-		pvc.cluster,
-		pvc.namespace,
-		pvc.name,
-		pvc.status,
-		pvc.capacity,
-		pvc.volumeName,
-		pvc.storageClass,
-		pvc.resourceAge(),
-		pvc.labelsString(),
-	}
-	return util.DumpLine(lst)
 }

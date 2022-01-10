@@ -1,12 +1,11 @@
 package k8sresources
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
+
+	"kubectlfzf/pkg/util"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"kubectlfzf/pkg/util"
 )
 
 const ReplicaSetHeader = "Cluster Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels\n"
@@ -45,22 +44,5 @@ func (r *ReplicaSet) HasChanged(k K8sResource) bool {
 		r.readyReplicas != oldRs.readyReplicas ||
 		r.availableReplicas != oldRs.availableReplicas ||
 		util.StringSlicesEqual(r.selectors, oldRs.selectors) ||
-		util.StringMapsEqual(r.labels, oldRs.labels))
-}
-
-// ToString serializes the object to strings
-func (r *ReplicaSet) ToString() string {
-	selectorList := util.JoinSlicesOrNone(r.selectors, ",")
-	line := strings.Join([]string{
-		r.cluster,
-		r.namespace,
-		r.name,
-		r.replicas,
-		r.availableReplicas,
-		r.readyReplicas,
-		selectorList,
-		r.resourceAge(),
-		r.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
+		util.StringMapsEqual(r.Labels, oldRs.Labels))
 }

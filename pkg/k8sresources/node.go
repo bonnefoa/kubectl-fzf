@@ -5,8 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"kubectlfzf/pkg/util"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // NodeHeader is the header line of csv result
@@ -46,7 +47,7 @@ func getNodeStatus(node *corev1.Node) string {
 func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 	node := obj.(*corev1.Node)
 	n.FromObjectMeta(node.ObjectMeta, config)
-	for k := range n.labels {
+	for k := range n.Labels {
 		nodePrefix := "node-role.kubernetes.io/"
 		if strings.HasPrefix(k, nodePrefix) {
 			role := strings.Replace(k, nodePrefix, "", 1)
@@ -74,8 +75,8 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 		n.taints = append(n.taints, taint)
 	}
 
-	n.instanceType = n.labels["beta.kubernetes.io/instance-type"]
-	n.zone = n.labels["failure-domain.beta.kubernetes.io/zone"]
+	n.instanceType = n.Labels["beta.kubernetes.io/instance-type"]
+	n.zone = n.Labels["failure-domain.beta.kubernetes.io/zone"]
 	for _, v := range node.Status.Addresses {
 		if v.Type == "InternalIP" {
 			n.internalIP = v.Address
@@ -87,22 +88,4 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (n *Node) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (n *Node) ToString() string {
-	line := strings.Join([]string{
-		n.cluster,
-		n.name,
-		util.JoinSlicesOrNone(n.roles, ","),
-		n.status,
-		n.instanceType,
-		n.zone,
-		n.internalIP,
-		util.JoinSlicesOrNone(n.taints, ","),
-		n.instanceID,
-		n.resourceAge(),
-		n.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
 }

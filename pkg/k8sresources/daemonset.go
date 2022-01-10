@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
-	"kubectlfzf/pkg/util"
 )
 
 // DaemonSetHeader is the header file for daemonset
@@ -57,21 +56,4 @@ func (d *DaemonSet) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (d *DaemonSet) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (d *DaemonSet) ToString() string {
-	lst := []string{
-		d.cluster,
-		d.namespace,
-		d.name,
-		d.desired,
-		d.current,
-		d.ready,
-		util.JoinSlicesOrNone(d.labelSelector, ","),
-		util.JoinSlicesOrNone(d.containers, ","),
-		d.resourceAge(),
-		d.labelsString(),
-	}
-	return util.DumpLine(lst)
 }

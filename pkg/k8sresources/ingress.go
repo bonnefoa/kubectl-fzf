@@ -2,7 +2,6 @@ package k8sresources
 
 import (
 	betav1 "k8s.io/api/extensions/v1beta1"
-	"kubectlfzf/pkg/util"
 )
 
 const IngressHeader = "Cluster Namespace Name Address Age Labels\n"
@@ -32,18 +31,4 @@ func (ingress *Ingress) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (ingress *Ingress) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (ingress *Ingress) ToString() string {
-	addressList := util.JoinSlicesOrNone(ingress.address, ",")
-	lst := []string{
-		ingress.cluster,
-		ingress.namespace,
-		ingress.name,
-		addressList,
-		ingress.resourceAge(),
-		ingress.labelsString(),
-	}
-	return util.DumpLine(lst)
 }

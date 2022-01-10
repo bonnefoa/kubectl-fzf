@@ -1,9 +1,7 @@
 package k8sresources
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -37,18 +35,4 @@ func (s *Secret) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (s *Secret) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (s *Secret) ToString() string {
-	line := strings.Join([]string{
-		s.cluster,
-		s.namespace,
-		s.name,
-		s.secretType,
-		s.data,
-		s.resourceAge(),
-		s.labelsString(),
-	}, " ")
-	return fmt.Sprintf("%s\n", line)
 }

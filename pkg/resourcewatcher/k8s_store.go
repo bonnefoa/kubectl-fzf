@@ -1,6 +1,7 @@
 package resourcewatcher
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -88,12 +89,11 @@ func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig StoreConfig, 
 	k.lastLabelDump = time.Time{}
 	k.lastFullDump = time.Time{}
 
-	go k.periodicLabelDump(ctx)
-	err := util.WriteStringToFile(cfg.header, k.destDir, k.resourceName, "header")
+	err := os.MkdirAll(k.destDir, os.ModePerm)
+	util.FatalIf(err)
 	if err != nil {
 		return &k, err
 	}
-
 	return &k, nil
 }
 
@@ -229,42 +229,43 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	}
 }
 
-func (k *K8sStore) updateCurrentFile() (err error) {
-	destFile := path.Join(k.destDir, fmt.Sprintf("%s_%s", k.resourceName, "resource"))
+func (k *K8sStore) reopenCurrentFile() (err error) {
+	destFile := k.getFilePath("resource")
 	k.currentFile, err = os.OpenFile(destFile, os.O_APPEND|os.O_WRONLY, 0644)
 	return err
 }
 
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
-	k.fileMutex.Lock()
-	if k.currentFile == nil {
-		var err error
-		err = util.WriteStringToFile(resource.ToString(), k.destDir, k.resourceName, "resource")
-		if err != nil {
-			k.fileMutex.Unlock()
-			return err
-		}
-		err = k.updateCurrentFile()
-		if err != nil {
-			k.fileMutex.Unlock()
-			return err
-		}
-		glog.Infof("Initial write of %s", k.currentFile.Name())
-	}
-	_, err := k.currentFile.WriteString(resource.ToString())
-	k.fileMutex.Unlock()
-	if err != nil {
-		return err
-	}
-
-	now := time.Now()
-	k.labelMutex.Lock()
-	delta := now.Sub(k.lastLabelDump)
-	if delta < time.Second {
-		k.labelToDump = true
-	}
-	k.labelMutex.Unlock()
+	//	k.fileMutex.Lock()
+	//	if k.currentFile == nil {
+	//		var err error
+	//		err = util.WriteStringToFile(resource.ToString(), k.destDir, k.resourceName, "resource")
+	//		if err != nil {
+	//			k.fileMutex.Unlock()
+	//			return err
+	//		}
+	//		err = k.reopenCurrentFile()
+	//		if err != nil {
+	//			k.fileMutex.Unlock()
+	//			return err
+	//		}
+	//		glog.Infof("Initial write of %s", k.currentFile.Name())
+	//	}
+	//	_, err := k.currentFile.WriteString(resource.ToString())
+	//	k.fileMutex.Unlock()
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	now := time.Now()
+	//	k.labelMutex.Lock()
+	//	delta := now.Sub(k.lastLabelDump)
+	//	if delta < time.Second {
+	//		k.labelToDump = true
+	//	}
+	//	k.labelMutex.Unlock()
+	//	return nil
 	return nil
 }
 
@@ -312,27 +313,28 @@ func (k *K8sStore) generateLabel() (string, error) {
 	return strings.Trim(res.String(), "\n"), nil
 }
 
-func (k *K8sStore) generateOutput() (string, error) {
-	k.dataMutex.Lock()
-	var res strings.Builder
-	keys := make([]string, len(k.data))
-	i := 0
-	for key := range k.data {
-		keys[i] = key
-		i = i + 1
+func (k *K8sStore) readCache() error {
+	destFile := k.getFilePath("resource")
+	file, err := os.Open(destFile)
+	if err != nil {
+		return errors.Wrapf(err, "Could not read file %s", destFile)
 	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		v := k.data[key]
-		_, err := res.WriteString(v.ToString())
-		if err != nil {
-			k.dataMutex.Unlock()
-			return "", errors.Wrapf(err, "Error writing string %s",
-				v.ToString())
-		}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
 	}
-	k.dataMutex.Unlock()
-	return res.String(), nil
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println(err)
+	}
+
+	return nil
+}
+
+func (k *K8sStore) getFilePath(suffix string) string {
+	return path.Join(k.destDir, fmt.Sprintf("%s_%s", k.resourceName, "resource"))
 }
 
 // DumpFullState writes the full state to the cache file
@@ -347,22 +349,18 @@ func (k *K8sStore) DumpFullState() error {
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
 
-	resourceOutput, err := k.generateOutput()
-	if err != nil {
-		return errors.Wrapf(err, "Error generating output")
-	}
-	err = util.WriteStringToFile(resourceOutput, k.destDir, k.resourceName, "resource")
-	if err != nil {
-		return err
-	}
-	err = k.updateCurrentFile()
-	if err != nil {
-		return err
-	}
-	labelOutput, err := k.generateLabel()
-	if err != nil {
-		return errors.Wrapf(err, "Error generating label output")
-	}
-	err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
+	destFile := k.getFilePath("resource")
+	err := util.EncodeToFile(k.data, destFile)
 	return err
+
+	// err = k.reopenCurrentFile()
+	// if err != nil {
+	// 	return err
+	// }
+	// labelOutput, err := k.generateLabel()
+	// if err != nil {
+	// 	return errors.Wrapf(err, "Error generating label output")
+	// }
+	// err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
+	// return err
 }

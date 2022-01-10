@@ -1,10 +1,11 @@
 package k8sresources
 
 import (
-	"github.com/golang/glog"
-	batchbetav1 "k8s.io/api/batch/v1beta1"
 	"kubectlfzf/pkg/util"
 	"strings"
+
+	"github.com/golang/glog"
+	v1 "k8s.io/api/batch/v1"
 )
 
 // CronJobHeader is the headers for cronjob files
@@ -27,7 +28,7 @@ func NewCronJobFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 
 // FromRuntime builds object from the informer's result
 func (c *CronJob) FromRuntime(obj interface{}, config CtorConfig) {
-	cronJob := obj.(*batchbetav1.CronJob)
+	cronJob := obj.(*v1.CronJob)
 	glog.V(19).Infof("Reading meta %#v", cronJob)
 	c.FromObjectMeta(cronJob.ObjectMeta, config)
 	c.schedule = strings.ReplaceAll(cronJob.Spec.Schedule, " ", "_")
@@ -48,19 +49,4 @@ func (c *CronJob) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (c *CronJob) HasChanged(k K8sResource) bool {
 	return true
-}
-
-// ToString serializes the object to strings
-func (c *CronJob) ToString() string {
-	lst := []string{
-		c.cluster,
-		c.namespace,
-		c.name,
-		c.schedule,
-		c.lastSchedule,
-		util.JoinSlicesOrNone(c.containers, ","),
-		c.resourceAge(),
-		c.labelsString(),
-	}
-	return util.DumpLine(lst)
 }

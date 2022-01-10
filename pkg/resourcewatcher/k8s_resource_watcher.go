@@ -14,7 +14,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchbetav1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	betav1 "k8s.io/api/extensions/v1beta1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -42,7 +41,6 @@ type ResourceWatcher struct {
 // WatchConfig provides the configuration to watch a specific kubernetes resource
 type WatchConfig struct {
 	resourceCtor      func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
-	header            string
 	resourceName      string
 	getter            cache.Getter
 	runtimeObject     runtime.Object
@@ -119,24 +117,24 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	batchGetter := r.clientset.BatchV1().RESTClient()
 
 	allWatchConfigs := []WatchConfig{
-		{k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, true, 0},
-		{k8sresources.NewConfigMapFromRuntime, k8sresources.ConfigMapHeader, "configmaps", coreGetter, &corev1.ConfigMap{}, true, true, 0},
-		{k8sresources.NewServiceFromRuntime, k8sresources.ServiceHeader, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, false, 0},
-		{k8sresources.NewServiceAccountFromRuntime, k8sresources.ServiceAccountHeader, "serviceaccounts", coreGetter, &corev1.ServiceAccount{}, true, false, 0},
-		{k8sresources.NewReplicaSetFromRuntime, k8sresources.ReplicaSetHeader, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
-		{k8sresources.NewDaemonSetFromRuntime, k8sresources.DaemonSetHeader, "daemonsets", appsGetter, &appsv1.DaemonSet{}, true, false, 0},
-		{k8sresources.NewSecretFromRuntime, k8sresources.SecretHeader, "secrets", coreGetter, &corev1.Secret{}, true, false, 0},
-		{k8sresources.NewStatefulSetFromRuntime, k8sresources.StatefulSetHeader, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, false, 0},
-		{k8sresources.NewDeploymentFromRuntime, k8sresources.DeploymentHeader, "deployments", appsGetter, &appsv1.Deployment{}, true, false, 0},
-		{k8sresources.NewEndpointsFromRuntime, k8sresources.EndpointsHeader, "endpoints", coreGetter, &corev1.Endpoints{}, true, false, 0},
-		{k8sresources.NewIngressFromRuntime, k8sresources.IngressHeader, "ingresses", betaGetter, &betav1.Ingress{}, true, false, 0},
-		{k8sresources.NewCronJobFromRuntime, k8sresources.CronJobHeader, "cronjobs", batchGetterV1Beta, &batchbetav1.CronJob{}, true, false, 0},
-		{k8sresources.NewJobFromRuntime, k8sresources.JobHeader, "jobs", batchGetter, &batchv1.Job{}, true, false, 0},
-		{k8sresources.NewHpaFromRuntime, k8sresources.HpaHeader, "horizontalpodautoscalers", autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, false, 0},
-		{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.PersistentVolumeHeader, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, false, 0},
-		{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.PersistentVolumeClaimHeader, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, false, 0},
-		{k8sresources.NewNodeFromRuntime, k8sresources.NodeHeader, "nodes", coreGetter, &corev1.Node{}, false, false, nodePollingPeriod},
-		{k8sresources.NewNamespaceFromRuntime, k8sresources.NamespaceHeader, "namespaces", coreGetter, &corev1.Namespace{}, false, false, namespacePollingPeriod},
+		{k8sresources.NewPodFromRuntime, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, true, 0},
+		{k8sresources.NewConfigMapFromRuntime, "configmaps", coreGetter, &corev1.ConfigMap{}, true, true, 0},
+		{k8sresources.NewServiceFromRuntime, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, false, 0},
+		{k8sresources.NewServiceAccountFromRuntime, "serviceaccounts", coreGetter, &corev1.ServiceAccount{}, true, false, 0},
+		{k8sresources.NewReplicaSetFromRuntime, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
+		{k8sresources.NewDaemonSetFromRuntime, "daemonsets", appsGetter, &appsv1.DaemonSet{}, true, false, 0},
+		{k8sresources.NewSecretFromRuntime, "secrets", coreGetter, &corev1.Secret{}, true, false, 0},
+		{k8sresources.NewStatefulSetFromRuntime, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, false, 0},
+		{k8sresources.NewDeploymentFromRuntime, "deployments", appsGetter, &appsv1.Deployment{}, true, false, 0},
+		{k8sresources.NewEndpointsFromRuntime, "endpoints", coreGetter, &corev1.Endpoints{}, true, false, 0},
+		{k8sresources.NewIngressFromRuntime, "ingresses", betaGetter, &betav1.Ingress{}, true, false, 0},
+		{k8sresources.NewCronJobFromRuntime, "cronjobs", batchGetterV1Beta, &batchv1.CronJob{}, true, false, 0},
+		{k8sresources.NewJobFromRuntime, "jobs", batchGetter, &batchv1.Job{}, true, false, 0},
+		{k8sresources.NewHpaFromRuntime, "horizontalpodautoscalers", autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, false, 0},
+		{k8sresources.NewPersistentVolumeFromRuntime, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, false, 0},
+		{k8sresources.NewPersistentVolumeClaimFromRuntime, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, false, 0},
+		{k8sresources.NewNodeFromRuntime, "nodes", coreGetter, &corev1.Node{}, false, false, nodePollingPeriod},
+		{k8sresources.NewNamespaceFromRuntime, "namespaces", coreGetter, &corev1.Namespace{}, false, false, namespacePollingPeriod},
 	}
 	watchConfigs := []WatchConfig{}
 	excludedResourcesSet := util.StringSliceToSet(excludedResources)
