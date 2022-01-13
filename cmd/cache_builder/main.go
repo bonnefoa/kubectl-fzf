@@ -4,27 +4,23 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/sevlyar/go-daemon"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path"
-	"path/filepath"
 	"runtime/pprof"
 	"syscall"
 	"time"
+
+	"github.com/sevlyar/go-daemon"
 
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/resourcewatcher"
 	"kubectlfzf/pkg/util"
 
 	"github.com/golang/glog"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -36,17 +32,15 @@ var (
 
 	displayVersion         bool
 	cpuProfile             bool
-	clusterName            string
-	inCluster              bool
-	kubeconfig             string
 	excludedResources      []string
 	excludedNamespaces     []string
-	cacheDir               string
 	roleBlacklist          []string
 	roleBlacklistSet       map[string]bool
-	timeBetweenFullDump    time.Duration
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
+	timeBetweenFullDump    time.Duration
+
+	clusterCliConf util.ClusterCliConf
 
 	daemonCmd         string
 	daemonName        string
@@ -55,26 +49,12 @@ var (
 )
 
 func init() {
-	if home := os.Getenv("HOME"); home != "" {
-		flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-
-	defaultCacheDirEnv, assigned := os.LookupEnv("KUBECTL_FZF_CACHE")
-	if assigned == false {
-		defaultCacheDirEnv = "/tmp/kubectl_fzf_cache/"
-	}
-
+	util.SetClusterConfFlags()
 	flag.Bool("version", false, "Display version and exit")
 	flag.Bool("cpu-profile", false, "Start with cpu profiling")
-	flag.Bool("in-cluster", false, "Use in-cluster configuration")
 	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by space")
 	flag.String("excluded-resources", "", "Resources to exclude, separated by space. To exclude everything: pods configmaps services serviceaccounts replicasets daemonsets secrets statefulsets deployments endpoints ingresses cronjobs jobs horizontalpodautoscalers persistentvolumes persistentvolumeclaims nodes namespaces")
-	flag.String("cluster-name", "incluster", "The cluster name. Needed for cross-cluster completion.")
-	flag.String("cache-dir", defaultCacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
 	flag.String("role-blacklist", "", "List of roles to hide from node list, separated by commas")
-	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 	flag.Duration("node-polling-period", 300*time.Second, "Polling period for nodes")
 	flag.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces")
 
@@ -87,37 +67,25 @@ func init() {
 	defaultLogPath := path.Join("/tmp/", defaultName+".log")
 	flag.String("daemon-pid-file", defaultPidPath, "Daemon's PID file path")
 	flag.String("daemon-log-file", defaultLogPath, "Daemon's log file path")
+	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	pflag.Parse()
-	viper.AutomaticEnv()
-	viper.BindPFlags(pflag.CommandLine)
-
-	viper.SetConfigName(".kubectl_fzf")
-	viper.AddConfigPath("/etc/kubectl_fzf/")
-	viper.AddConfigPath("$HOME")
-	err := viper.ReadInConfig()
-	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-		util.FatalIf(err)
-	}
+	util.ParseFlags()
 
 	displayVersion = viper.GetBool("version")
 	cpuProfile = viper.GetBool("cpu-profile")
-	inCluster = viper.GetBool("in-cluster")
-	kubeconfig = viper.GetString("kubeconfig")
-	cacheDir = viper.GetString("cache-dir")
 	roleBlacklist = viper.GetStringSlice("role-blacklist")
-	clusterName = viper.GetString("cluster-name")
 	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
 	excludedResources = viper.GetStringSlice("excluded-resources")
-	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 	nodePollingPeriod = viper.GetDuration("node-polling-period")
 	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
+	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
 
 	daemonCmd = viper.GetString("daemon")
 	daemonName = viper.GetString("daemon-name")
 	daemonPidFilePath = viper.GetString("daemon-pid-file")
 	daemonLogFilePath = viper.GetString("daemon-log-file")
+
+	clusterCliConf = util.GetClusterCliConf()
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -137,16 +105,8 @@ func termHandler(sig os.Signal) error {
 	return daemon.ErrStop
 }
 
-func startWatchOnCluster(ctx context.Context, config *restclient.Config, inCluster bool, cluster string) resourcewatcher.ResourceWatcher {
-	clusterDir := cluster
-	if inCluster {
-		clusterDir = "incluster"
-	}
-	storeConfig := resourcewatcher.StoreConfig{
-		CacheDir:            cacheDir,
-		ClusterDir:          clusterDir,
-		TimeBetweenFullDump: timeBetweenFullDump,
-	}
+func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
+	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, timeBetweenFullDump)
 	watcher := resourcewatcher.NewResourceWatcher(config, storeConfig, excludedNamespaces)
 	watcher.FetchNamespaces(ctx)
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod, excludedResources)
@@ -163,27 +123,6 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, inClust
 	err := watcher.DumpAPIResources()
 	util.FatalIf(err)
 	return watcher
-}
-
-func getClientConfigAndCluster() (*rest.Config, string) {
-	if inCluster {
-		restConfig, err := rest.InClusterConfig()
-		util.FatalIf(err)
-		return restConfig, clusterName
-	}
-
-	configInBytes, err := ioutil.ReadFile(kubeconfig)
-	util.FatalIf(err)
-	clientConfig, err := clientcmd.NewClientConfigFromBytes(configInBytes)
-	util.FatalIf(err)
-
-	rawConfig, err := clientConfig.RawConfig()
-	util.FatalIf(err)
-	cluster := rawConfig.CurrentContext
-
-	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	util.FatalIf(err)
-	return cfg, cluster
 }
 
 func processArgs() {
@@ -219,8 +158,8 @@ func start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	currentRestConfig, currentCluster := getClientConfigAndCluster()
-	watcher := startWatchOnCluster(ctx, currentRestConfig, inCluster, currentCluster)
+	currentRestConfig, currentCluster := clusterCliConf.GetClientConfigAndCluster()
+	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster)
 	ticker := time.NewTicker(time.Second * 5)
 
 	for {
@@ -228,12 +167,12 @@ func start() {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			restConfig, cluster := getClientConfigAndCluster()
+			restConfig, cluster := clusterCliConf.GetClientConfigAndCluster()
 			glog.V(7).Infof("Checking config %s %s ", restConfig.Host, currentRestConfig.Host)
 			if restConfig.Host != currentRestConfig.Host {
 				glog.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
-				watcher = startWatchOnCluster(ctx, restConfig, inCluster, cluster)
+				watcher = startWatchOnCluster(ctx, restConfig, cluster)
 				currentRestConfig = restConfig
 				currentCluster = cluster
 			}

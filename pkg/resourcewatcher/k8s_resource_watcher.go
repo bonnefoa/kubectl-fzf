@@ -2,8 +2,6 @@ package resourcewatcher
 
 import (
 	"context"
-	"path"
-	"strings"
 	"time"
 
 	"kubectlfzf/pkg/k8sresources"
@@ -35,7 +33,7 @@ type ResourceWatcher struct {
 	excludedNamespaces []*regexp.Regexp
 	cluster            string
 	cancelFuncs        []context.CancelFunc
-	storeConfig        StoreConfig
+	storeConfig        *k8sresources.StoreConfig
 }
 
 // WatchConfig provides the configuration to watch a specific kubernetes resource
@@ -51,7 +49,7 @@ type WatchConfig struct {
 
 // NewResourceWatcher creates a new resource watcher on a given cluster
 func NewResourceWatcher(config *restclient.Config,
-	storeConfig StoreConfig, excludedNamespaces []string) ResourceWatcher {
+	storeConfig *k8sresources.StoreConfig, excludedNamespaces []string) ResourceWatcher {
 	var err error
 	resourceWatcher := ResourceWatcher{}
 	resourceWatcher.clientset, err = kubernetes.NewForConfig(config)
@@ -73,28 +71,19 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 	r.cancelFuncs = append(r.cancelFuncs, cancel)
 
 	if cfg.pollingPeriod > 0 {
-		store, err := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
-		if err != nil {
-			return err
-		}
+		store := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
 		go r.pollResource(ctx, cfg, store)
 		return nil
 	}
 
 	if cfg.splitByNamespaces {
 		glog.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceName)
-		store, err := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
-		if err != nil {
-			return err
-		}
+		store := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
 		go r.watchResource(ctx, cfg, store, r.namespaces)
 		return nil
 	}
 
-	store, err := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
-	if err != nil {
-		return err
-	}
+	store := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
 	go r.watchResource(ctx, cfg, store, []string{""})
 	return nil
 }
@@ -181,29 +170,22 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 // DumpAPIResources dumps api resources file
 func (r *ResourceWatcher) DumpAPIResources() error {
 	resourceName := "apiresources"
-	destDir := path.Join(r.storeConfig.CacheDir, r.storeConfig.ClusterDir)
-	err := util.WriteStringToFile(k8sresources.APIResourceHeader, destDir, resourceName, "header")
-	if err != nil {
-		return err
-	}
+	destFile := r.storeConfig.GetFilePath("resource", resourceName)
 
-	var res strings.Builder
-	resourceLists, _ := r.clientset.Discovery().ServerPreferredResources()
+	resourceLists, err := r.clientset.Discovery().ServerPreferredResources()
 	if err != nil {
 		return err
 	}
+	apiResources := []k8sresources.APIResource{}
 	for _, resourceList := range resourceLists {
 		for _, apiResource := range resourceList.APIResources {
 			a := k8sresources.APIResource{}
 			a.FromAPIResource(apiResource, resourceList)
-			_, err := res.WriteString(a.ToString())
-			if err != nil {
-				return err
-			}
+			apiResources = append(apiResources, a)
 		}
 	}
 
-	err = util.WriteStringToFile(res.String(), destDir, resourceName, "resource")
+	err = util.EncodeToFile(apiResources, destFile)
 	return err
 }
 

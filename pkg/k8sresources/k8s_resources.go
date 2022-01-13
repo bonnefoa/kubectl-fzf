@@ -1,7 +1,6 @@
 package k8sresources
 
 import (
-	"sort"
 	"time"
 
 	"kubectlfzf/pkg/util"
@@ -62,12 +61,3 @@ var ExcludedLabels = map[string]string{"pod-template-generation": "",
 	"app.kubernetes.io/managed-by": "", "pod-template-hash": "",
 	"statefulset.kubernetes.io/pod-name": "",
 	"controler-uid":                      ""}
-
-func (r *ResourceMeta) labelsString() string {
-	if len(r.Labels) == 0 {
-		return "None"
-	}
-	els := util.JoinStringMap(r.Labels, ExcludedLabels, "=")
-	sort.Strings(els)
-	return util.JoinSlicesOrNone(els, ",")
-}

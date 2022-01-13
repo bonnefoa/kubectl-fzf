@@ -1,11 +1,9 @@
 package resourcewatcher
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -54,9 +52,8 @@ type K8sStore struct {
 	ctorConfig   k8sresources.CtorConfig
 	resourceName string
 	currentFile  *os.File
-	storeConfig  StoreConfig
+	storeConfig  *k8sresources.StoreConfig
 	firstWrite   bool
-	destDir      string
 
 	dataMutex  sync.Mutex
 	labelMutex sync.Mutex
@@ -67,17 +64,9 @@ type K8sStore struct {
 	lastLabelDump time.Time
 }
 
-// StoreConfig defines parameters used for the cache location
-type StoreConfig struct {
-	ClusterDir          string
-	CacheDir            string
-	TimeBetweenFullDump time.Duration
-}
-
 // NewK8sStore creates a new store
-func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig StoreConfig, ctorConfig k8sresources.CtorConfig) (*K8sStore, error) {
+func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig *k8sresources.StoreConfig, ctorConfig k8sresources.CtorConfig) *K8sStore {
 	k := K8sStore{}
-	k.destDir = path.Join(storeConfig.CacheDir, storeConfig.ClusterDir)
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.labelMap = make(map[LabelKey]int, 0)
 	k.resourceCtor = cfg.resourceCtor
@@ -89,12 +78,7 @@ func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig StoreConfig, 
 	k.lastLabelDump = time.Time{}
 	k.lastFullDump = time.Time{}
 
-	err := os.MkdirAll(k.destDir, os.ModePerm)
-	util.FatalIf(err)
-	if err != nil {
-		return &k, err
-	}
-	return &k, nil
+	return &k
 }
 
 func resourceKey(obj interface{}) (string, string, map[string]string) {
@@ -229,12 +213,6 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	}
 }
 
-func (k *K8sStore) reopenCurrentFile() (err error) {
-	destFile := k.getFilePath("resource")
-	k.currentFile, err = os.OpenFile(destFile, os.O_APPEND|os.O_WRONLY, 0644)
-	return err
-}
-
 // AppendNewObject appends a new object to the cache dump
 func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	//	k.fileMutex.Lock()
@@ -271,16 +249,16 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 
 func (k *K8sStore) dumpLabel() error {
 	glog.V(8).Infof("Dump of label file %s", k.resourceName)
-	k.lastLabelDump = time.Now()
-	labelOutput, err := k.generateLabel()
-	if err != nil {
-		return errors.Wrapf(err, "Error generating label output")
-	}
-	err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
-	if err != nil {
-		return errors.Wrapf(err, "Error writing label file")
-	}
-	k.labelToDump = false
+	//k.lastLabelDump = time.Now()
+	//labelOutput, err := k.generateLabel()
+	//if err != nil {
+	//return errors.Wrapf(err, "Error generating label output")
+	//}
+	//err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
+	//if err != nil {
+	//return errors.Wrapf(err, "Error writing label file")
+	//}
+	//k.labelToDump = false
 	return nil
 }
 
@@ -313,30 +291,6 @@ func (k *K8sStore) generateLabel() (string, error) {
 	return strings.Trim(res.String(), "\n"), nil
 }
 
-func (k *K8sStore) readCache() error {
-	destFile := k.getFilePath("resource")
-	file, err := os.Open(destFile)
-	if err != nil {
-		return errors.Wrapf(err, "Could not read file %s", destFile)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println(err)
-	}
-
-	return nil
-}
-
-func (k *K8sStore) getFilePath(suffix string) string {
-	return path.Join(k.destDir, fmt.Sprintf("%s_%s", k.resourceName, "resource"))
-}
-
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
 	glog.V(8).Infof("Dump full state of %s", k.resourceName)
@@ -349,7 +303,7 @@ func (k *K8sStore) DumpFullState() error {
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
 
-	destFile := k.getFilePath("resource")
+	destFile := k.storeConfig.GetFilePath("resource", k.resourceName)
 	err := util.EncodeToFile(k.data, destFile)
 	return err
 
