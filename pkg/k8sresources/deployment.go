@@ -1,6 +1,7 @@
 package k8sresources
 
 import (
+	"kubectlfzf/pkg/util"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,10 +13,10 @@ const DeploymentHeader = "Cluster Namespace Name Desired Current Up-to-date Avai
 // Deployment is the summary of a kubernetes deployment
 type Deployment struct {
 	ResourceMeta
-	desiredReplicas   string
-	availableReplicas string
-	updatedReplicas   string
-	currentReplicas   string
+	DesiredReplicas   string
+	AvailableReplicas string
+	UpdatedReplicas   string
+	CurrentReplicas   string
 }
 
 // NewDeploymentFromRuntime builds a k8sresource from informer result
@@ -31,16 +32,32 @@ func (d *Deployment) FromRuntime(obj interface{}, config CtorConfig) {
 	d.FromObjectMeta(deployment.ObjectMeta, config)
 
 	status := deployment.Status
-	d.desiredReplicas = "1"
+	d.DesiredReplicas = "1"
 	if deployment.Spec.Replicas != nil {
-		d.desiredReplicas = strconv.Itoa(int(*deployment.Spec.Replicas))
+		d.DesiredReplicas = strconv.Itoa(int(*deployment.Spec.Replicas))
 	}
-	d.currentReplicas = strconv.Itoa(int(status.Replicas))
-	d.updatedReplicas = strconv.Itoa(int(status.UpdatedReplicas))
-	d.availableReplicas = strconv.Itoa(int(status.AvailableReplicas))
+	d.CurrentReplicas = strconv.Itoa(int(status.Replicas))
+	d.UpdatedReplicas = strconv.Itoa(int(status.UpdatedReplicas))
+	d.AvailableReplicas = strconv.Itoa(int(status.AvailableReplicas))
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (d *Deployment) HasChanged(k K8sResource) bool {
 	return true
+}
+
+// ToString serializes the object to strings
+func (d *Deployment) ToString() string {
+	line := []string{
+		d.Cluster,
+		d.Namespace,
+		d.Name,
+		d.DesiredReplicas,
+		d.CurrentReplicas,
+		d.UpdatedReplicas,
+		d.AvailableReplicas,
+		d.resourceAge(),
+		d.labelsString(),
+	}
+	return util.DumpLine(line)
 }

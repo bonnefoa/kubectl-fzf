@@ -1,7 +1,9 @@
 package k8sresources
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -12,8 +14,8 @@ const SecretHeader = "Cluster Namespace Name Type Data Age Labels\n"
 // Secret is the summary of a kubernetes secret
 type Secret struct {
 	ResourceMeta
-	secretType string
-	data       string
+	SecretType string
+	Data       string
 }
 
 // NewSecretFromRuntime builds a secret from informer result
@@ -28,11 +30,25 @@ func (s *Secret) FromRuntime(obj interface{}, config CtorConfig) {
 	secret := obj.(*corev1.Secret)
 	glog.V(19).Infof("Reading meta %#v", secret)
 	s.FromObjectMeta(secret.ObjectMeta, config)
-	s.secretType = string(secret.Type)
-	s.data = strconv.Itoa(len(secret.Data))
+	s.SecretType = string(secret.Type)
+	s.Data = strconv.Itoa(len(secret.Data))
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (s *Secret) HasChanged(k K8sResource) bool {
 	return true
+}
+
+// ToString serializes the object to strings
+func (s *Secret) ToString() string {
+	line := strings.Join([]string{
+		s.Cluster,
+		s.Namespace,
+		s.Name,
+		s.SecretType,
+		s.Data,
+		s.resourceAge(),
+		s.labelsString(),
+	}, " ")
+	return fmt.Sprintf("%s\n", line)
 }

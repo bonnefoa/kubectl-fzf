@@ -16,13 +16,13 @@ const NodeHeader = "Cluster Name Roles Status InstanceType Zone InternalIp Taint
 // Node is the summary of a kubernetes node
 type Node struct {
 	ResourceMeta
-	roles        []string
-	status       string
-	instanceType string
-	zone         string
-	instanceID   string
-	internalIP   string
-	taints       []string
+	Roles        []string
+	Status       string
+	InstanceType string
+	Zone         string
+	InstanceID   string
+	InternalIP   string
+	Taints       []string
 }
 
 // NewNodeFromRuntime builds a k8sresoutce from informer result
@@ -54,17 +54,17 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 			if _, ok := config.RoleBlacklist[role]; ok {
 				continue
 			}
-			n.roles = append(n.roles, role)
+			n.Roles = append(n.Roles, role)
 		}
 	}
-	n.instanceID = "Unknown"
+	n.InstanceID = "Unknown"
 	if node.Spec.ProviderID != "" {
-		n.instanceID = util.LastURLPart(node.Spec.ProviderID)
+		n.InstanceID = util.LastURLPart(node.Spec.ProviderID)
 	}
 
-	n.status = getNodeStatus(node)
+	n.Status = getNodeStatus(node)
 
-	n.taints = make([]string, 0)
+	n.Taints = make([]string, 0)
 	for _, t := range node.Spec.Taints {
 		var taint string
 		if t.Value == "" {
@@ -72,20 +72,38 @@ func (n *Node) FromRuntime(obj interface{}, config CtorConfig) {
 		} else {
 			taint = fmt.Sprintf("%s=%s:%s", t.Key, t.Value, t.Effect)
 		}
-		n.taints = append(n.taints, taint)
+		n.Taints = append(n.Taints, taint)
 	}
 
-	n.instanceType = n.Labels["beta.kubernetes.io/instance-type"]
-	n.zone = n.Labels["failure-domain.beta.kubernetes.io/zone"]
+	n.InstanceType = n.Labels["beta.kubernetes.io/instance-type"]
+	n.Zone = n.Labels["failure-domain.beta.kubernetes.io/zone"]
 	for _, v := range node.Status.Addresses {
 		if v.Type == "InternalIP" {
-			n.internalIP = v.Address
+			n.InternalIP = v.Address
 		}
 	}
-	sort.Strings(n.roles)
+	sort.Strings(n.Roles)
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (n *Node) HasChanged(k K8sResource) bool {
 	return true
+}
+
+// ToString serializes the object to strings
+func (n *Node) ToString() string {
+	line := strings.Join([]string{
+		n.Cluster,
+		n.Name,
+		util.JoinSlicesOrNone(n.Roles, ","),
+		n.Status,
+		n.InstanceType,
+		n.Zone,
+		n.InternalIP,
+		util.JoinSlicesOrNone(n.Taints, ","),
+		n.InstanceID,
+		n.resourceAge(),
+		n.labelsString(),
+	}, " ")
+	return fmt.Sprintf("%s\n", line)
 }

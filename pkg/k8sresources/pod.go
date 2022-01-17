@@ -123,3 +123,24 @@ func (p *Pod) HasChanged(k K8sResource) bool {
 		util.StringMapsEqual(p.Labels, oldPod.Labels) ||
 		p.NodeName != oldPod.NodeName)
 }
+
+// ToString serializes the object to strings
+func (p *Pod) ToString() string {
+	lst := []string{
+		p.Cluster,
+		p.Namespace,
+		p.Name,
+		p.PodIP,
+		p.HostIP,
+		p.NodeName,
+		p.Phase,
+		p.QosClass,
+		util.TruncateString(util.JoinSlicesOrNone(p.Containers, ","), 300),
+		util.JoinSlicesOrNone(p.Tolerations, ","),
+		util.JoinSlicesOrNone(p.Claims, ","),
+		p.resourceAge(),
+		p.labelsString(),
+		p.FieldSelectors,
+	}
+	return util.DumpLine(lst)
+}

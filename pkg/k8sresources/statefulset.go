@@ -1,7 +1,9 @@
 package k8sresources
 
 import (
+	"fmt"
 	"kubectlfzf/pkg/util"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 )
@@ -39,4 +41,19 @@ func (s *StatefulSet) HasChanged(k K8sResource) bool {
 		s.replicas != oldSts.replicas ||
 		util.StringSlicesEqual(s.selectors, oldSts.selectors) ||
 		util.StringMapsEqual(s.Labels, oldSts.Labels))
+}
+
+// ToString serializes the object to strings
+func (s *StatefulSet) ToString() string {
+	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
+	line := strings.Join([]string{
+		s.Cluster,
+		s.Namespace,
+		s.Name,
+		fmt.Sprintf("%d/%d", s.currentReplicas, s.replicas),
+		selectorList,
+		s.resourceAge(),
+		s.labelsString(),
+	}, " ")
+	return fmt.Sprintf("%s\n", line)
 }

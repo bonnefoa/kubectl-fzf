@@ -1,7 +1,6 @@
 package k8sresources
 
 import (
-	"fmt"
 	"kubectlfzf/pkg/util"
 	"os"
 	"path"
@@ -29,6 +28,6 @@ func NewStoreConfig(clusterConf *util.ClusterCliConf, timeBetweenFullDump time.D
 	return &s
 }
 
-func (s *StoreConfig) GetFilePath(suffix string, resourceName string) string {
-	return path.Join(s.destDir, fmt.Sprintf("%s_%s", resourceName, "resource"))
+func (s *StoreConfig) GetFilePath(resourceName string) string {
+	return path.Join(s.destDir, resourceName)
 }

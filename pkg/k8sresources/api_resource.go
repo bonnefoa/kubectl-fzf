@@ -2,6 +2,8 @@ package k8sresources
 
 import (
 	"fmt"
+	"kubectlfzf/pkg/util"
+	"strconv"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,4 +34,16 @@ func (a *APIResource) FromAPIResource(apiResource metav1.APIResource,
 		group := strings.Split(a.GroupVersion, "/")[0]
 		a.FullName = fmt.Sprintf("%s.%s", apiResource.Name, group)
 	}
+}
+
+// ToString serializes the object to strings
+func (a *APIResource) ToString() string {
+	lst := []string{
+		a.FullName,
+		util.JoinSlicesOrNone(a.Shortnames, ","),
+		a.GroupVersion,
+		strconv.FormatBool(a.Namespaced),
+		a.Kind,
+	}
+	return util.DumpLine(lst)
 }

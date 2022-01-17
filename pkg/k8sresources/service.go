@@ -2,6 +2,7 @@ package k8sresources
 
 import (
 	"fmt"
+	"strings"
 
 	"kubectlfzf/pkg/util"
 
@@ -13,10 +14,10 @@ const ServiceHeader = "Cluster Namespace Name Type ClusterIp Ports Selector Age 
 // Service is the summary of a kubernetes service
 type Service struct {
 	ResourceMeta
-	serviceType string
-	clusterIP   string
-	ports       []string
-	selectors   []string
+	ServiceType string
+	ClusterIP   string
+	Ports       []string
+	Selectors   []string
 }
 
 // NewServiceFromRuntime builds a pod from informer result
@@ -30,23 +31,41 @@ func NewServiceFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 func (s *Service) FromRuntime(obj interface{}, config CtorConfig) {
 	service := obj.(*corev1.Service)
 	s.FromObjectMeta(service.ObjectMeta, config)
-	s.serviceType = string(service.Spec.Type)
-	s.clusterIP = service.Spec.ClusterIP
-	s.ports = make([]string, len(service.Spec.Ports))
+	s.ServiceType = string(service.Spec.Type)
+	s.ClusterIP = service.Spec.ClusterIP
+	s.Ports = make([]string, len(service.Spec.Ports))
 	for k, v := range service.Spec.Ports {
 		if v.NodePort > 0 {
-			s.ports[k] = fmt.Sprintf("%s:%d/%d", v.Name, v.Port, v.NodePort)
+			s.Ports[k] = fmt.Sprintf("%s:%d/%d", v.Name, v.Port, v.NodePort)
 		} else {
-			s.ports[k] = fmt.Sprintf("%s:%d", v.Name, v.Port)
+			s.Ports[k] = fmt.Sprintf("%s:%d", v.Name, v.Port)
 		}
 	}
-	s.selectors = util.JoinStringMap(service.Spec.Selector, ExcludedLabels, "=")
+	s.Selectors = util.JoinStringMap(service.Spec.Selector, ExcludedLabels, "=")
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (s *Service) HasChanged(k K8sResource) bool {
 	oldService := k.(*Service)
-	return (util.StringSlicesEqual(s.ports, oldService.ports) ||
-		util.StringSlicesEqual(s.selectors, oldService.selectors) ||
+	return (util.StringSlicesEqual(s.Ports, oldService.Ports) ||
+		util.StringSlicesEqual(s.Selectors, oldService.Selectors) ||
 		util.StringMapsEqual(s.Labels, oldService.Labels))
+}
+
+// ToString serializes the object to strings
+func (s *Service) ToString() string {
+	portList := util.JoinSlicesOrNone(s.Ports, ",")
+	selectorList := util.JoinSlicesOrNone(s.Selectors, ",")
+	line := strings.Join([]string{
+		s.Cluster,
+		s.Namespace,
+		s.Name,
+		s.ServiceType,
+		s.ClusterIP,
+		portList,
+		selectorList,
+		s.resourceAge(),
+		s.labelsString(),
+	}, " ")
+	return fmt.Sprintf("%s\n", line)
 }

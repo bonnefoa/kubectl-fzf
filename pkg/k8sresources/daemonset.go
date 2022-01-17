@@ -2,6 +2,7 @@ package k8sresources
 
 import (
 	"fmt"
+	"kubectlfzf/pkg/util"
 	"strconv"
 
 	"github.com/golang/glog"
@@ -14,11 +15,11 @@ const DaemonSetHeader = "Cluster Namespace Name Desired Current Ready LabelSelec
 // DaemonSet is the summary of a kubernetes daemonset
 type DaemonSet struct {
 	ResourceMeta
-	desired       string
-	current       string
-	ready         string
-	containers    []string
-	labelSelector []string
+	Desired       string
+	Current       string
+	Ready         string
+	Containers    []string
+	LabelSelector []string
 }
 
 // NewDaemonSetFromRuntime builds a daemonset from informer result
@@ -35,25 +36,42 @@ func (d *DaemonSet) FromRuntime(obj interface{}, config CtorConfig) {
 	d.FromObjectMeta(daemonset.ObjectMeta, config)
 
 	status := daemonset.Status
-	d.desired = strconv.Itoa(int(status.DesiredNumberScheduled))
-	d.current = strconv.Itoa(int(status.CurrentNumberScheduled))
-	d.ready = strconv.Itoa(int(status.NumberReady))
+	d.Desired = strconv.Itoa(int(status.DesiredNumberScheduled))
+	d.Current = strconv.Itoa(int(status.CurrentNumberScheduled))
+	d.Ready = strconv.Itoa(int(status.NumberReady))
 
-	d.labelSelector = make([]string, 0)
+	d.LabelSelector = make([]string, 0)
 	for k, v := range daemonset.Spec.Selector.MatchLabels {
-		d.labelSelector = append(d.labelSelector, fmt.Sprintf("%s=%s", k, v))
+		d.LabelSelector = append(d.LabelSelector, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	podSpec := daemonset.Spec.Template.Spec
 	containers := podSpec.Containers
 	containers = append(containers, podSpec.InitContainers...)
-	d.containers = make([]string, len(containers))
+	d.Containers = make([]string, len(containers))
 	for k, v := range containers {
-		d.containers[k] = v.Name
+		d.Containers[k] = v.Name
 	}
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (d *DaemonSet) HasChanged(k K8sResource) bool {
 	return true
+}
+
+// ToString serializes the object to strings
+func (d *DaemonSet) ToString() string {
+	lst := []string{
+		d.Cluster,
+		d.Namespace,
+		d.Name,
+		d.Desired,
+		d.Current,
+		d.Ready,
+		util.JoinSlicesOrNone(d.LabelSelector, ","),
+		util.JoinSlicesOrNone(d.Containers, ","),
+		d.resourceAge(),
+		d.labelsString(),
+	}
+	return util.DumpLine(lst)
 }

@@ -14,9 +14,9 @@ const CronJobHeader = "Cluster Namespace Name Schedule LastSchedule Containers A
 // CronJob is the summary of a kubernetes cronJob
 type CronJob struct {
 	ResourceMeta
-	schedule     string
-	lastSchedule string
-	containers   []string
+	Schedule     string
+	LastSchedule string
+	Containers   []string
 }
 
 // NewCronJobFromRuntime builds a cronJob from informer result
@@ -31,22 +31,37 @@ func (c *CronJob) FromRuntime(obj interface{}, config CtorConfig) {
 	cronJob := obj.(*v1.CronJob)
 	glog.V(19).Infof("Reading meta %#v", cronJob)
 	c.FromObjectMeta(cronJob.ObjectMeta, config)
-	c.schedule = strings.ReplaceAll(cronJob.Spec.Schedule, " ", "_")
-	c.lastSchedule = ""
+	c.Schedule = strings.ReplaceAll(cronJob.Spec.Schedule, " ", "_")
+	c.LastSchedule = ""
 	if cronJob.Status.LastScheduleTime != nil {
-		c.lastSchedule = util.TimeToAge(cronJob.Status.LastScheduleTime.Time)
+		c.LastSchedule = util.TimeToAge(cronJob.Status.LastScheduleTime.Time)
 	}
 
 	spec := cronJob.Spec.JobTemplate.Spec.Template.Spec
 	containers := spec.Containers
 	containers = append(containers, spec.InitContainers...)
-	c.containers = make([]string, len(containers))
+	c.Containers = make([]string, len(containers))
 	for k, v := range containers {
-		c.containers[k] = v.Name
+		c.Containers[k] = v.Name
 	}
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (c *CronJob) HasChanged(k K8sResource) bool {
 	return true
+}
+
+// ToString serializes the object to strings
+func (c *CronJob) ToString() string {
+	lst := []string{
+		c.Cluster,
+		c.Namespace,
+		c.Name,
+		c.Schedule,
+		c.LastSchedule,
+		util.JoinSlicesOrNone(c.Containers, ","),
+		c.resourceAge(),
+		c.labelsString(),
+	}
+	return util.DumpLine(lst)
 }

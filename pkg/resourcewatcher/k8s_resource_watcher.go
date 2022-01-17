@@ -102,7 +102,6 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	appsGetter := r.clientset.AppsV1().RESTClient()
 	autoscalingGetter := r.clientset.AutoscalingV1().RESTClient()
 	betaGetter := r.clientset.ExtensionsV1beta1().RESTClient()
-	batchGetterV1Beta := r.clientset.BatchV1beta1().RESTClient()
 	batchGetter := r.clientset.BatchV1().RESTClient()
 
 	allWatchConfigs := []WatchConfig{
@@ -117,7 +116,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 		{k8sresources.NewDeploymentFromRuntime, "deployments", appsGetter, &appsv1.Deployment{}, true, false, 0},
 		{k8sresources.NewEndpointsFromRuntime, "endpoints", coreGetter, &corev1.Endpoints{}, true, false, 0},
 		{k8sresources.NewIngressFromRuntime, "ingresses", betaGetter, &betav1.Ingress{}, true, false, 0},
-		{k8sresources.NewCronJobFromRuntime, "cronjobs", batchGetterV1Beta, &batchv1.CronJob{}, true, false, 0},
+		{k8sresources.NewCronJobFromRuntime, "cronjobs", batchGetter, &batchv1.CronJob{}, true, false, 0},
 		{k8sresources.NewJobFromRuntime, "jobs", batchGetter, &batchv1.Job{}, true, false, 0},
 		{k8sresources.NewHpaFromRuntime, "horizontalpodautoscalers", autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, false, 0},
 		{k8sresources.NewPersistentVolumeFromRuntime, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, false, 0},
@@ -170,7 +169,7 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 // DumpAPIResources dumps api resources file
 func (r *ResourceWatcher) DumpAPIResources() error {
 	resourceName := "apiresources"
-	destFile := r.storeConfig.GetFilePath("resource", resourceName)
+	destFile := r.storeConfig.GetFilePath(resourceName)
 
 	resourceLists, err := r.clientset.Discovery().ServerPreferredResources()
 	if err != nil {

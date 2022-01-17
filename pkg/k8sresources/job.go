@@ -2,6 +2,7 @@ package k8sresources
 
 import (
 	"fmt"
+	"kubectlfzf/pkg/util"
 
 	"github.com/golang/glog"
 	batchv1 "k8s.io/api/batch/v1"
@@ -13,8 +14,8 @@ const JobHeader = "Cluster Namespace Name Completions Containers Age Labels\n"
 // Job is the summary of a kubernetes Job
 type Job struct {
 	ResourceMeta
-	completions string
-	containers  []string
+	Completions string
+	Containers  []string
 }
 
 // NewJobFromRuntime builds a Job from informer result
@@ -30,23 +31,37 @@ func (j *Job) FromRuntime(obj interface{}, config CtorConfig) {
 	glog.V(19).Infof("Reading meta %#v", job)
 	j.FromObjectMeta(job.ObjectMeta, config)
 
-	j.completions = "-"
+	j.Completions = "-"
 	if job.Spec.Completions != nil {
 		desired := int(*job.Spec.Completions)
 		successful := int(job.Status.Succeeded)
-		j.completions = fmt.Sprintf("%d/%d", successful, desired)
+		j.Completions = fmt.Sprintf("%d/%d", successful, desired)
 	}
 
 	spec := job.Spec.Template.Spec
 	containers := spec.Containers
 	containers = append(containers, spec.InitContainers...)
-	j.containers = make([]string, len(containers))
+	j.Containers = make([]string, len(containers))
 	for k, v := range containers {
-		j.containers[k] = v.Name
+		j.Containers[k] = v.Name
 	}
 }
 
 // HasChanged returns true if the resource's dump needs to be updated
 func (j *Job) HasChanged(k K8sResource) bool {
 	return true
+}
+
+// ToString serializes the object to strings
+func (j *Job) ToString() string {
+	lst := []string{
+		j.Cluster,
+		j.Namespace,
+		j.Name,
+		j.Completions,
+		util.JoinSlicesOrNone(j.Containers, ","),
+		j.resourceAge(),
+		j.labelsString(),
+	}
+	return util.DumpLine(lst)
 }

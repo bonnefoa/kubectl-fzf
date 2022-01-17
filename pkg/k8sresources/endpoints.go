@@ -1,7 +1,9 @@
 package k8sresources
 
 import (
+	"fmt"
 	"kubectlfzf/pkg/util"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -11,10 +13,10 @@ const EndpointsHeader = "Cluster Namespace Name Age ReadyIps ReadyPods NotReadyI
 // Endpoints is the summary of a kubernetes endpoints
 type Endpoints struct {
 	ResourceMeta
-	readyIps     []string
-	readyPods    []string
-	notReadyIps  []string
-	notReadyPods []string
+	ReadyIps     []string
+	ReadyPods    []string
+	NotReadyIps  []string
+	NotReadyPods []string
 }
 
 // NewEndpointsFromRuntime builds a k8s resource from informer result
@@ -30,15 +32,15 @@ func (e *Endpoints) FromRuntime(obj interface{}, config CtorConfig) {
 	e.FromObjectMeta(endpoints.ObjectMeta, config)
 	for _, subsets := range endpoints.Subsets {
 		for _, v := range subsets.Addresses {
-			e.readyIps = append(e.readyIps, v.IP)
+			e.ReadyIps = append(e.ReadyIps, v.IP)
 			if v.TargetRef != nil && v.TargetRef.Kind == "Pod" {
-				e.readyPods = append(e.readyPods, v.TargetRef.Name)
+				e.ReadyPods = append(e.ReadyPods, v.TargetRef.Name)
 			}
 		}
 		for _, v := range subsets.NotReadyAddresses {
-			e.notReadyIps = append(e.notReadyIps, v.IP)
+			e.NotReadyIps = append(e.NotReadyIps, v.IP)
 			if v.TargetRef != nil && v.TargetRef.Kind == "Pod" {
-				e.notReadyPods = append(e.notReadyPods, v.TargetRef.Name)
+				e.NotReadyPods = append(e.NotReadyPods, v.TargetRef.Name)
 			}
 		}
 	}
@@ -47,8 +49,24 @@ func (e *Endpoints) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (e *Endpoints) HasChanged(k K8sResource) bool {
 	oldE := k.(*Endpoints)
-	return (util.StringSlicesEqual(e.readyIps, oldE.readyIps) ||
-		util.StringSlicesEqual(e.readyPods, oldE.readyPods) ||
-		util.StringSlicesEqual(e.notReadyIps, oldE.notReadyIps) ||
-		util.StringSlicesEqual(e.notReadyIps, oldE.notReadyIps))
+	return (util.StringSlicesEqual(e.ReadyIps, oldE.ReadyIps) ||
+		util.StringSlicesEqual(e.ReadyPods, oldE.ReadyPods) ||
+		util.StringSlicesEqual(e.NotReadyIps, oldE.NotReadyIps) ||
+		util.StringSlicesEqual(e.NotReadyIps, oldE.NotReadyIps))
+}
+
+// ToString serializes the object to strings
+func (e *Endpoints) ToString() string {
+	line := strings.Join([]string{
+		e.Cluster,
+		e.Namespace,
+		e.Name,
+		e.resourceAge(),
+		util.JoinSlicesWithMaxOrNone(e.ReadyIps, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.ReadyPods, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.NotReadyIps, 20, ","),
+		util.JoinSlicesWithMaxOrNone(e.NotReadyPods, 20, ","),
+		e.labelsString(),
+	}, " ")
+	return fmt.Sprintf("%s\n", line)
 }

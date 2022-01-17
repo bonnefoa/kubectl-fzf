@@ -303,7 +303,7 @@ func (k *K8sStore) DumpFullState() error {
 	k.lastFullDump = now
 	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
 
-	destFile := k.storeConfig.GetFilePath("resource", k.resourceName)
+	destFile := k.storeConfig.GetFilePath(k.resourceName)
 	err := util.EncodeToFile(k.data, destFile)
 	return err
 

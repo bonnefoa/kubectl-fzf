@@ -1,6 +1,7 @@
 package k8sresources
 
 import (
+	"sort"
 	"time"
 
 	"kubectlfzf/pkg/util"
@@ -13,6 +14,7 @@ import (
 // K8sResource is the generic information of a k8s entity
 type K8sResource interface {
 	HasChanged(k K8sResource) bool
+	ToString() string
 	FromRuntime(obj interface{}, config CtorConfig)
 }
 
@@ -61,3 +63,12 @@ var ExcludedLabels = map[string]string{"pod-template-generation": "",
 	"app.kubernetes.io/managed-by": "", "pod-template-hash": "",
 	"statefulset.kubernetes.io/pod-name": "",
 	"controler-uid":                      ""}
+
+func (r *ResourceMeta) labelsString() string {
+	if len(r.Labels) == 0 {
+		return "None"
+	}
+	els := util.JoinStringMap(r.Labels, ExcludedLabels, "=")
+	sort.Strings(els)
+	return util.JoinSlicesOrNone(els, ",")
+}

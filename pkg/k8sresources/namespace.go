@@ -1,6 +1,9 @@
 package k8sresources
 
 import (
+	"fmt"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -27,4 +30,15 @@ func (c *Namespace) FromRuntime(obj interface{}, config CtorConfig) {
 // HasChanged returns true if the resource's dump needs to be updated
 func (c *Namespace) HasChanged(k K8sResource) bool {
 	return false
+}
+
+// ToString serializes the object to strings
+func (c *Namespace) ToString() string {
+	line := strings.Join([]string{
+		c.Cluster,
+		c.Name,
+		c.resourceAge(),
+		c.labelsString(),
+	}, " ")
+	return fmt.Sprintf("%s\n", line)
 }
