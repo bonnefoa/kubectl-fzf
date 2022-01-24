@@ -44,7 +44,7 @@ func GetClusterCliConf() ClusterCliConf {
 	return c
 }
 
-func (c *ClusterCliConf) GetClusterDir() string {
+func (c *ClusterCliConf) GetClusterName() string {
 	clusterDir := c.ClusterName
 	if c.InCluster {
 		clusterDir = "incluster"

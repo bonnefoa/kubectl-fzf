@@ -9,7 +9,6 @@ import (
 
 // StoreConfig defines parameters used for the cache location
 type StoreConfig struct {
-	clusterDir          string
 	cacheDir            string
 	destDir             string
 	TimeBetweenFullDump time.Duration
@@ -17,9 +16,9 @@ type StoreConfig struct {
 
 func NewStoreConfig(clusterConf *util.ClusterCliConf, timeBetweenFullDump time.Duration) *StoreConfig {
 	s := StoreConfig{}
-	s.clusterDir = clusterConf.GetClusterDir()
+	clusterName := clusterConf.GetClusterName()
 	s.cacheDir = clusterConf.CacheDir
-	s.destDir = path.Join(s.cacheDir, s.clusterDir)
+	s.destDir = path.Join(s.cacheDir, clusterName)
 	s.TimeBetweenFullDump = timeBetweenFullDump
 
 	err := os.MkdirAll(s.destDir, os.ModePerm)
