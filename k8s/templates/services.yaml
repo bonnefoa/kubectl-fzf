@@ -7,7 +7,6 @@ metadata:
     app: {{ $.Chart.Name }}
     chart: {{ $.Chart.Name }}-{{ $.Chart.Version }}
 spec:
-  clusterIP: None
   ports:
   - name: rsync
     port: {{ $.Values.port }}
