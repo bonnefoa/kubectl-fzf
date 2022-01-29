@@ -3,10 +3,12 @@ port: 80
 docker:
   pullPolicy: IfNotPresent
 
+contextName: default
+
 image:
   cache_builder:
     name: bonnefoa/kubectl-fzf
-    tag: v1.0.11
+    tag: 3.0.0
   rsyncd:
     name: eeacms/rsync
     tag: 2.1

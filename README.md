@@ -64,7 +64,7 @@ You can deploy the cache builder as a pod in your cluster.
 
 ```shell
 
-helm template --namespace myns --set image.cache_builder.tag=1.0.11 --set toleration=aToleration . | kubectl apply -f -
+helm template --namespace myns --set image.cache_builder.tag=1.0.11 --set toleration=aToleration . --set contextName=(your kubectl context) | kubectl apply -f -
 ```
 
 You can check the latest image version [here](https://cloud.docker.com/repository/docker/bonnefoa/kubectl-fzf/general).
@@ -155,7 +155,7 @@ By default, it will use the port 80.
 You can change it by deploying the chart with a different port value and using `KUBECTL_FZF_RSYNC_PORT`:
 
 ```shell
-helm template --namespace myns --set port=873 . | kubectl apply -f -
+helm template --namespace myns --set port=873 . --set contextName=(your kubectl context) | kubectl apply -f -
 export KUBECTL_FZF_RSYNC_PORT=873
 ```
 
