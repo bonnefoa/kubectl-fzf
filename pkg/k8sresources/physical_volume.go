@@ -11,7 +11,7 @@ import (
 // PersistentVolumeHeader is the header for pvc csv
 const PersistentVolumeHeader = "Cluster Name Status StorageClass Zone Claim Volume Affinities Age Labels\n"
 
-// PersistentVolume is the summary of a kubernetes physical volume
+// PersistentVolume is the summary of a kubernetes persistent volume
 type PersistentVolume struct {
 	ResourceMeta
 	Status       string

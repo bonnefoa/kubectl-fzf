@@ -10,7 +10,7 @@ import (
 
 const EndpointsHeader = "Cluster Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
 
-// Endpoints is the summary of a kubernetes endpoints
+// Endpoint is the summary of a kubernetes endpoints
 type Endpoints struct {
 	ResourceMeta
 	ReadyIps     []string

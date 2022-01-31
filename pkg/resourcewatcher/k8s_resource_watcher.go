@@ -39,7 +39,7 @@ type ResourceWatcher struct {
 // WatchConfig provides the configuration to watch a specific kubernetes resource
 type WatchConfig struct {
 	resourceCtor      func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
-	resourceName      string
+	resourceType      k8sresources.ResourceType
 	getter            cache.Getter
 	runtimeObject     runtime.Object
 	hasNamespace      bool
@@ -77,7 +77,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 	}
 
 	if cfg.splitByNamespaces {
-		glog.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceName)
+		glog.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceType)
 		store := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
 		go r.watchResource(ctx, cfg, store, r.namespaces)
 		return nil
@@ -105,30 +105,30 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	batchGetter := r.clientset.BatchV1().RESTClient()
 
 	allWatchConfigs := []WatchConfig{
-		{k8sresources.NewPodFromRuntime, string(corev1.ResourcePods), coreGetter, &corev1.Pod{}, true, true, 0},
-		{k8sresources.NewConfigMapFromRuntime, "configmaps", coreGetter, &corev1.ConfigMap{}, true, true, 0},
-		{k8sresources.NewServiceFromRuntime, string(corev1.ResourceServices), coreGetter, &corev1.Service{}, true, false, 0},
-		{k8sresources.NewServiceAccountFromRuntime, "serviceaccounts", coreGetter, &corev1.ServiceAccount{}, true, false, 0},
-		{k8sresources.NewReplicaSetFromRuntime, "replicasets", appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
-		{k8sresources.NewDaemonSetFromRuntime, "daemonsets", appsGetter, &appsv1.DaemonSet{}, true, false, 0},
-		{k8sresources.NewSecretFromRuntime, "secrets", coreGetter, &corev1.Secret{}, true, false, 0},
-		{k8sresources.NewStatefulSetFromRuntime, "statefulsets", appsGetter, &appsv1.StatefulSet{}, true, false, 0},
-		{k8sresources.NewDeploymentFromRuntime, "deployments", appsGetter, &appsv1.Deployment{}, true, false, 0},
-		{k8sresources.NewEndpointsFromRuntime, "endpoints", coreGetter, &corev1.Endpoints{}, true, false, 0},
-		{k8sresources.NewIngressFromRuntime, "ingresses", betaGetter, &betav1.Ingress{}, true, false, 0},
-		{k8sresources.NewCronJobFromRuntime, "cronjobs", batchGetter, &batchv1.CronJob{}, true, false, 0},
-		{k8sresources.NewJobFromRuntime, "jobs", batchGetter, &batchv1.Job{}, true, false, 0},
-		{k8sresources.NewHpaFromRuntime, "horizontalpodautoscalers", autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, false, 0},
-		{k8sresources.NewPersistentVolumeFromRuntime, "persistentvolumes", coreGetter, &corev1.PersistentVolume{}, false, false, 0},
-		{k8sresources.NewPersistentVolumeClaimFromRuntime, string(corev1.ResourcePersistentVolumeClaims), coreGetter, &corev1.PersistentVolumeClaim{}, true, false, 0},
-		{k8sresources.NewNodeFromRuntime, "nodes", coreGetter, &corev1.Node{}, false, false, nodePollingPeriod},
-		{k8sresources.NewNamespaceFromRuntime, "namespaces", coreGetter, &corev1.Namespace{}, false, false, namespacePollingPeriod},
+		{k8sresources.NewPodFromRuntime, k8sresources.ResourceTypePod, coreGetter, &corev1.Pod{}, true, true, 0},
+		{k8sresources.NewConfigMapFromRuntime, k8sresources.ResourceTypeConfigMap, coreGetter, &corev1.ConfigMap{}, true, true, 0},
+		{k8sresources.NewServiceFromRuntime, k8sresources.ResourceTypeService, coreGetter, &corev1.Service{}, true, false, 0},
+		{k8sresources.NewServiceAccountFromRuntime, k8sresources.ResourceTypeServiceAccount, coreGetter, &corev1.ServiceAccount{}, true, false, 0},
+		{k8sresources.NewReplicaSetFromRuntime, k8sresources.ResourceTypeReplicaSet, appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
+		{k8sresources.NewDaemonSetFromRuntime, k8sresources.ResourceTypeDaemonSet, appsGetter, &appsv1.DaemonSet{}, true, false, 0},
+		{k8sresources.NewSecretFromRuntime, k8sresources.ResourceTypeSecret, coreGetter, &corev1.Secret{}, true, false, 0},
+		{k8sresources.NewStatefulSetFromRuntime, k8sresources.ResourceTypeStatefulSet, appsGetter, &appsv1.StatefulSet{}, true, false, 0},
+		{k8sresources.NewDeploymentFromRuntime, k8sresources.ResourceTypeDeployment, appsGetter, &appsv1.Deployment{}, true, false, 0},
+		{k8sresources.NewEndpointsFromRuntime, k8sresources.ResourceTypeEndpoints, coreGetter, &corev1.Endpoints{}, true, false, 0},
+		{k8sresources.NewIngressFromRuntime, k8sresources.ResourceTypeIngress, betaGetter, &betav1.Ingress{}, true, false, 0},
+		{k8sresources.NewCronJobFromRuntime, k8sresources.ResourceTypeCronJob, batchGetter, &batchv1.CronJob{}, true, false, 0},
+		{k8sresources.NewJobFromRuntime, k8sresources.ResourceTypeJob, batchGetter, &batchv1.Job{}, true, false, 0},
+		{k8sresources.NewHorizontalPodAutoscalerFromRuntime, k8sresources.ResourceTypeHorizontalPodAutoscaler, autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, false, 0},
+		{k8sresources.NewPersistentVolumeFromRuntime, k8sresources.ResourceTypePersistentVolume, coreGetter, &corev1.PersistentVolume{}, false, false, 0},
+		{k8sresources.NewPersistentVolumeClaimFromRuntime, k8sresources.ResourceTypePersistentVolumeClaim, coreGetter, &corev1.PersistentVolumeClaim{}, true, false, 0},
+		{k8sresources.NewNodeFromRuntime, k8sresources.ResourceTypeNode, coreGetter, &corev1.Node{}, false, false, nodePollingPeriod},
+		{k8sresources.NewNamespaceFromRuntime, k8sresources.ResourceTypeNamespace, coreGetter, &corev1.Namespace{}, false, false, namespacePollingPeriod},
 	}
 	watchConfigs := []WatchConfig{}
 	excludedResourcesSet := util.StringSliceToSet(excludedResources)
 	glog.Infof("%d Resources will be excluded: %s", len(excludedResources), excludedResources)
 	for _, w := range allWatchConfigs {
-		if _, ok := excludedResourcesSet[w.resourceName]; ok {
+		if _, ok := excludedResourcesSet[w.resourceType.String()]; ok {
 			continue
 		}
 		watchConfigs = append(watchConfigs, w)
@@ -140,11 +140,11 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore *K8sStore) {
 	obj, err := watchlist.List(metav1.ListOptions{})
 	if err != nil {
-		glog.Warningf("Error on listing %s: %v", k8sStore.resourceName, err)
+		glog.Warningf("Error on listing %s: %v", k8sStore.resourceType, err)
 	}
 	lst, err := apimeta.ExtractList(obj)
 	if err != nil {
-		glog.Warningf("Error extracting list %s: %v", k8sStore.resourceName, err)
+		glog.Warningf("Error extracting list %s: %v", k8sStore.resourceType, err)
 	}
 	k8sStore.AddResourceList(lst)
 }
@@ -168,8 +168,7 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 
 // DumpAPIResources dumps api resources file
 func (r *ResourceWatcher) DumpAPIResources() error {
-	resourceName := "apiresources"
-	destFile := r.storeConfig.GetFilePath(resourceName)
+	destFile := r.storeConfig.GetFilePath(k8sresources.ResourceTypeApiResource)
 
 	resourceLists, err := r.clientset.Discovery().ServerPreferredResources()
 	if err != nil {
@@ -194,13 +193,13 @@ func (r *ResourceWatcher) getWatchList(cfg WatchConfig, k8sStore *K8sStore, name
 		options.ResourceVersion = "0"
 	}
 	watchlist := cache.NewFilteredListWatchFromClient(cfg.getter,
-		k8sStore.resourceName, namespace, optionsModifier)
+		k8sStore.resourceType.String(), namespace, optionsModifier)
 	return watchlist
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,
 	cfg WatchConfig, k8sStore *K8sStore) {
-	glog.V(4).Infof("Start poller for %s", k8sStore.resourceName)
+	glog.V(4).Infof("Start poller for %s", k8sStore.resourceType)
 	watchlist := r.getWatchList(cfg, k8sStore, "")
 
 	r.doPoll(watchlist, k8sStore)
@@ -208,7 +207,7 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 	for {
 		select {
 		case <-ctx.Done():
-			glog.Infof("Exiting poll of %s", k8sStore.resourceName)
+			glog.Infof("Exiting poll of %s", k8sStore.resourceType)
 			return
 		case <-ticker.C:
 			r.doPoll(watchlist, k8sStore)
@@ -233,7 +232,7 @@ func (r *ResourceWatcher) startWatch(cfg WatchConfig,
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
 	cfg WatchConfig, k8sStore *K8sStore, namespaces []string) {
-	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceName, namespaces)
+	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceType, namespaces)
 
 	stop := make(chan struct{})
 	for _, ns := range namespaces {
@@ -241,6 +240,6 @@ func (r *ResourceWatcher) watchResource(ctx context.Context,
 	}
 
 	<-ctx.Done()
-	glog.Infof("Exiting watch of %s namespace %s", k8sStore.resourceName, namespaces)
+	glog.Infof("Exiting watch of %s namespace %s", k8sStore.resourceType, namespaces)
 	close(stop)
 }

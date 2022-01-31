@@ -50,7 +50,7 @@ type K8sStore struct {
 	labelMap     map[LabelKey]int
 	resourceCtor func(obj interface{}, config k8sresources.CtorConfig) k8sresources.K8sResource
 	ctorConfig   k8sresources.CtorConfig
-	resourceName string
+	resourceType k8sresources.ResourceType
 	currentFile  *os.File
 	storeConfig  *k8sresources.StoreConfig
 	firstWrite   bool
@@ -70,7 +70,7 @@ func NewK8sStore(ctx context.Context, cfg WatchConfig, storeConfig *k8sresources
 	k.data = make(map[string]k8sresources.K8sResource, 0)
 	k.labelMap = make(map[LabelKey]int, 0)
 	k.resourceCtor = cfg.resourceCtor
-	k.resourceName = cfg.resourceName
+	k.resourceType = cfg.resourceType
 	k.currentFile = nil
 	k.storeConfig = storeConfig
 	k.firstWrite = true
@@ -154,7 +154,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 func (k *K8sStore) AddResource(obj interface{}) {
 	key, ns, labels := resourceKey(obj)
 	newObj := k.resourceCtor(obj, k.ctorConfig)
-	glog.V(11).Infof("%s added: %s", k.resourceName, key)
+	glog.V(11).Infof("%s added: %s", k.resourceType, key)
 	k.dataMutex.Lock()
 	k.data[key] = newObj
 	k.dataMutex.Unlock()
@@ -181,7 +181,7 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 		glog.V(6).Infof("Unknown object type %v", obj)
 		return
 	}
-	glog.V(11).Infof("%s deleted: %s", k.resourceName, key)
+	glog.V(11).Infof("%s deleted: %s", k.resourceType, key)
 	k.dataMutex.Lock()
 	delete(k.data, key)
 	k.dataMutex.Unlock()
@@ -199,7 +199,7 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
 	k.dataMutex.Lock()
 	if k8sObj.HasChanged(k.data[key]) {
-		glog.V(11).Infof("%s changed: %s", k.resourceName, key)
+		glog.V(11).Infof("%s changed: %s", k.resourceType, key)
 		k.data[key] = k8sObj
 		k.dataMutex.Unlock()
 		// TODO Handle label diff
@@ -218,7 +218,7 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	//	k.fileMutex.Lock()
 	//	if k.currentFile == nil {
 	//		var err error
-	//		err = util.WriteStringToFile(resource.ToString(), k.destDir, k.resourceName, "resource")
+	//		err = util.WriteStringToFile(resource.ToString(), k.destDir, k.resourceType, "resource")
 	//		if err != nil {
 	//			k.fileMutex.Unlock()
 	//			return err
@@ -248,13 +248,13 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 }
 
 func (k *K8sStore) dumpLabel() error {
-	glog.V(8).Infof("Dump of label file %s", k.resourceName)
+	glog.V(8).Infof("Dump of label file %s", k.resourceType)
 	//k.lastLabelDump = time.Now()
 	//labelOutput, err := k.generateLabel()
 	//if err != nil {
 	//return errors.Wrapf(err, "Error generating label output")
 	//}
-	//err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
+	//err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceType, "label")
 	//if err != nil {
 	//return errors.Wrapf(err, "Error writing label file")
 	//}
@@ -293,17 +293,17 @@ func (k *K8sStore) generateLabel() (string, error) {
 
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
-	glog.V(8).Infof("Dump full state of %s", k.resourceName)
+	glog.V(8).Infof("Dump full state of %s", k.resourceType)
 	now := time.Now()
 	delta := now.Sub(k.lastFullDump)
 	if delta < k.storeConfig.TimeBetweenFullDump {
-		glog.V(10).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceName, delta)
+		glog.V(10).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceType, delta)
 		return nil
 	}
 	k.lastFullDump = now
-	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceName)
+	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceType)
 
-	destFile := k.storeConfig.GetFilePath(k.resourceName)
+	destFile := k.storeConfig.GetFilePath(k.resourceType)
 	err := util.EncodeToFile(k.data, destFile)
 	return err
 
@@ -315,6 +315,6 @@ func (k *K8sStore) DumpFullState() error {
 	// if err != nil {
 	// 	return errors.Wrapf(err, "Error generating label output")
 	// }
-	// err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceName, "label")
+	// err = util.WriteStringToFile(labelOutput, k.destDir, k.resourceType, "label")
 	// return err
 }

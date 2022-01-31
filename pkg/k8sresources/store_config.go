@@ -27,6 +27,6 @@ func NewStoreConfig(clusterConf *util.ClusterCliConf, timeBetweenFullDump time.D
 	return &s
 }
 
-func (s *StoreConfig) GetFilePath(resourceName string) string {
-	return path.Join(s.destDir, resourceName)
+func (s *StoreConfig) GetFilePath(r ResourceType) string {
+	return path.Join(s.destDir, r.String())
 }

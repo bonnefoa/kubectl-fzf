@@ -72,3 +72,48 @@ func (r *ResourceMeta) labelsString() string {
 	sort.Strings(els)
 	return util.JoinSlicesOrNone(els, ",")
 }
+
+func ResourceToHeader(r ResourceType) string {
+	switch r {
+	case ResourceTypeApiResource:
+		return APIResourceHeader
+	case ResourceTypeConfigMap:
+		return ConfigMapHeader
+	case ResourceTypeCronJob:
+		return CronJobHeader
+	case ResourceTypeDaemonSet:
+		return DaemonSetHeader
+	case ResourceTypeDeployment:
+		return DeploymentHeader
+	case ResourceTypeEndpoints:
+		return EndpointsHeader
+	case ResourceTypeHorizontalPodAutoscaler:
+		return HorizontalPodAutoscalerHeader
+	case ResourceTypeIngress:
+		return IngressHeader
+	case ResourceTypeJob:
+		return JobHeader
+	case ResourceTypeNamespace:
+		return NamespaceHeader
+	case ResourceTypeNode:
+		return NodeHeader
+	case ResourceTypePod:
+		return PodHeader
+	case ResourceTypePersistentVolume:
+		return PersistentVolumeHeader
+	case ResourceTypePersistentVolumeClaim:
+		return PersistentVolumeClaimHeader
+	case ResourceTypeReplicaSet:
+		return ReplicaSetHeader
+	case ResourceTypeSecret:
+		return SecretHeader
+	case ResourceTypeService:
+		return ServiceHeader
+	case ResourceTypeServiceAccount:
+		return ServiceAccountHeader
+	case ResourceTypeStatefulSet:
+		return StatefulSetHeader
+	default:
+		return "Unknown"
+	}
+}

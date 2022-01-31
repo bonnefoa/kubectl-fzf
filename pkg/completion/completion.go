@@ -7,7 +7,7 @@ import (
 
 func CompGetApiResources(storeConfig *k8sresources.StoreConfig) []string {
 	apiResources := []k8sresources.APIResource{}
-	err := util.LoadFromFile(&apiResources, storeConfig.GetFilePath("apiresources"))
+	err := util.LoadFromFile(&apiResources, storeConfig.GetFilePath(k8sresources.ResourceTypeApiResource))
 	util.FatalIf(err)
 	res := []string{}
 	res = append(res, k8sresources.APIResourceHeader)
@@ -18,9 +18,9 @@ func CompGetApiResources(storeConfig *k8sresources.StoreConfig) []string {
 }
 
 // CompGetResource gets the list of the resource specified which begin with `toComplete`.
-func CompGetResource(resourceName string, storeConfig *k8sresources.StoreConfig) []string {
+func CompGetResource(r k8sresources.ResourceType, storeConfig *k8sresources.StoreConfig) []string {
 	resources := map[string]k8sresources.K8sResource{}
-	err := util.LoadFromFile(&resources, storeConfig.GetFilePath(resourceName))
+	err := util.LoadFromFile(&resources, storeConfig.GetFilePath(r))
 	util.FatalIf(err)
 	res := []string{}
 	for _, v := range resources {

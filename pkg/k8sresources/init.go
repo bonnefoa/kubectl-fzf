@@ -9,7 +9,7 @@ func init() {
 	gob.Register(&DaemonSet{})
 	gob.Register(&Deployment{})
 	gob.Register(&Endpoints{})
-	gob.Register(&Hpa{})
+	gob.Register(&HorizontalPodAutoscaler{})
 	gob.Register(&Ingress{})
 	gob.Register(&Job{})
 	gob.Register(&Namespace{})

@@ -7,10 +7,10 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 )
 
-const HpaHeader = "Cluster Namespace Name Reference Targets MinPods MaxPods Replicas Age Labels\n"
+const HorizontalPodAutoscalerHeader = "Cluster Namespace Name Reference Targets MinPods MaxPods Replicas Age Labels\n"
 
-// Hpa is the summary of a kubernetes horizontal pod autoscaler
-type Hpa struct {
+// HorizontalPodAutoscaler is the summary of a kubernetes horizontal pod autoscaler
+type HorizontalPodAutoscaler struct {
 	ResourceMeta
 	Reference       string
 	Targets         string
@@ -19,15 +19,15 @@ type Hpa struct {
 	CurrentReplicas string
 }
 
-// NewHpaFromRuntime builds a pod from informer result
-func NewHpaFromRuntime(obj interface{}, config CtorConfig) K8sResource {
-	h := &Hpa{}
+// NewHorizontalPodAutoscalerFromRuntime builds a pod from informer result
+func NewHorizontalPodAutoscalerFromRuntime(obj interface{}, config CtorConfig) K8sResource {
+	h := &HorizontalPodAutoscaler{}
 	h.FromRuntime(obj, config)
 	return h
 }
 
 // FromRuntime builds object from the informer's result
-func (h *Hpa) FromRuntime(obj interface{}, config CtorConfig) {
+func (h *HorizontalPodAutoscaler) FromRuntime(obj interface{}, config CtorConfig) {
 	hpa := obj.(*autoscalingv1.HorizontalPodAutoscaler)
 	h.FromObjectMeta(hpa.ObjectMeta, config)
 	h.Reference = fmt.Sprintf("%s/%s",
@@ -42,12 +42,12 @@ func (h *Hpa) FromRuntime(obj interface{}, config CtorConfig) {
 }
 
 // HasChanged returns true if the resource'h dump needs to be updated
-func (h *Hpa) HasChanged(k K8sResource) bool {
+func (h *HorizontalPodAutoscaler) HasChanged(k K8sResource) bool {
 	return true
 }
 
 // ToString serializes the object to strings
-func (h *Hpa) ToString() string {
+func (h *HorizontalPodAutoscaler) ToString() string {
 	line := strings.Join([]string{
 		h.Cluster,
 		h.Namespace,

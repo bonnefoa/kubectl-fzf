@@ -23,7 +23,7 @@ func TestGetPods(t *testing.T) {
 	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
 		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
 	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
-	res := CompGetResource("pods", storeConfig)
+	res := CompGetResource(k8sresources.ResourceTypePod, storeConfig)
 	t.Log(res)
 	assert := assert.New(t)
 	assert.Contains(res[0], "Cluster")
