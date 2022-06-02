@@ -23,6 +23,7 @@ func CompGetResource(r k8sresources.ResourceType, storeConfig *k8sresources.Stor
 	err := util.LoadFromFile(&resources, storeConfig.GetFilePath(r))
 	util.FatalIf(err)
 	res := []string{}
+	res = append(res, k8sresources.ResourceToHeader(r))
 	for _, v := range resources {
 		res = append(res, v.ToString())
 	}

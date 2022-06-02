@@ -6,7 +6,7 @@ import (
 
 	"kubectlfzf/pkg/util"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -66,7 +66,7 @@ func NewPodFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (p *Pod) FromRuntime(obj interface{}, config CtorConfig) {
 	pod := obj.(*corev1.Pod)
-	glog.V(19).Infof("Reading meta %#v", pod)
+	logrus.Debugf("Reading meta %#v", pod)
 	p.FromObjectMeta(pod.ObjectMeta, config)
 	p.HostIP = pod.Status.HostIP
 	p.PodIP = pod.Status.PodIP

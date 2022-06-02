@@ -1,7 +1,6 @@
 package resourcewatcher
 
 import (
-	"bufio"
 	"context"
 	"io/ioutil"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"kubectlfzf/pkg/k8sresources"
+	"kubectlfzf/pkg/util"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -35,18 +35,16 @@ func podResource(name string, ns string, labels map[string]string) corev1.Pod {
 func getK8sStore(t *testing.T) (string, *K8sStore) {
 	tempDir, err := ioutil.TempDir("/tmp/", "cacheTest")
 	assert.Nil(t, err)
-	defer os.RemoveAll(tempDir)
 
-	cfg := WatchConfig{
-		k8sresources.NewPodFromRuntime, k8sresources.PodHeader, string(corev1.ResourcePods), nil, &corev1.Pod{}, true, true, 0,
+	watchConfig := WatchConfig{
+		k8sresources.NewPodFromRuntime, k8sresources.ResourceTypePod, nil, &corev1.Pod{}, true, true, 0,
 	}
-	storeConfig := StoreConfig{
-		CacheDir: tempDir,
-	}
+	clusterCliConf := util.ClusterCliConf{"test", false, tempDir, ""}
+	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, 5*time.Minute)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ctorConfig := k8sresources.CtorConfig{}
-	k, err := NewK8sStore(ctx, cfg, storeConfig, ctorConfig)
+	k8sStore := NewK8sStore(ctx, watchConfig, storeConfig, ctorConfig)
 	assert.Nil(t, err)
 
 	pods := []corev1.Pod{
@@ -57,32 +55,35 @@ func getK8sStore(t *testing.T) (string, *K8sStore) {
 	}
 
 	for _, pod := range pods {
-		k.AddResource(&pod)
+		k8sStore.AddResource(&pod)
 	}
-	return tempDir, &k
+	return tempDir, k8sStore
 }
 
 func TestDumpFullState(t *testing.T) {
 	tempDir, k := getK8sStore(t)
+	defer os.RemoveAll(tempDir)
+
 	err := k.DumpFullState()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
+	podFilePath := path.Join(tempDir, "test", "pods")
+	assert.FileExists(t, podFilePath)
 
-	f, err := os.OpenFile(path.Join(tempDir, "pods_resource"), os.O_RDONLY, 0644)
-	assert.Nil(t, err)
+	pods := map[string]k8sresources.K8sResource{}
+	err = util.LoadFromFile(&pods, podFilePath)
+	assert.NoError(t, err)
 
-	scanner := bufio.NewScanner(f)
-	lines := make([]string, 0)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	assert.Equal(t, len(lines), 4)
-	assert.Contains(t, strings.Split(lines[0], " "), "Test4")
-	assert.Contains(t, strings.Split(lines[1], " "), "Test1")
-	assert.NoError(t, scanner.Err(), "Scanner")
+	assert.Equal(t, 4, len(pods))
+	assert.Contains(t, pods, "ns1_Test1")
+	assert.Contains(t, pods, "ns2_Test2")
+	assert.Contains(t, pods, "ns2_Test3")
+	assert.Contains(t, pods, "aaa_Test4")
 }
 
 func TestSortedPairList(t *testing.T) {
-	_, k := getK8sStore(t)
+	tempDir, k := getK8sStore(t)
+	defer os.RemoveAll(tempDir)
+
 	labelStr, err := k.generateLabel()
 	assert.NoError(t, err, "Generate label")
 	split := strings.Split(labelStr, "\n")

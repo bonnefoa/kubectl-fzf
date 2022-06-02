@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"kubectlfzf/pkg/util"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 )
 
@@ -28,7 +28,7 @@ func NewJobFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (j *Job) FromRuntime(obj interface{}, config CtorConfig) {
 	job := obj.(*batchv1.Job)
-	glog.V(19).Infof("Reading meta %#v", job)
+	logrus.Debugf("Reading meta %#v", job)
 	j.FromObjectMeta(job.ObjectMeta, config)
 
 	j.Completions = "-"

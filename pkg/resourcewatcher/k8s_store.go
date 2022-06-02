@@ -12,8 +12,8 @@ import (
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/util"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -97,7 +97,7 @@ func resourceKey(obj interface{}) (string, string, map[string]string) {
 		namespace = metadata["namespace"].(string)
 		labels = metadata["labels"].(map[string]string)
 	default:
-		glog.Warningf("Unknown type %v", obj)
+		logrus.Warningf("Unknown type %v", obj)
 	}
 	return fmt.Sprintf("%s_%s", namespace, name), namespace, labels
 }
@@ -146,7 +146,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 	}
 	err := k.DumpFullState()
 	if err != nil {
-		glog.Warningf("Error when dumping state: %v", err)
+		logrus.Warningf("Error when dumping state: %v", err)
 	}
 }
 
@@ -154,7 +154,7 @@ func (k *K8sStore) AddResourceList(lstRuntime []runtime.Object) {
 func (k *K8sStore) AddResource(obj interface{}) {
 	key, ns, labels := resourceKey(obj)
 	newObj := k.resourceCtor(obj, k.ctorConfig)
-	glog.V(11).Infof("%s added: %s", k.resourceType, key)
+	logrus.Debugf("%s added: %s", k.resourceType, key)
 	k.dataMutex.Lock()
 	k.data[key] = newObj
 	k.dataMutex.Unlock()
@@ -162,7 +162,7 @@ func (k *K8sStore) AddResource(obj interface{}) {
 
 	err := k.AppendNewObject(newObj)
 	if err != nil {
-		glog.Warningf("Error when appending new object to current state: %v", err)
+		logrus.Warningf("Error when appending new object to current state: %v", err)
 	}
 }
 
@@ -178,10 +178,10 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 	case metav1.ObjectMetaAccessor:
 		key, ns, labels = resourceKey(obj)
 	default:
-		glog.V(6).Infof("Unknown object type %v", obj)
+		logrus.Debugf("Unknown object type %v", obj)
 		return
 	}
-	glog.V(11).Infof("%s deleted: %s", k.resourceType, key)
+	logrus.Debugf("%s deleted: %s", k.resourceType, key)
 	k.dataMutex.Lock()
 	delete(k.data, key)
 	k.dataMutex.Unlock()
@@ -189,7 +189,7 @@ func (k *K8sStore) DeleteResource(obj interface{}) {
 
 	err := k.DumpFullState()
 	if err != nil {
-		glog.Warningf("Error when dumping state: %v", err)
+		logrus.Warningf("Error when dumping state: %v", err)
 	}
 }
 
@@ -199,14 +199,14 @@ func (k *K8sStore) UpdateResource(oldObj, newObj interface{}) {
 	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
 	k.dataMutex.Lock()
 	if k8sObj.HasChanged(k.data[key]) {
-		glog.V(11).Infof("%s changed: %s", k.resourceType, key)
+		logrus.Debugf("%s changed: %s", k.resourceType, key)
 		k.data[key] = k8sObj
 		k.dataMutex.Unlock()
 		// TODO Handle label diff
 		// k.updateLabelMap(ns, labels, 1)
 		err := k.DumpFullState()
 		if err != nil {
-			glog.Warningf("Error when dumping state: %v", err)
+			logrus.Warningf("Error when dumping state: %v", err)
 		}
 	} else {
 		k.dataMutex.Unlock()
@@ -228,7 +228,7 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 	//			k.fileMutex.Unlock()
 	//			return err
 	//		}
-	//		glog.Infof("Initial write of %s", k.currentFile.Name())
+	//		logrus.Infof("Initial write of %s", k.currentFile.Name())
 	//	}
 	//	_, err := k.currentFile.WriteString(resource.ToString())
 	//	k.fileMutex.Unlock()
@@ -248,7 +248,7 @@ func (k *K8sStore) AppendNewObject(resource k8sresources.K8sResource) error {
 }
 
 func (k *K8sStore) dumpLabel() error {
-	glog.V(8).Infof("Dump of label file %s", k.resourceType)
+	logrus.Debugf("Dump of label file %s", k.resourceType)
 	//k.lastLabelDump = time.Now()
 	//labelOutput, err := k.generateLabel()
 	//if err != nil {
@@ -293,15 +293,15 @@ func (k *K8sStore) generateLabel() (string, error) {
 
 // DumpFullState writes the full state to the cache file
 func (k *K8sStore) DumpFullState() error {
-	glog.V(8).Infof("Dump full state of %s", k.resourceType)
+	logrus.Debugf("Dump full state of %s", k.resourceType)
 	now := time.Now()
 	delta := now.Sub(k.lastFullDump)
 	if delta < k.storeConfig.TimeBetweenFullDump {
-		glog.V(10).Infof("Last full dump for %s happened %s ago, ignoring it", k.resourceType, delta)
+		logrus.Debugf("Last full dump for %s happened %s ago, ignoring it", k.resourceType, delta)
 		return nil
 	}
 	k.lastFullDump = now
-	glog.V(8).Infof("Doing full dump %d %s", len(k.data), k.resourceType)
+	logrus.Debugf("Doing full dump %d %s", len(k.data), k.resourceType)
 
 	destFile := k.storeConfig.GetFilePath(k.resourceType)
 	err := util.EncodeToFile(k.data, destFile)

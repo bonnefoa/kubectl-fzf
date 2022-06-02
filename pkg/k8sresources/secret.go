@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -28,7 +28,7 @@ func NewSecretFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (s *Secret) FromRuntime(obj interface{}, config CtorConfig) {
 	secret := obj.(*corev1.Secret)
-	glog.V(19).Infof("Reading meta %#v", secret)
+	logrus.Debugf("Reading meta %#v", secret)
 	s.FromObjectMeta(secret.ObjectMeta, config)
 	s.SecretType = string(secret.Type)
 	s.Data = strconv.Itoa(len(secret.Data))

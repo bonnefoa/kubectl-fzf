@@ -12,15 +12,14 @@ import (
 	"time"
 
 	"github.com/sevlyar/go-daemon"
+	"github.com/sirupsen/logrus"
 
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/resourcewatcher"
 	"kubectlfzf/pkg/util"
 
-	"github.com/golang/glog"
 	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	restclient "k8s.io/client-go/rest"
 )
 
 var (
@@ -40,8 +39,6 @@ var (
 	namespacePollingPeriod time.Duration
 	timeBetweenFullDump    time.Duration
 
-	clusterCliConf util.ClusterCliConf
-
 	daemonCmd         string
 	daemonName        string
 	daemonPidFilePath string
@@ -50,6 +47,8 @@ var (
 
 func init() {
 	util.SetClusterConfFlags()
+	util.SetLogConfFlags()
+
 	flag.Bool("version", false, "Display version and exit")
 	flag.Bool("cpu-profile", false, "Start with cpu profiling")
 	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by space")
@@ -85,7 +84,6 @@ func init() {
 	daemonPidFilePath = viper.GetString("daemon-pid-file")
 	daemonLogFilePath = viper.GetString("daemon-log-file")
 
-	clusterCliConf = util.GetClusterCliConf()
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -94,19 +92,20 @@ func handleSignals(cancel context.CancelFunc) {
 	for sig := range sigIn {
 		switch sig {
 		case syscall.SIGINT, syscall.SIGTERM:
-			glog.Errorf("Caught signal '%s' (%d); terminating.", sig, sig)
+			logrus.Errorf("Caught signal '%s' (%d); terminating.", sig, sig)
 			cancel()
 		}
 	}
 }
 
 func termHandler(sig os.Signal) error {
-	glog.Infoln("Terminating daemon...")
+	logrus.Infoln("Terminating daemon...")
 	return daemon.ErrStop
 }
 
-func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster string) resourcewatcher.ResourceWatcher {
-	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, timeBetweenFullDump)
+func startWatchOnCluster(ctx context.Context, clusterCliConf *util.ClusterCliConf) resourcewatcher.ResourceWatcher {
+	config, cluster := clusterCliConf.GetClientConfigAndCluster()
+	storeConfig := k8sresources.NewStoreConfig(clusterCliConf, timeBetweenFullDump)
 	watcher := resourcewatcher.NewResourceWatcher(config, storeConfig, excludedNamespaces)
 	watcher.FetchNamespaces(ctx)
 	watchConfigs := watcher.GetWatchConfigs(nodePollingPeriod, namespacePollingPeriod, excludedResources)
@@ -115,7 +114,7 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 		Cluster:       cluster,
 	}
 
-	glog.Infof("Start cache build on cluster %s", cluster)
+	logrus.Infof("Start cache build on cluster %s", cluster)
 	for _, watchConfig := range watchConfigs {
 		err := watcher.Start(ctx, watchConfig, ctorConfig)
 		util.FatalIf(err)
@@ -126,11 +125,11 @@ func startWatchOnCluster(ctx context.Context, config *restclient.Config, cluster
 }
 
 func processArgs() {
-	glog.Infof("Building role blacklist from \"%s\"", roleBlacklist)
+	logrus.Infof("Building role blacklist from \"%s\"", roleBlacklist)
 	roleBlacklistSet = util.StringSliceToSet(roleBlacklist)
 }
 
-func start() {
+func handleDisplayVersion() {
 	if displayVersion {
 		fmt.Printf("Version: %s\n", Version)
 		if GitCommit != "" {
@@ -147,49 +146,47 @@ func start() {
 		}
 		os.Exit(0)
 	}
+}
 
+func handleCpuProfile() {
 	if cpuProfile {
 		f, err := os.Create("cpu.pprof")
 		util.FatalIf(err)
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
+}
+
+func start() {
+	util.ConfigureLog()
+	handleDisplayVersion()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	currentRestConfig, currentCluster := clusterCliConf.GetClientConfigAndCluster()
-	watcher := startWatchOnCluster(ctx, currentRestConfig, currentCluster)
+	clusterCliConf := util.GetClusterCliConf()
+	watcher := startWatchOnCluster(ctx, &clusterCliConf)
 	ticker := time.NewTicker(time.Second * 5)
 
+	currentRestConfig, _ := clusterCliConf.GetClientConfigAndCluster()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			restConfig, cluster := clusterCliConf.GetClientConfigAndCluster()
-			glog.V(7).Infof("Checking config %s %s ", restConfig.Host, currentRestConfig.Host)
+			restConfig, _ := clusterCliConf.GetClientConfigAndCluster()
+			logrus.Debugf("Checking config %s %s ", restConfig.Host, currentRestConfig.Host)
 			if restConfig.Host != currentRestConfig.Host {
-				glog.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
+				logrus.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
-				watcher = startWatchOnCluster(ctx, restConfig, cluster)
+				watcher = startWatchOnCluster(ctx, &clusterCliConf)
 				currentRestConfig = restConfig
-				currentCluster = cluster
 			}
 		}
 	}
 }
 
-func main() {
-	flag.Set("logtostderr", "true")
-	flag.Parse()
-	processArgs()
-
-	if daemonCmd == "" && !daemon.WasReborn() {
-		start()
-		return
-	}
-
+func startDaemon() {
 	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "stop"), syscall.SIGTERM, termHandler)
 
 	cntxt := &daemon.Context{
@@ -203,35 +200,45 @@ func main() {
 	}
 
 	if len(daemon.ActiveFlags()) > 0 {
-		glog.Infof("Stopping daemon...")
+		logrus.Infof("Stopping daemon...")
 		d, err := cntxt.Search()
 		if err != nil {
-			glog.Fatalf("Unable send signal to the daemon: %s", err.Error())
+			logrus.Fatalf("Unable send signal to the daemon: %s", err.Error())
 		}
 		daemon.SendCommands(d)
 		return
 	}
-	glog.Infof("Starting daemon...")
+	logrus.Infof("Starting daemon...")
 
 	d, err := cntxt.Reborn()
 	if err != nil {
-		glog.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 	if d != nil {
 		return
 	}
 	defer cntxt.Release()
 
-	glog.Infoln("- - - - - - - - - - - - - - -")
-	glog.Infoln("daemon started")
+	logrus.Infoln("- - - - - - - - - - - - - - -")
+	logrus.Infoln("daemon started")
 
 	go start()
 
 	err = daemon.ServeSignals()
 	if err != nil {
-		glog.Infof("Error: %s", err.Error())
+		logrus.Infof("Error: %s", err.Error())
 	}
+	logrus.Infoln("daemon terminated")
+}
 
-	glog.Infoln("daemon terminated")
+func main() {
+	flag.Set("logtostderr", "true")
+	flag.Parse()
+	processArgs()
 
+	if daemonCmd == "" && !daemon.WasReborn() {
+		start()
+		return
+	}
+	startDaemon()
 }

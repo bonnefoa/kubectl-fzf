@@ -28,3 +28,13 @@ func TestGetPods(t *testing.T) {
 	assert := assert.New(t)
 	assert.Contains(res[0], "Cluster")
 }
+
+func TestApiResources(t *testing.T) {
+	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
+		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
+	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
+	res := CompGetResource(k8sresources.ResourceTypeApiResource, storeConfig)
+	t.Log(res)
+	assert := assert.New(t)
+	assert.Contains(res[0], "Cluster")
+}

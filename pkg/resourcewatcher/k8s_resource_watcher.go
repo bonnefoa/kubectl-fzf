@@ -8,7 +8,7 @@ import (
 	"kubectlfzf/pkg/util"
 	"regexp"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -61,7 +61,7 @@ func NewResourceWatcher(config *restclient.Config,
 		util.FatalIf(err)
 		resourceWatcher.excludedNamespaces[i] = rg
 	}
-	glog.Infof("%d Namespaces will be excluded: %s", len(excludedNamespaces), excludedNamespaces)
+	logrus.Infof("%d Namespaces will be excluded: %s", len(excludedNamespaces), excludedNamespaces)
 	return resourceWatcher
 }
 
@@ -77,7 +77,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 	}
 
 	if cfg.splitByNamespaces {
-		glog.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceType)
+		logrus.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceType)
 		store := NewK8sStore(ctx, cfg, r.storeConfig, ctorConfig)
 		go r.watchResource(ctx, cfg, store, r.namespaces)
 		return nil
@@ -90,7 +90,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig, ctor
 
 // Stop closes the watch/poll process of a k8s resource
 func (r *ResourceWatcher) Stop() {
-	glog.Infof("Stopping %d resource watcher", len(r.cancelFuncs))
+	logrus.Infof("Stopping %d resource watcher", len(r.cancelFuncs))
 	for _, cancel := range r.cancelFuncs {
 		cancel()
 	}
@@ -126,7 +126,7 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 	}
 	watchConfigs := []WatchConfig{}
 	excludedResourcesSet := util.StringSliceToSet(excludedResources)
-	glog.Infof("%d Resources will be excluded: %s", len(excludedResources), excludedResources)
+	logrus.Infof("%d Resources will be excluded: %s", len(excludedResources), excludedResources)
 	for _, w := range allWatchConfigs {
 		if _, ok := excludedResourcesSet[w.resourceType.String()]; ok {
 			continue
@@ -140,11 +140,11 @@ func (r *ResourceWatcher) GetWatchConfigs(nodePollingPeriod time.Duration, names
 func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore *K8sStore) {
 	obj, err := watchlist.List(metav1.ListOptions{})
 	if err != nil {
-		glog.Warningf("Error on listing %s: %v", k8sStore.resourceType, err)
+		logrus.Warningf("Error on listing %s: %v", k8sStore.resourceType, err)
 	}
 	lst, err := apimeta.ExtractList(obj)
 	if err != nil {
-		glog.Warningf("Error extracting list %s: %v", k8sStore.resourceType, err)
+		logrus.Warningf("Error extracting list %s: %v", k8sStore.resourceType, err)
 	}
 	k8sStore.AddResourceList(lst)
 }
@@ -162,7 +162,7 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 		}
 		r.namespaces = append(r.namespaces, namespaceName)
 	}
-	glog.Infof("Fetched %d namespaces", len(r.namespaces))
+	logrus.Infof("Fetched %d namespaces", len(r.namespaces))
 	return nil
 }
 
@@ -199,7 +199,7 @@ func (r *ResourceWatcher) getWatchList(cfg WatchConfig, k8sStore *K8sStore, name
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,
 	cfg WatchConfig, k8sStore *K8sStore) {
-	glog.V(4).Infof("Start poller for %s", k8sStore.resourceType)
+	logrus.Infof("Start poller for %s", k8sStore.resourceType)
 	watchlist := r.getWatchList(cfg, k8sStore, "")
 
 	r.doPoll(watchlist, k8sStore)
@@ -207,7 +207,7 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 	for {
 		select {
 		case <-ctx.Done():
-			glog.Infof("Exiting poll of %s", k8sStore.resourceType)
+			logrus.Infof("Exiting poll of %s", k8sStore.resourceType)
 			return
 		case <-ticker.C:
 			r.doPoll(watchlist, k8sStore)
@@ -232,7 +232,7 @@ func (r *ResourceWatcher) startWatch(cfg WatchConfig,
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
 	cfg WatchConfig, k8sStore *K8sStore, namespaces []string) {
-	glog.V(4).Infof("Start watch for %s on namespace %s", k8sStore.resourceType, namespaces)
+	logrus.Infof("Start watch for %s on namespace %s", k8sStore.resourceType, namespaces)
 
 	stop := make(chan struct{})
 	for _, ns := range namespaces {
@@ -240,6 +240,6 @@ func (r *ResourceWatcher) watchResource(ctx context.Context,
 	}
 
 	<-ctx.Done()
-	glog.Infof("Exiting watch of %s namespace %s", k8sStore.resourceType, namespaces)
+	logrus.Infof("Exiting watch of %s namespace %s", k8sStore.resourceType, namespaces)
 	close(stop)
 }

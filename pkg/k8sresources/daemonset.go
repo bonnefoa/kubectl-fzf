@@ -5,7 +5,7 @@ import (
 	"kubectlfzf/pkg/util"
 	"strconv"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -32,7 +32,7 @@ func NewDaemonSetFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (d *DaemonSet) FromRuntime(obj interface{}, config CtorConfig) {
 	daemonset := obj.(*appsv1.DaemonSet)
-	glog.V(19).Infof("Reading meta %#v", daemonset)
+	logrus.Debugf("Reading meta %#v", daemonset)
 	d.FromObjectMeta(daemonset.ObjectMeta, config)
 
 	status := daemonset.Status

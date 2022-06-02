@@ -12,9 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
+
+type stackTracer interface {
+	StackTrace() errors.StackTrace
+}
 
 // JoinStringMap generates a list of map element separated by string excluding keys in excluded maps
 func JoinStringMap(m map[string]string, exclude map[string]string, sep string) []string {
@@ -49,7 +53,7 @@ func GetDestFileName(cacheDir string, cluster string, resourceName string) strin
 func WriteStringToFile(str string, destDir string, resourceName string, suffix string) error {
 	name := fmt.Sprintf("%s_%s", resourceName, suffix)
 	tempPattern := fmt.Sprintf("_%s_%s", resourceName, suffix)
-	glog.V(6).Infof("Writing file %s", name)
+	logrus.Infof("Writing file %s", name)
 	tempFile, err := ioutil.TempFile(destDir, tempPattern)
 	if err != nil {
 		return errors.Wrapf(err, "Error creating temp file in %s for resource %s",
@@ -192,9 +196,12 @@ func FilterSliceWithRegexps(sl []string, excludeRegexps []*regexp.Regexp) []stri
 // FatalIf exits if the error is not nil
 func FatalIf(err error) {
 	if err != nil {
-		debug.PrintStack()
-		fmt.Printf("Fatal error: %s\n", err)
-		os.Exit(-1)
+		if stackErr, ok := err.(stackTracer); ok {
+			logrus.WithField("stacktrace", fmt.Sprintf("%+v", stackErr.StackTrace()))
+		} else {
+			debug.PrintStack()
+		}
+		logrus.Fatalf("Fatal error: %s\n", err)
 	}
 }
 

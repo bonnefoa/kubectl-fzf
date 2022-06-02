@@ -4,7 +4,7 @@ import (
 	"kubectlfzf/pkg/util"
 	"strings"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/batch/v1"
 )
 
@@ -29,7 +29,7 @@ func NewCronJobFromRuntime(obj interface{}, config CtorConfig) K8sResource {
 // FromRuntime builds object from the informer's result
 func (c *CronJob) FromRuntime(obj interface{}, config CtorConfig) {
 	cronJob := obj.(*v1.CronJob)
-	glog.V(19).Infof("Reading meta %#v", cronJob)
+	logrus.Debugf("Reading meta %#v", cronJob)
 	c.FromObjectMeta(cronJob.ObjectMeta, config)
 	c.Schedule = strings.ReplaceAll(cronJob.Spec.Schedule, " ", "_")
 	c.LastSchedule = ""
