@@ -3,8 +3,7 @@ module kubectlfzf
 go 1.17
 
 replace cmd/cache_builder => ./cache_builder
-
-replace cmd/completion => ./kubectl_completion
+replace cmd/kubectl_completion => ./kubectl_completion
 
 require (
 	github.com/pkg/errors v0.9.1
