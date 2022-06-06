@@ -13,12 +13,12 @@ import (
 
 	"github.com/sevlyar/go-daemon"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"kubectlfzf/pkg/k8sresources"
 	"kubectlfzf/pkg/resourcewatcher"
 	"kubectlfzf/pkg/util"
 
-	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -49,41 +49,30 @@ func init() {
 	util.SetClusterConfFlags()
 	util.SetLogConfFlags()
 
-	flag.Bool("version", false, "Display version and exit")
-	flag.Bool("cpu-profile", false, "Start with cpu profiling")
+	flag.BoolVar(&displayVersion, "version", false, "Display version and exit")
+	flag.BoolVar(&cpuProfile, "cpu-profile", false, "Start with cpu profiling")
 	flag.String("excluded-namespaces", "", "Namespaces to exclude, separated by space")
 	flag.String("excluded-resources", "", "Resources to exclude, separated by space. To exclude everything: pods configmaps services serviceaccounts replicasets daemonsets secrets statefulsets deployments endpoints ingresses cronjobs jobs horizontalpodautoscalers persistentvolumes persistentvolumeclaims nodes namespaces")
 	flag.String("role-blacklist", "", "List of roles to hide from node list, separated by commas")
-	flag.Duration("node-polling-period", 300*time.Second, "Polling period for nodes")
-	flag.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces")
+	flag.DurationVar(&nodePollingPeriod, "node-polling-period", 300*time.Second, "Polling period for nodes")
+	flag.DurationVar(&namespacePollingPeriod, "namespace-polling-period", 600*time.Second, "Polling period for namespaces")
 
-	flag.String("daemon", "", `Send signal to the daemon:
+	flag.StringVar(&daemonCmd, "daemon", "", `Send signal to the daemon:
   start - run as a daemon
   stop — fast shutdown`)
 	defaultName := path.Base(os.Args[0])
-	flag.String("daemon-name", defaultName, "Daemon name")
+	flag.StringVar(&daemonName, "daemon-name", defaultName, "Daemon name")
 	defaultPidPath := path.Join("/tmp/", defaultName+".pid")
 	defaultLogPath := path.Join("/tmp/", defaultName+".log")
-	flag.String("daemon-pid-file", defaultPidPath, "Daemon's PID file path")
-	flag.String("daemon-log-file", defaultLogPath, "Daemon's log file path")
-	flag.Duration("time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
+	flag.StringVar(&daemonPidFilePath, "daemon-pid-file", defaultPidPath, "Daemon's PID file path")
+	flag.StringVar(&daemonLogFilePath, "daemon-log-file", defaultLogPath, "Daemon's log file path")
+	flag.DurationVar(&timeBetweenFullDump, "time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
 
 	util.ParseFlags()
 
-	displayVersion = viper.GetBool("version")
-	cpuProfile = viper.GetBool("cpu-profile")
 	roleBlacklist = viper.GetStringSlice("role-blacklist")
 	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
 	excludedResources = viper.GetStringSlice("excluded-resources")
-	nodePollingPeriod = viper.GetDuration("node-polling-period")
-	namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
-	timeBetweenFullDump = viper.GetDuration("time-between-fulldump")
-
-	daemonCmd = viper.GetString("daemon")
-	daemonName = viper.GetString("daemon-name")
-	daemonPidFilePath = viper.GetString("daemon-pid-file")
-	daemonLogFilePath = viper.GetString("daemon-log-file")
-
 }
 
 func handleSignals(cancel context.CancelFunc) {
