@@ -5,7 +5,7 @@ import (
 	"kubectlfzf/pkg/util"
 )
 
-func CompGetApiResources(storeConfig *k8sresources.StoreConfig) []string {
+func getApiCompletion(storeConfig *k8sresources.StoreConfig) []string {
 	apiResources := []k8sresources.APIResource{}
 	err := util.LoadFromFile(&apiResources, storeConfig.GetFilePath(k8sresources.ResourceTypeApiResource))
 	util.FatalIf(err)
@@ -17,8 +17,11 @@ func CompGetApiResources(storeConfig *k8sresources.StoreConfig) []string {
 	return res
 }
 
-// CompGetResource gets the list of the resource specified which begin with `toComplete`.
-func CompGetResource(r k8sresources.ResourceType, storeConfig *k8sresources.StoreConfig) []string {
+// GetResourceCompletion gets the list of the resource specified which begin with `toComplete`.
+func GetResourceCompletion(r k8sresources.ResourceType, storeConfig *k8sresources.StoreConfig) []string {
+	if r == k8sresources.ResourceTypeApiResource {
+		return getApiCompletion(storeConfig)
+	}
 	resources := map[string]k8sresources.K8sResource{}
 	err := util.LoadFromFile(&resources, storeConfig.GetFilePath(r))
 	util.FatalIf(err)

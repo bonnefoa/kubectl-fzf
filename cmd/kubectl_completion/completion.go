@@ -37,14 +37,14 @@ func completeGetFun(cmd *cobra.Command, args []string) {
 	// k get #
 	// k get pod#
 	if len(args) < 2 {
-		comps = completion.CompGetApiResources(storeConfig)
+		comps = completion.GetResourceCompletion(k8sresources.ResourceTypeApiResource, storeConfig)
 	} else {
 		resourceType = k8sresources.ParseResourceType(args[0])
 		if resourceType == k8sresources.ResourceTypeUnknown {
-			logrus.Debugf("Resource Type '%v' unknown", resourceType, args[0])
+			logrus.Debugf("Resource Type '%v' unknown", args[0])
 			os.Exit(1)
 		}
-		comps = completion.CompGetResource(resourceType, storeConfig)
+		comps = completion.GetResourceCompletion(resourceType, storeConfig)
 	}
 	fmt.Print(strings.Join(comps, ""))
 }
@@ -64,6 +64,6 @@ func main() {
 		rootCmd.AddCommand(cmd)
 	}
 	if err := rootCmd.Execute(); err != nil {
-		logrus.Fatalf("Root command failed", err)
+		logrus.Fatalf("Root command failed: %v", err)
 	}
 }

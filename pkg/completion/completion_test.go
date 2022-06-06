@@ -9,32 +9,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHeaderPresent(t *testing.T) {
+func getStoreConfig() *k8sresources.StoreConfig {
 	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
 		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
 	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
-	res := CompGetApiResources(storeConfig)
-	t.Log(res)
-	assert := assert.New(t)
-	assert.Contains(res[0], "Fullname")
+	return storeConfig
 }
 
 func TestGetPods(t *testing.T) {
-	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
-		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
-	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
-	res := CompGetResource(k8sresources.ResourceTypePod, storeConfig)
+	storeConfig := getStoreConfig()
+	res := GetResourceCompletion(k8sresources.ResourceTypePod, storeConfig)
 	t.Log(res)
 	assert := assert.New(t)
 	assert.Contains(res[0], "Cluster")
 }
 
 func TestApiResources(t *testing.T) {
-	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
-		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
-	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
-	res := CompGetResource(k8sresources.ResourceTypeApiResource, storeConfig)
+	storeConfig := getStoreConfig()
+	res := GetResourceCompletion(k8sresources.ResourceTypeApiResource, storeConfig)
 	t.Log(res)
 	assert := assert.New(t)
-	assert.Contains(res[0], "Cluster")
+	assert.Contains(res[0], "Fullname")
 }
