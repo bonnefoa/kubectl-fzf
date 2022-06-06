@@ -1,6 +1,6 @@
 module kubectlfzf
 
-go 1.17
+go 1.18
 
 replace cmd/cache_builder => ./cache_builder
 replace cmd/kubectl_completion => ./kubectl_completion
