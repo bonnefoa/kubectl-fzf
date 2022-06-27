@@ -15,6 +15,7 @@ import (
 type K8sResource interface {
 	HasChanged(k K8sResource) bool
 	ToString() string
+	GetNamespace() string
 	FromRuntime(obj interface{}, config CtorConfig)
 }
 
@@ -25,6 +26,10 @@ type ResourceMeta struct {
 	Namespace    string // Namespace can be None
 	Labels       map[string]string
 	CreationTime time.Time
+}
+
+func (r *ResourceMeta) GetNamespace() string {
+	return r.Namespace
 }
 
 // FromObjectMeta copies meta information to the object
