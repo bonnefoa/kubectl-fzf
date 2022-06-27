@@ -27,6 +27,6 @@ func GetLogConf() LogConf {
 
 func ConfigureLog() {
 	logConf := GetLogConf()
-	logrus.Infof("Setting log level %v", logConf.LogLevel)
+	logrus.Debugf("Setting log level %v", logConf.LogLevel)
 	logrus.SetLevel(logConf.LogLevel)
 }
