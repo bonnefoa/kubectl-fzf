@@ -25,7 +25,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 	fmt.Print(strings.Join(comps, ""))
 }
 
-func resultFun(cmd *cobra.Command, args []string) {
+func processResultFun(cmd *cobra.Command, args []string) {
 	fzfResult := viper.GetString("fzf-result")
 	sourceCmd := viper.GetString("initial-cmd")
 	logrus.Debugf("Processing fzf result %s", fzfResult)
@@ -55,8 +55,8 @@ func main() {
 	}
 
 	resultCmd := &cobra.Command{
-		Use: "result",
-		Run: resultFun,
+		Use: "process_result",
+		Run: processResultFun,
 	}
 	resultCmd.Flags().String("fzf-result", "", "Fzf output to process")
 	resultCmd.Flags().String("initial-cmd", "", "Initial completion command")
