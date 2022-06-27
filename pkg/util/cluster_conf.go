@@ -25,14 +25,9 @@ func SetClusterConfFlags() {
 		flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
-	defaultCacheDirEnv, assigned := os.LookupEnv("KUBECTL_FZF_CACHE")
-	if assigned == false {
-		defaultCacheDirEnv = "/tmp/kubectl_fzf_cache/"
-	}
-	flag.String("cache-dir", defaultCacheDirEnv, "Cache dir location. Default to KUBECTL_FZF_CACHE env var")
+	flag.String("cache-dir", "/tmp/kubectl_fzf_cache/", "Cache dir location.")
 	flag.String("cluster-name", "incluster", "The cluster name. Needed for cross-cluster completion.")
 	flag.Bool("in-cluster", false, "Use in-cluster configuration")
-
 }
 
 func GetClusterCliConf() ClusterCliConf {
