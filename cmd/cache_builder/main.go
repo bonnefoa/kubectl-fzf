@@ -48,6 +48,7 @@ var (
 func init() {
 	util.SetClusterConfFlags()
 	util.SetLogConfFlags()
+	util.ConfigureViper()
 
 	flag.BoolVar(&displayVersion, "version", false, "Display version and exit")
 	flag.BoolVar(&cpuProfile, "cpu-profile", false, "Start with cpu profiling")
@@ -67,12 +68,6 @@ func init() {
 	flag.StringVar(&daemonPidFilePath, "daemon-pid-file", defaultPidPath, "Daemon's PID file path")
 	flag.StringVar(&daemonLogFilePath, "daemon-log-file", defaultLogPath, "Daemon's log file path")
 	flag.DurationVar(&timeBetweenFullDump, "time-between-fulldump", 60*time.Second, "Buffer changes and only do full dump every x secondes")
-
-	util.ParseFlags()
-
-	roleBlacklist = viper.GetStringSlice("role-blacklist")
-	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
-	excludedResources = viper.GetStringSlice("excluded-resources")
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -114,6 +109,11 @@ func startWatchOnCluster(ctx context.Context, clusterCliConf *util.ClusterCliCon
 }
 
 func processArgs() {
+	roleBlacklist = viper.GetStringSlice("role-blacklist")
+	excludedNamespaces = viper.GetStringSlice("excluded-namespaces")
+	excludedResources = viper.GetStringSlice("excluded-resources")
+
+	util.ConfigureLog()
 	logrus.Infof("Building role blacklist from \"%s\"", roleBlacklist)
 	roleBlacklistSet = util.StringSliceToSet(roleBlacklist)
 }
@@ -221,7 +221,6 @@ func startDaemon() {
 }
 
 func main() {
-	flag.Set("logtostderr", "true")
 	flag.Parse()
 	processArgs()
 
