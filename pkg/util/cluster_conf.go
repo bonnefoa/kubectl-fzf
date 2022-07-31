@@ -66,8 +66,5 @@ func (c *ClusterCliConf) GetClientConfigAndCluster() (*rest.Config, string) {
 	cfg, err := clientcmd.BuildConfigFromKubeconfigGetter("", configPath.GetStartingConfig)
 	FatalIf(err)
 
-	//fmt.Printf("%+v\n", cfg)
-	//os.Exit(1)
-
 	return cfg, c.ClusterName
 }
