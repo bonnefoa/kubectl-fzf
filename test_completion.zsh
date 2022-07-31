@@ -1,4 +1,4 @@
-#!/usr/bin/zsh
+#!/usr/bin/env zsh
 
 . kubectl_completion.zsh
 BASH_COMP_DEBUG_FILE="/tmp/log"
