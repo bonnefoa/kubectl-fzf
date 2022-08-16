@@ -9,7 +9,7 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - name: rsync
+  - name: http
     port: {{ $.Values.port }}
     protocol: TCP
     targetPort: {{ $.Values.port }}

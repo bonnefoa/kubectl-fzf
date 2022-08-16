@@ -1,30 +1,161 @@
 package completion
 
 import (
-	"kubectlfzf/pkg/k8sresources"
-	"kubectlfzf/pkg/util"
+	"context"
+	"fmt"
+	"kubectlfzf/pkg/httpserver"
+	"kubectlfzf/pkg/k8s/clusterconfig"
+	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/k8s/store"
+	"sort"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestHeaderPresent(t *testing.T) {
-	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
-		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
-	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
-	res := CompGetApiResources(storeConfig)
-	t.Log(res)
-	assert := assert.New(t)
-	assert.Contains(res[0], "Fullname")
+func getTestClusterConfigCli() clusterconfig.ClusterConfigCli {
+	return clusterconfig.ClusterConfigCli{ClusterName: "minikube", CacheDir: "./testdata", Kubeconfig: ""}
 }
 
-func TestGetPods(t *testing.T) {
-	clusterCliConf := util.ClusterCliConf{ClusterName: "minikube",
-		InCluster: false, CacheDir: "./testdata", Kubeconfig: ""}
-	storeConfig := k8sresources.NewStoreConfig(&clusterCliConf, time.Second)
-	res := CompGetResource(k8sresources.ResourceTypePod, storeConfig)
+func getTestStoreConfigCli() *store.StoreConfigCli {
+	return &store.StoreConfigCli{ClusterConfigCli: getTestClusterConfigCli()}
+}
+
+func getTestFetchConfig(t *testing.T) *fetcher.Fetcher {
+	f := fetcher.FetcherCli{ClusterConfigCli: getTestClusterConfigCli(), HttpEndpoint: "localhost:0"}
+	fetchConfig := fetcher.NewFetcher(&f)
+	return fetchConfig
+}
+
+type cmdArg struct {
+	verb string
+	args []string
+}
+
+func TestProcessResourceName(t *testing.T) {
+	fetchConfig := getTestFetchConfig(t)
+	cmdArgs := []cmdArg{
+		{"get", []string{"get", "pods", ""}},
+		{"get", []string{"po", ""}},
+		{"logs", []string{""}},
+		{"exec", []string{"-ti", ""}},
+	}
+	for _, cmdArg := range cmdArgs {
+		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.NoError(t, err)
+		assert.Contains(t, comps[0], "minikube kube-system coredns-6d4b75cb6d-m6m4q 172.17.0.3 192.168.49.2 minikube Running Burstable coredns CriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule None ")
+	}
+}
+
+func TestProcessLabelCompletion(t *testing.T) {
+	fetchConfig := getTestFetchConfig(t)
+	cmdArgs := []cmdArg{
+		{"get", []string{"pods", "-l="}},
+		{"get", []string{"pods", "-l"}},
+		{"get", []string{"pods", "-l", ""}},
+		{"get", []string{"pods", "--selector", ""}},
+		{"get", []string{"pods", "--selector"}},
+		{"get", []string{"pods", "--selector="}},
+	}
+	for _, cmdArg := range cmdArgs {
+		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.NoError(t, err)
+		assert.Equal(t, "minikube kube-system tier=control-plane 4", comps[0])
+		assert.Len(t, comps, 12)
+	}
+}
+
+func TestProcessFieldSelectorCompletion(t *testing.T) {
+	fetchConfig := getTestFetchConfig(t)
+	cmdArgs := []cmdArg{
+		{"get", []string{"pods", "--field-selector", ""}},
+		{"get", []string{"pods", "--field-selector"}},
+		{"get", []string{"pods", "--field-selector="}},
+	}
+	for _, cmdArg := range cmdArgs {
+		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.NoError(t, err)
+		assert.Equal(t, "minikube kube-system spec.nodeName=minikube 7", comps[0])
+	}
+}
+
+func TestPodCompletionFile(t *testing.T) {
+	fetchConfig := getTestFetchConfig(t)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, fetchConfig)
+	require.NoError(t, err)
 	t.Log(res)
 	assert := assert.New(t)
-	assert.Contains(res[0], "Cluster")
+	assert.Contains(res[0], "minikube kube-system ")
+	assert.Len(res, 7)
+}
+
+func TestNamespaceFilterFile(t *testing.T) {
+	fetchConfig := getTestFetchConfig(t)
+
+	// everything is filtered
+	namespace := "test"
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, &namespace, fetchConfig)
+	require.NoError(t, err)
+	t.Log(res)
+	assert := assert.New(t)
+	assert.Len(res, 0)
+
+	// all results match
+	namespace = "kube-system"
+	res, err = getResourceCompletion(context.Background(), resources.ResourceTypePod, &namespace, fetchConfig)
+	assert.Len(res, 7)
+	require.NoError(t, err)
+}
+
+func TestApiResourcesFile(t *testing.T) {
+	fetchConfig := getTestFetchConfig(t)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, fetchConfig)
+	require.NoError(t, err)
+	assert := assert.New(t)
+	sort.Strings(res)
+	assert.Contains(res[0], "apiservices None apiregistration.k8s.io/v1 false APIService")
+}
+
+func startTestHttpServer(t *testing.T) *fetcher.Fetcher {
+	ctx := context.Background()
+	storeConfigCli := getTestStoreConfigCli()
+	storeConfig := store.NewStoreConfig(storeConfigCli)
+	h := &httpserver.HttpServerConfigCli{ListenAddress: "localhost:0", Debug: false}
+	port, err := httpserver.StartHttpServer(ctx, h, storeConfig)
+
+	require.NoError(t, err)
+	fetchConfigCli := &fetcher.FetcherCli{
+		ClusterConfigCli: clusterconfig.ClusterConfigCli{
+			CacheDir: "doenstexist",
+		},
+		HttpEndpoint: fmt.Sprintf("localhost:%d", port),
+	}
+	f := fetcher.NewFetcher(fetchConfigCli)
+	require.NoError(t, err)
+	return f
+}
+
+func TestHttpServerApiCompletion(t *testing.T) {
+	s := startTestHttpServer(t)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, s)
+	require.NoError(t, err)
+	sort.Strings(res)
+	assert.Contains(t, res[0], "apiservices None apiregistration.k8s.io/v1 false APIService")
+	assert.Len(t, res, 56)
+}
+
+func TestHttpServerPodCompletion(t *testing.T) {
+	s := startTestHttpServer(t)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, s)
+	require.NoError(t, err)
+	assert.Contains(t, res[0], "minikube kube-system ")
+	assert.Len(t, res, 7)
+}
+
+func TestHttpUnknownResourceCompletion(t *testing.T) {
+	s := startTestHttpServer(t)
+	_, err := getResourceCompletion(context.Background(), resources.ResourceTypePersistentVolume, nil, s)
+	require.Error(t, err)
 }

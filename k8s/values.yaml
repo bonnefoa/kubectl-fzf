@@ -1,21 +1,14 @@
-port: 80
+port: 8080
 
 docker:
   pullPolicy: IfNotPresent
 
 image:
-  cache_builder:
+  kubectl_fzf_server:
     name: bonnefoa/kubectl-fzf
-    tag: v1.0.11
-  rsyncd:
-    name: eeacms/rsync
-    tag: 2.1
+    tag: v2.0.0
 
 resources:
-  rsyncd:
-    memory: 128M
-    cpu: 0.2
-
-  cache_builder:
+  kubectl_fzf_server:
     memory: 4G
     cpu: 1

@@ -1,10 +1,11 @@
-# Build the cache_builder binary
+# Build the kubectl_fzf_server binary
 FROM golang:latest as builder
 
 WORKDIR /workspace
 COPY .git .
 # Copy the Go Modules manifests
 COPY go.mod go.mod
+COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
@@ -23,13 +24,11 @@ RUN CGO_ENABLED=0 \
     VERSION=$(git describe --tags) \
     GO_VERSION=$(go version) \
     BUILD_DATE=$(date) \
-    go build -a -o cache_builder -ldflags "-X main.GitCommit=$GIT_COMMIT -X main.GitBranch=$GitBranch -X main.GoVersion=$GoVersion -X main.BuildDate=$BUILD_DATE -X main.Version=$VERSION" cmd/cache_builder/main.go 
+    go build -a -o kubectl-fzf-server -ldflags "-X main.GitCommit=$GIT_COMMIT -X main.GitBranch=$GitBranch -X main.GoVersion=$GoVersion -X main.BuildDate=$BUILD_DATE -X main.Version=$VERSION" cmd/kubectl-fzf-server/main.go
 
-# Copy the cache_builder into a thin image
+# Copy the kubectl_fzf_server into a thin image
 FROM alpine:latest
 WORKDIR /
-COPY --from=builder /workspace/cache_builder .
+COPY --from=builder /workspace/kubectl-fzf-server .
 
-RUN apk add --no-cache rsync
-
-ENTRYPOINT ["/cache_builder"]
+ENTRYPOINT ["/kubectl-fzf-server"]

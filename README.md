@@ -118,7 +118,7 @@ You can configure `cache_builder` with the configuration file `$HOME/.kubectl_fz
 
 ```yaml
 # Role to hide from the role list in node completion
-role-blacklist:
+ignored-node-role:
   - common-node
 # Namespaces to exclude for configmap and pod listing
 # Regexps are accepted

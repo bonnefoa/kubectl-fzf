@@ -1,1 +1,0 @@
-kubectl_fzf.sh

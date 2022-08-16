@@ -8,22 +8,8 @@ metadata:
     chart: {{ $.Chart.Name }}
     chart_version: {{ $.Chart.Version }}
 data:
-  rsyncd.conf: |
-    lock file = /var/run/rsync.lock
-    log file = /var/log/rsyncd.log
-    pid file = /var/run/rsyncd.pid
-    port = 80
-    use chroot = no
-
-    [fzf_cache]
-        path = /tmp/kubectl_fzf_cache/incluster
-        uid = root
-        gid = root
-        read only = yes
-        list = yes
-
   .kubectl_fzf.yaml: |
-    role-blacklist:
+    ignored-node-role:
       - compute
     excluded-namespaces:
       - consul-agent

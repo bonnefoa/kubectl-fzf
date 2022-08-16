@@ -32,7 +32,7 @@ spec:
       {{- end }}
       containers:
       - name: cache-builder
-        image: {{ $.Values.image.cache_builder.name }}:{{ $.Values.image.cache_builder.tag }}
+        image: {{ $.Values.image.kubectl_fzf_server.name }}:{{ $.Values.image.kubectl_fzf_server.tag }}
         imagePullPolicy: {{ $.Values.docker.pullPolicy }}
         volumeMounts:
         - name: config
@@ -41,42 +41,19 @@ spec:
           mountPath: /tmp/kubectl_fzf_cache
         resources:
           requests:
-            memory: {{ $.Values.resources.cache_builder.memory }}
-            cpu: {{ $.Values.resources.cache_builder.cpu }}
+            memory: {{ $.Values.resources.kubectl_fzf_server.memory }}
+            cpu: {{ $.Values.resources.kubectl_fzf_server.cpu }}
           limits:
-            memory: {{ $.Values.resources.cache_builder.memory }}
-            cpu: {{ $.Values.resources.cache_builder.cpu }}
-        args:
-          - --in-cluster
-          - --cluster-name=$(K8S_CLUSTER_INFRA_DOMAIN)
-
-      - name: rsyncd
-        image: {{ $.Values.image.rsyncd.name }}:{{ $.Values.image.rsyncd.tag }}
-        imagePullPolicy: {{ $.Values.docker.pullPolicy }}
-        volumeMounts:
-        - name: config
-          mountPath: /etc/kubectl_fzf
-        - name: cache
-          mountPath: /tmp/kubectl_fzf_cache
+            memory: {{ $.Values.resources.kubectl_fzf_server.memory }}
+            cpu: {{ $.Values.resources.kubectl_fzf_server.cpu }}
         ports:
-        - containerPort: {{ $.Values.port }}
-          name: rsync
-        resources:
-          requests:
-            memory: {{ $.Values.resources.rsyncd.memory }}
-            cpu: {{ $.Values.resources.rsyncd.cpu }}
-          limits:
-            memory: {{ $.Values.resources.rsyncd.memory }}
-            cpu: {{ $.Values.resources.rsyncd.cpu }}
-        command: ["rsync"]
+          - containerPort: {{ $.Values.port }}
         args:
-          - --daemon
-          - --no-detach
-          - --config
-          - /etc/kubectl_fzf/rsyncd.conf
-        livenessProbe:
-          tcpSocket:
-            port: {{ $.Values.port }}
+          - --cluster-name=$(K8S_CLUSTER_INFRA_DOMAIN)
+          - --log-level=info
+          - --listen-address=localhost:{{ $.Values.port }}
+          - --http-debug
+
       volumes:
       - name: config
         configMap:

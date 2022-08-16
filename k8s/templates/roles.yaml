@@ -12,7 +12,6 @@ rules:
   - ""
   resources:
   - endpoints
-  - ingresses
   - nodes
   - persistentvolumeclaims
   - persistentvolumes
@@ -25,6 +24,7 @@ rules:
   verbs:
   - list
   - watch
+
 - apiGroups:
   - extensions
   - apps
@@ -36,6 +36,7 @@ rules:
   verbs:
   - list
   - watch
+
 - apiGroups:
   - extensions
   - autoscaling
@@ -44,6 +45,7 @@ rules:
   verbs:
   - list
   - watch
+
 - apiGroups:
   - extensions
   - batch
@@ -53,9 +55,9 @@ rules:
   verbs:
   - list
   - watch
+
 - apiGroups:
-  - extensions
-  - beta1
+  - networking.k8s.io
   resources:
   - ingresses
   verbs:

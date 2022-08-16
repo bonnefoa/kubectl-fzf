@@ -129,7 +129,7 @@ dist/
 kubeconfig
 TEMP.md
 tags
-cmd/cache_builder/cache_builder
 TODO
-/cache_builder
-/kubectl_completion
+/kubectl-fzf-server
+/kubectl-fzf-completion
+dist/

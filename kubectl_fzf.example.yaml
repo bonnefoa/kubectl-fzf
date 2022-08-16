@@ -1,5 +1,5 @@
 # Role to hide from the role list in node completion
-role-blacklist:
+ignored-node-role:
   - compute
 # Namespaces to exclude for configmap and pod
 # Regexps are accepted
