@@ -35,8 +35,8 @@ func TestLabelCompletion(t *testing.T) {
 	assert.Len(t, labelComps, 12)
 
 	t.Log(labelComps)
-	assert.Equal(t, "minikube kube-system tier=control-plane 4", labelComps[0])
-	assert.Equal(t, "minikube kube-system addonmanager.kubernetes.io/mode=Reconcile 1", labelComps[1])
+	assert.Equal(t, "minikube\tkube-system\ttier=control-plane\t4", labelComps[0])
+	assert.Equal(t, "minikube\tkube-system\taddonmanager.kubernetes.io/mode=Reconcile\t1", labelComps[1])
 }
 
 func TestGetFieldSelector(t *testing.T) {

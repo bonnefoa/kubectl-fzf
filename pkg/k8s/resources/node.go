@@ -10,9 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// NodeHeader is the header line of csv result
-const NodeHeader = "Cluster Name Roles Status InstanceType Zone InternalIp Taints InstanceID Age Labels\n"
-
 // Node is the summary of a kubernetes node
 type Node struct {
 	ResourceMeta
@@ -105,5 +102,5 @@ func (n *Node) ToStrings() []string {
 		n.resourceAge(),
 		n.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

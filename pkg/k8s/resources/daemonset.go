@@ -9,9 +9,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-// DaemonSetHeader is the header file for daemonset
-const DaemonSetHeader = "Cluster Namespace Name Desired Current Ready LabelSelector Containers Age Labels\n"
-
 // DaemonSet is the summary of a kubernetes daemonset
 type DaemonSet struct {
 	ResourceMeta
@@ -73,5 +70,5 @@ func (d *DaemonSet) ToStrings() []string {
 		d.resourceAge(),
 		d.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

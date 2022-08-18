@@ -6,8 +6,6 @@ import (
 	v1 "k8s.io/api/networking/v1"
 )
 
-const IngressHeader = "Cluster Namespace Name Address Age Labels\n"
-
 // Ingress is the summary of a kubernetes ingress
 type Ingress struct {
 	ResourceMeta
@@ -46,5 +44,5 @@ func (ingress *Ingress) ToStrings() []string {
 		ingress.resourceAge(),
 		ingress.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

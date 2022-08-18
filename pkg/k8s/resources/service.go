@@ -8,8 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const ServiceHeader = "Cluster Namespace Name Type ClusterIp Ports Selector Age Labels\n"
-
 // Service is the summary of a kubernetes service
 type Service struct {
 	ResourceMeta
@@ -66,5 +64,5 @@ func (s *Service) ToStrings() []string {
 		s.resourceAge(),
 		s.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

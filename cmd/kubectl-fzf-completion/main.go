@@ -6,7 +6,6 @@ import (
 	"kubectlfzf/pkg/k8s/fetcher"
 	"kubectlfzf/pkg/util"
 	"os"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,7 +25,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 		logrus.Warn("No completion found")
 		os.Exit(5)
 	}
-	fmt.Print(header, strings.Join(comps, "\n"))
+	fmt.Print(completion.FormatCompletion(header, comps))
 }
 
 func processResultFun(cmd *cobra.Command, args []string) {

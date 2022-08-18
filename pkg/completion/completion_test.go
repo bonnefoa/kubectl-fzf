@@ -45,7 +45,7 @@ func TestProcessResourceName(t *testing.T) {
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		assert.Contains(t, comps[0], "minikube kube-system coredns-6d4b75cb6d-m6m4q 172.17.0.3 192.168.49.2 minikube Running Burstable coredns CriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule None ")
+		assert.Contains(t, comps[0], "minikube\tkube-system\tcoredns-6d4b75cb6d-m6m4q\t172.17.0.3\t192.168.49.2\tminikube\tRunning\tBurstable\tcoredns\tCriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule\tNone")
 	}
 }
 
@@ -62,7 +62,7 @@ func TestProcessLabelCompletion(t *testing.T) {
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		assert.Equal(t, "minikube kube-system tier=control-plane 4", comps[0])
+		assert.Equal(t, "minikube\tkube-system\ttier=control-plane\t4", comps[0])
 		assert.Len(t, comps, 12)
 	}
 }
@@ -77,7 +77,7 @@ func TestProcessFieldSelectorCompletion(t *testing.T) {
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		assert.Equal(t, "minikube kube-system spec.nodeName=minikube 7", comps[0])
+		assert.Equal(t, "minikube\tkube-system\tspec.nodeName=minikube\t7", comps[0])
 	}
 }
 
@@ -87,7 +87,7 @@ func TestPodCompletionFile(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(res)
 	assert := assert.New(t)
-	assert.Contains(res[0], "minikube kube-system ")
+	assert.Contains(res[0], "minikube\tkube-system\t")
 	assert.Len(res, 7)
 }
 
@@ -115,7 +115,7 @@ func TestApiResourcesFile(t *testing.T) {
 	require.NoError(t, err)
 	assert := assert.New(t)
 	sort.Strings(res)
-	assert.Contains(res[0], "apiservices None apiregistration.k8s.io/v1 false APIService")
+	assert.Contains(res[0], "apiservices\tNone\tapiregistration.k8s.io/v1\tfalse\tAPIService")
 }
 
 func startTestHttpServer(t *testing.T) *fetcher.Fetcher {
@@ -142,7 +142,7 @@ func TestHttpServerApiCompletion(t *testing.T) {
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, s)
 	require.NoError(t, err)
 	sort.Strings(res)
-	assert.Contains(t, res[0], "apiservices None apiregistration.k8s.io/v1 false APIService")
+	assert.Contains(t, res[0], "apiservices\tNone\tapiregistration.k8s.io/v1\tfalse\tAPIService")
 	assert.Len(t, res, 56)
 }
 
@@ -150,7 +150,7 @@ func TestHttpServerPodCompletion(t *testing.T) {
 	s := startTestHttpServer(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, s)
 	require.NoError(t, err)
-	assert.Contains(t, res[0], "minikube kube-system ")
+	assert.Contains(t, res[0], "minikube\tkube-system\t")
 	assert.Len(t, res, 7)
 }
 

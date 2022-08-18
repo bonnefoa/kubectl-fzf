@@ -30,14 +30,18 @@ func IsStringIncluded(s string, regexps []*regexp.Regexp) bool {
 }
 
 // DumpLine replaces empty string by None, join the slice and append newline
-func DumpLine(lst []string) []string {
+func DumpLine(lst []string) string {
 	for k, v := range lst {
 		if v == "" {
 			lst[k] = "None"
 		}
 	}
-	line := strings.Join(lst, " ")
-	return []string{line}
+	line := strings.Join(lst, "\t")
+	return line
+}
+
+func DumpLines(lst []string) []string {
+	return []string{DumpLine(lst)}
 }
 
 // StringSlicesEqual returns true if slices are equals

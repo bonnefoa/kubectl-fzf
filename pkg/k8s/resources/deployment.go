@@ -7,9 +7,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-// DeploymentHeader is the header file for deployment
-const DeploymentHeader = "Cluster Namespace Name Desired Current Up-to-date Available Age Labels\n"
-
 // Deployment is the summary of a kubernetes deployment
 type Deployment struct {
 	ResourceMeta
@@ -59,5 +56,5 @@ func (d *Deployment) ToStrings() []string {
 		d.resourceAge(),
 		d.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

@@ -8,9 +8,6 @@ import (
 	v1 "k8s.io/api/batch/v1"
 )
 
-// CronJobHeader is the headers for cronjob files
-const CronJobHeader = "Cluster Namespace Name Schedule LastSchedule Containers Age Labels\n"
-
 // CronJob is the summary of a kubernetes cronJob
 type CronJob struct {
 	ResourceMeta
@@ -63,5 +60,5 @@ func (c *CronJob) ToStrings() []string {
 		c.resourceAge(),
 		c.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

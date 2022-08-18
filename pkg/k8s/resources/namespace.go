@@ -6,8 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const NamespaceHeader = "Cluster Name Age Labels\n"
-
 // Namespace is the summary of a kubernetes configMap
 type Namespace struct {
 	ResourceMeta
@@ -39,5 +37,5 @@ func (c *Namespace) ToStrings() []string {
 		c.resourceAge(),
 		c.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

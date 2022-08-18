@@ -94,47 +94,66 @@ func (r *ResourceMeta) labelsString() string {
 	return util.JoinSlicesOrNone(els, ",")
 }
 
-func ResourceToHeader(r ResourceType) string {
+func ResourceToHeader(r ResourceType) []string {
+	replicaSetHeader := []string{"Cluster", "Namespace", "Name", "Replicas", "AvailableReplicas", "ReadyReplicas", "Selector", "Age", "Labels"}
+	apiResourceHeader := []string{"Name", "Shortnames", "ApiVersion", "Namespaced", "Kind"}
+	configMapHeader := []string{"Cluster", "Namespace", "Name", "Age", "Labels"}
+	cronJobHeader := []string{"Cluster", "Namespace", "Name", "Schedule", "LastSchedule", "Containers", "Age", "Labels"}
+	daemonSetHeader := []string{"Cluster", "Namespace", "Name", "Desired", "Current", "Ready", "LabelSelector", "Containers", "Age", "Labels"}
+	deploymentHeader := []string{"Cluster", "Namespace", "Name", "Desired", "Current", "Up-to-date", "Available", "Age", "Labels"}
+	endpointsHeader := []string{"Cluster", "Namespace", "Name", "Age", "ReadyIps", "ReadyPods", "NotReadyIps", "NotReadyPods", "Labels"}
+	horizontalPodAutoscalerHeader := []string{"Cluster", "Namespace", "Name", "Reference", "Targets", "MinPods", "MaxPods", "Replicas", "Age", "Labels"}
+	ingressHeader := []string{"Cluster", "Namespace", "Name", "Address", "Age", "Labels"}
+	jobHeader := []string{"Cluster", "Namespace", "Name", "Completions", "Containers", "Age", "Labels"}
+	namespaceHeader := []string{"Cluster", "Name", "Age", "Labels"}
+	nodeHeader := []string{"Cluster", "Name", "Roles", "Status", "InstanceType", "Zone", "InternalIp", "Taints", "InstanceID", "Age", "Labels"}
+	podHeader := []string{"Cluster", "Namespace", "Name", "PodIp", "HostIp", "NodeName", "Phase", "QOSClass", "Containers", "Tolerations", "Claims", "Age", "Labels"}
+	persistentVolumeHeader := []string{"Cluster", "Name", "Status", "StorageClass", "Zone", "Claim", "Volume", "Affinities", "Age", "Labels"}
+	persistentVolumeClaimHeader := []string{"Cluster", "Namespace", "Name", "Status", "Capacity", "VolumeName", "StorageClass", "Age", "Labels"}
+	secretHeader := []string{"Cluster", "Namespace", "Name", "Type", "Data", "Age", "Labels"}
+	serviceHeader := []string{"Cluster", "Namespace", "Name", "Type", "ClusterIp", "Ports", "Selector", "Age", "Labels"}
+	serviceAccountHeader := []string{"Cluster", "Namespace", "Name", "Secrets", "Age", "Labels"}
+	statefulSetHeader := []string{"Cluster", "Namespace", "Name", "Replicas", "Selector", "Age", "Labels"}
 	switch r {
 	case ResourceTypeApiResource:
-		return APIResourceHeader
+		return apiResourceHeader
 	case ResourceTypeConfigMap:
-		return ConfigMapHeader
+		return configMapHeader
 	case ResourceTypeCronJob:
-		return CronJobHeader
+		return cronJobHeader
 	case ResourceTypeDaemonSet:
-		return DaemonSetHeader
+		return daemonSetHeader
 	case ResourceTypeDeployment:
-		return DeploymentHeader
+		return deploymentHeader
 	case ResourceTypeEndpoints:
-		return EndpointsHeader
+		return endpointsHeader
 	case ResourceTypeHorizontalPodAutoscaler:
-		return HorizontalPodAutoscalerHeader
+		return horizontalPodAutoscalerHeader
 	case ResourceTypeIngress:
-		return IngressHeader
+		return ingressHeader
 	case ResourceTypeJob:
-		return JobHeader
+		return jobHeader
 	case ResourceTypeNamespace:
-		return NamespaceHeader
+		return namespaceHeader
 	case ResourceTypeNode:
-		return NodeHeader
+		return nodeHeader
 	case ResourceTypePod:
-		return PodHeader
+		return podHeader
 	case ResourceTypePersistentVolume:
-		return PersistentVolumeHeader
+		return persistentVolumeHeader
 	case ResourceTypePersistentVolumeClaim:
-		return PersistentVolumeClaimHeader
+		return persistentVolumeClaimHeader
 	case ResourceTypeReplicaSet:
-		return ReplicaSetHeader
+		return replicaSetHeader
 	case ResourceTypeSecret:
-		return SecretHeader
+		return secretHeader
 	case ResourceTypeService:
-		return ServiceHeader
+		return serviceHeader
 	case ResourceTypeServiceAccount:
-		return ServiceAccountHeader
+		return serviceAccountHeader
 	case ResourceTypeStatefulSet:
-		return StatefulSetHeader
+		return statefulSetHeader
 	default:
-		return "Unknown"
+		return []string{"Unknown"}
 	}
 }

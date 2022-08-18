@@ -8,8 +8,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-const ReplicaSetHeader = "Cluster Namespace Name Replicas AvailableReplicas ReadyReplicas Selector Age Labels\n"
-
 // ReplicaSet is the summary of a kubernetes replicaSet
 type ReplicaSet struct {
 	ResourceMeta
@@ -61,5 +59,5 @@ func (r *ReplicaSet) ToStrings() []string {
 		r.resourceAge(),
 		r.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

@@ -19,7 +19,7 @@ _kubectl_fzf_call_fzf()
 
     fzfPreviewOptions=(--preview-window=down:"$numFields" --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
 
-    (printf "%s" "$completionOutput" | column -t) \
+    (printf "%s" "$completionOutput") \
         | fzf "${fzfPreviewOptions[@]}" "${KUBECTL_FZF_OPTIONS[@]}" -q "$query" \
         | awk '{print $1,$2,$3}'
 }

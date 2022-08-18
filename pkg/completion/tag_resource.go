@@ -17,14 +17,6 @@ const (
 	TagTypeFieldSelector
 )
 
-func GetLabelHeader() string {
-	return "Cluster Namespace Label Occurrences\n"
-}
-
-func GetFieldSelectorHeader() string {
-	return "Cluster Namespace FieldSelector Occurrences\n"
-}
-
 type TagResourceKey struct {
 	Cluster   string
 	Namespace string
@@ -54,7 +46,7 @@ func (p TagResourcePairList) Less(i, j int) bool {
 func (p TagResourcePairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 func (l *TagResourcePair) ToString() string {
-	return fmt.Sprintf("%s %s %s %d", l.Key.Cluster, l.Key.Namespace,
+	return fmt.Sprintf("%s\t%s\t%s\t%d", l.Key.Cluster, l.Key.Namespace,
 		l.Key.Value, l.Occurrences)
 }
 

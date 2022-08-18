@@ -6,8 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const PersistentVolumeClaimHeader = "Cluster Namespace Name Status Capacity VolumeName StorageClass Age Labels\n"
-
 // PersistentVolumeClaim is the summary of a kubernetes physical volume claim
 type PersistentVolumeClaim struct {
 	ResourceMeta
@@ -55,5 +53,5 @@ func (pvc *PersistentVolumeClaim) ToStrings() []string {
 		pvc.resourceAge(),
 		pvc.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

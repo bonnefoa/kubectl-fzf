@@ -7,8 +7,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-const StatefulSetHeader = "Cluster Namespace Name Replicas Selector Age Labels\n"
-
 // StatefulSet is the summary of a kubernetes statefulset
 type StatefulSet struct {
 	ResourceMeta
@@ -54,5 +52,5 @@ func (s *StatefulSet) ToStrings() []string {
 		s.resourceAge(),
 		s.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

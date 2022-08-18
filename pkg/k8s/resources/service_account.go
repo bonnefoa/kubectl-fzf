@@ -7,8 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const ServiceAccountHeader = "Cluster Namespace Name Secrets Age Labels\n"
-
 // ServiceAccount is the summary of a kubernetes service account
 type ServiceAccount struct {
 	ResourceMeta
@@ -44,5 +42,5 @@ func (s *ServiceAccount) ToStrings() []string {
 		s.resourceAge(),
 		s.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

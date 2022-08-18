@@ -8,9 +8,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 )
 
-// JobHeader is the headers for job files
-const JobHeader = "Cluster Namespace Name Completions Containers Age Labels\n"
-
 // Job is the summary of a kubernetes Job
 type Job struct {
 	ResourceMeta
@@ -63,5 +60,5 @@ func (j *Job) ToStrings() []string {
 		j.resourceAge(),
 		j.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

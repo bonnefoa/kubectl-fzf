@@ -7,8 +7,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 )
 
-const HorizontalPodAutoscalerHeader = "Cluster Namespace Name Reference Targets MinPods MaxPods Replicas Age Labels\n"
-
 // HorizontalPodAutoscaler is the summary of a kubernetes horizontal pod autoscaler
 type HorizontalPodAutoscaler struct {
 	ResourceMeta
@@ -60,5 +58,5 @@ func (h *HorizontalPodAutoscaler) ToStrings() []string {
 		h.resourceAge(),
 		h.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

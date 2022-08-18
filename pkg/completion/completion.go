@@ -4,6 +4,7 @@ import (
 	"context"
 	"kubectlfzf/pkg/k8s/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/util"
 	"sort"
 	"strings"
 	"time"
@@ -47,15 +48,18 @@ func getResourceCompletion(ctx context.Context, r resources.ResourceType, namesp
 }
 
 func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher.Fetcher,
-	cmdUse string, args []string) (string, []string, error) {
+	cmdUse string, args []string) ([]string, []string, error) {
 	var comps []string
 	var err error
 	resourceType := getResourceType(cmdUse, args)
 	logrus.Debugf("Call Get Fun with %+v, resource type detected %s", args, resourceType)
 
 	if resourceType == resources.ResourceTypeUnknown {
-		return "", comps, UnknownResourceError(strings.Join(args, " "))
+		return nil, comps, UnknownResourceError(strings.Join(args, " "))
 	}
+
+	labelHeader := []string{"Cluster", "Namespace", "Label", "Occurrences"}
+	fieldSelectorHeader := []string{"Cluster", "Namespace", "FieldSelector", "Occurrences"}
 
 	namespace := getNamespace(args)
 	if len(args) >= 2 {
@@ -63,14 +67,12 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 		penultimateWord := args[len(args)-2]
 		logrus.Debugf("Checking lastWord '%s' and penultimateWord '%s'", lastWord, penultimateWord)
 		if penultimateWord == "-l" || penultimateWord == "--selector" || lastWord == "-l" || lastWord == "-l=" || lastWord == "--selector=" || lastWord == "--selector" {
-			header := GetLabelHeader()
 			comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
-			return header, comps, err
+			return labelHeader, comps, err
 		}
 		if penultimateWord == "--field-selector" || lastWord == "--field-selector" || lastWord == "--field-selector=" {
-			header := GetFieldSelectorHeader()
 			comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
-			return header, comps, err
+			return fieldSelectorHeader, comps, err
 		}
 	}
 
@@ -93,5 +95,5 @@ func ProcessCommandArgs(cmdUse string, args []string) (string, []string, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	header, comps, err := processCommandArgsWithFetchConfig(ctx, f, cmdUse, args)
 	cancel()
-	return header, comps, err
+	return util.DumpLine(header), comps, err
 }

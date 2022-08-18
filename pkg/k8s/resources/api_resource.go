@@ -7,9 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// APIResourceHeader is the header for pod files
-const APIResourceHeader = "Name Shortnames ApiVersion Namespaced Kind\n"
-
 // APIResource is the summary of a kubernetes pod
 type APIResourceList struct {
 	ApiResources []APIResource
@@ -77,5 +74,5 @@ func (a *APIResource) ToStrings() []string {
 		strconv.FormatBool(a.Namespaced),
 		a.Kind,
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

@@ -10,9 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// PodHeader is the header for pod files
-const PodHeader = "Cluster Namespace Name PodIp HostIp NodeName Phase QOSClass Containers Tolerations Claims Age Labels\n"
-
 // Pod is the summary of a kubernetes pod
 type Pod struct {
 	ResourceMeta
@@ -139,5 +136,5 @@ func (p *Pod) ToStrings() []string {
 		p.resourceAge(),
 		p.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

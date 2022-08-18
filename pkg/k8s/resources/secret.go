@@ -8,8 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const SecretHeader = "Cluster Namespace Name Type Data Age Labels\n"
-
 // Secret is the summary of a kubernetes secret
 type Secret struct {
 	ResourceMeta
@@ -49,5 +47,5 @@ func (s *Secret) ToStrings() []string {
 		s.resourceAge(),
 		s.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

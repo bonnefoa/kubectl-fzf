@@ -8,9 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// PersistentVolumeHeader is the header for pvc csv
-const PersistentVolumeHeader = "Cluster Name Status StorageClass Zone Claim Volume Affinities Age Labels\n"
-
 // PersistentVolume is the summary of a kubernetes persistent volume
 type PersistentVolume struct {
 	ResourceMeta
@@ -81,5 +78,5 @@ func (pv *PersistentVolume) ToStrings() []string {
 		pv.resourceAge(),
 		pv.labelsString(),
 	}
-	return util.DumpLine(lst)
+	return util.DumpLines(lst)
 }

@@ -6,8 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const EndpointsHeader = "Cluster Namespace Name Age ReadyIps ReadyPods NotReadyIps NotReadyPods Labels\n"
-
 // Endpoint is the summary of a kubernetes endpoints
 type Endpoints struct {
 	ResourceMeta
@@ -66,5 +64,5 @@ func (e *Endpoints) ToStrings() []string {
 		util.JoinSlicesWithMaxOrNone(e.NotReadyPods, 20, ","),
 		e.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }

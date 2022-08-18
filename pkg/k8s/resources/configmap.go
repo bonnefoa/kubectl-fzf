@@ -6,8 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const ConfigMapHeader = "Cluster Namespace Name Age Labels\n"
-
 // ConfigMap is the summary of a kubernetes configMap
 type ConfigMap struct {
 	ResourceMeta
@@ -40,5 +38,5 @@ func (c *ConfigMap) ToStrings() []string {
 		c.resourceAge(),
 		c.labelsString(),
 	}
-	return util.DumpLine(line)
+	return util.DumpLines(line)
 }
