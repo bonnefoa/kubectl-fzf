@@ -136,10 +136,13 @@ func (f *Fetcher) GetStatsFromHttpServer(ctx context.Context) ([]*store.Stats, e
 }
 
 func (f *Fetcher) GetStats(ctx context.Context) ([]*store.Stats, error) {
+	logrus.Debugf("GetStats httpendpoint: %s", f.httpEndpoint)
 	// TODO Handle local file
 	if f.httpEndpoint != "" && f.httpAddressReachable() {
+		logrus.Debugf("Fetching stats from %s", f.httpEndpoint)
 		return f.GetStatsFromHttpServer(ctx)
 	}
+	// TODO Handle port forward
 	return nil, nil
 }
 

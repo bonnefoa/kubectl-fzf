@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"kubectlfzf/pkg/completion"
 	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/k8s/store"
 	"kubectlfzf/pkg/util"
 	"os"
 
@@ -37,9 +39,13 @@ func processResultFun(cmd *cobra.Command, args []string) {
 }
 
 func statsFun(cmd *cobra.Command, args []string) {
-	//res, err := completion.ProcessResult(fzfResult, sourceCmd)
-	//util.FatalIf(err)
-	//fmt.Print(res)
+	fetchConfigCli := fetcher.GetFetchConfigCli()
+	f := fetcher.NewFetcher(&fetchConfigCli)
+	ctx := context.Background()
+	stats, err := f.GetStats(ctx)
+	util.FatalIf(err)
+	statsOutput := store.GetStatsOutput(stats)
+	fmt.Print(statsOutput)
 }
 
 func addK8sCmd(rootCmd *cobra.Command) {

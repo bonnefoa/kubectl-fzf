@@ -138,12 +138,6 @@ func (k *Store) UpdateResource(oldObj, newObj interface{}) {
 	}
 }
 
-type Stats struct {
-	ResourceType     resources.ResourceType
-	ItemPerNamespace map[string]int
-	LastDumped       time.Time
-}
-
 func (k *Store) GetStats() *Stats {
 	itemPerNamespaces := make(map[string]int, 0)
 	for _, r := range k.data {
@@ -182,12 +176,4 @@ func (k *Store) DumpFullState() error {
 	err := util.EncodeToFile(k.data, destFile)
 	k.dataMutex.Unlock()
 	return err
-}
-
-func GetStatsFromStores(stores []*Store) []*Stats {
-	stats := make([]*Stats, 0)
-	for _, stores := range stores {
-		stats = append(stats, stores.GetStats())
-	}
-	return stats
 }
