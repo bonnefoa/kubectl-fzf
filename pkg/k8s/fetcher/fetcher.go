@@ -15,6 +15,7 @@ import (
 // Fetcher defines configuration to fetch completion datas
 type Fetcher struct {
 	clusterconfig.ClusterConfig
+	fetcherCachePath     string
 	httpEndpoint         string
 	portForwardLocalPort int // Local port to use for port-forward
 }
@@ -23,6 +24,7 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 	f := Fetcher{}
 	f.ClusterConfig = clusterconfig.NewClusterConfig(&fetchConfigCli.ClusterConfigCli)
 	f.httpEndpoint = fetchConfigCli.HttpEndpoint
+	f.fetcherCachePath = fetchConfigCli.FetcherCachePath
 	f.portForwardLocalPort = fetchConfigCli.PortForwardLocalPort
 	return &f
 }

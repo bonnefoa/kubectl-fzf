@@ -101,8 +101,8 @@ func TestApiResourcesFile(t *testing.T) {
 }
 
 func TestHttpServerApiCompletion(t *testing.T) {
-	s := httpservertest.StartTestHttpServer(t)
-	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, s)
+	f := httpservertest.StartTestHttpServer(t)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, f)
 	require.NoError(t, err)
 	sort.Strings(res)
 	assert.Contains(t, res[0], "apiservices\tNone\tapiregistration.k8s.io/v1\tfalse\tAPIService")
@@ -110,15 +110,15 @@ func TestHttpServerApiCompletion(t *testing.T) {
 }
 
 func TestHttpServerPodCompletion(t *testing.T) {
-	s := httpservertest.StartTestHttpServer(t)
-	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, s)
+	f := httpservertest.StartTestHttpServer(t)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
 	require.NoError(t, err)
 	assert.Contains(t, res[0], "minikube\tkube-system\t")
 	assert.Len(t, res, 7)
 }
 
 func TestHttpUnknownResourceCompletion(t *testing.T) {
-	s := httpservertest.StartTestHttpServer(t)
-	_, err := getResourceCompletion(context.Background(), resources.ResourceTypePersistentVolume, nil, s)
+	f := httpservertest.StartTestHttpServer(t)
+	_, err := getResourceCompletion(context.Background(), resources.ResourceTypePersistentVolume, nil, f)
 	require.Error(t, err)
 }

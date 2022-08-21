@@ -36,8 +36,10 @@ func StartTestHttpServer(t *testing.T) *fetcher.Fetcher {
 	port, err := httpserver.StartHttpServer(ctx, h, storeConfig, []*store.Store{podStore})
 	require.NoError(t, err)
 	fetchConfigCli := &fetcher.FetcherCli{
+		FetcherCachePath: t.TempDir(),
 		ClusterConfigCli: clusterconfig.ClusterConfigCli{
-			CacheDir: "doenstexist",
+			ClusterName: "testcluster",
+			CacheDir:    "doesntexist",
 		},
 		HttpEndpoint: fmt.Sprintf("localhost:%d", port),
 	}

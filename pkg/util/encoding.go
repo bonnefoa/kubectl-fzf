@@ -38,29 +38,14 @@ func EncodeToFile(data interface{}, filePath string) error {
 
 func LoadGobFromFile(e interface{}, filePath string) error {
 	logrus.Debugf("Loading file %s", filePath)
-	n, err := ioutil.ReadFile(filePath)
+	b, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return errors.Wrap(err, "error reading file")
 	}
-	bbuffer := bytes.NewBuffer(n)
-	zr, err := gzip.NewReader(bbuffer)
-	if err != nil {
-		return errors.Wrap(err, "error creating new gzip reader")
-	}
-	dec := gob.NewDecoder(zr)
-	err = dec.Decode(e)
-	if err := zr.Close(); err != nil {
-		return errors.Wrap(err, "error closing gzip reader")
-	}
-	return err
+	return DecodeGob(e, b)
 }
 
-func LoadGobFromHttpServer(e interface{}, url string) error {
-	logrus.Debugf("Loading from %s", url)
-	b, err := GetBodyFromHttpServer(url)
-	if err != nil {
-		return errors.Wrap(err, "error reading body content")
-	}
+func DecodeGob(e interface{}, b []byte) error {
 	bbuffer := bytes.NewBuffer(b)
 	zr, err := gzip.NewReader(bbuffer)
 	if err != nil {

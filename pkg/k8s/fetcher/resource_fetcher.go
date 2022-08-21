@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"kubectlfzf/pkg/k8s/resources"
 	"kubectlfzf/pkg/util"
+	"os"
 	"path"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,9 +18,34 @@ func loadResourceFromFile(filePath string) (map[string]resources.K8sResource, er
 	return resources, err
 }
 
-func loadResourceFromHttpServer(url string) (map[string]resources.K8sResource, error) {
+func (f *Fetcher) writeResourceToCache(b []byte, r resources.ResourceType) error {
+	destDir := path.Join(f.fetcherCachePath, f.GetContext())
+	err := os.MkdirAll(destDir, 0755)
+	if err != nil {
+		return errors.Wrap(err, "error mkdirall")
+	}
+	cachePath := path.Join(destDir, r.String())
+	logrus.Debugf("Caching resource in %s", cachePath)
+	err = os.WriteFile(cachePath, b, 0644)
+	if err != nil {
+		return errors.Wrap(err, "error writing cache file")
+	}
+	return nil
+}
+
+func (f *Fetcher) loadResourceFromHttpServer(url string, r resources.ResourceType) (map[string]resources.K8sResource, error) {
+	logrus.Debugf("Loading from %s", url)
+	b, err := util.GetBodyFromHttpServer(url)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading body content")
+	}
+	err = f.writeResourceToCache(b, r)
+	if err != nil {
+		return nil, errors.Wrap(err, "error writing fetcher cache")
+	}
+
 	resources := map[string]resources.K8sResource{}
-	err := util.LoadGobFromHttpServer(&resources, url)
+	util.DecodeGob(&resources, b)
 	return resources, err
 }
 
@@ -33,7 +60,7 @@ func (f *Fetcher) getResourcesFromPortForward(ctx context.Context, r resources.R
 		return nil, err
 	}
 	httpPath := f.getResourceHttpPath(fmt.Sprintf("localhost:%d", f.portForwardLocalPort), r)
-	resources, err := loadResourceFromHttpServer(httpPath)
+	resources, err := f.loadResourceFromHttpServer(httpPath, r)
 	stopChan <- struct{}{}
 	return resources, err
 }
@@ -48,7 +75,7 @@ func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (m
 	if f.httpEndpoint != "" && f.httpAddressReachable() {
 		httpPath := f.getResourceHttpPath(f.httpEndpoint, r)
 		logrus.Debugf("Using %s for completion", httpPath)
-		return loadResourceFromHttpServer(httpPath)
+		return f.loadResourceFromHttpServer(httpPath, r)
 	}
 	return f.getResourcesFromPortForward(ctx, r)
 }
