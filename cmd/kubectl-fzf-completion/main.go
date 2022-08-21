@@ -36,15 +36,19 @@ func processResultFun(cmd *cobra.Command, args []string) {
 	fmt.Print(res)
 }
 
-func main() {
-	var rootCmd = &cobra.Command{
-		Use: "kubectl_fzf_completion",
-	}
-	rootFlags := rootCmd.PersistentFlags()
-	util.SetCommonCliFlags(rootFlags)
-	err := viper.BindPFlags(rootFlags)
-	util.FatalIf(err)
+func statsFun(cmd *cobra.Command, args []string) {
+	//res, err := completion.ProcessResult(fzfResult, sourceCmd)
+	//util.FatalIf(err)
+	//fmt.Print(res)
+}
 
+func addK8sCmd(rootCmd *cobra.Command) {
+	var k8sCmd = &cobra.Command{
+		Use:     "k8s_completion",
+		Short:   "Subcommand grouping completion for kubectl cli verbs",
+		Example: "kubectl-fzf-completion k8s_completion get pods \"\"",
+	}
+	rootCmd.AddCommand(k8sCmd)
 	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit"}
 	for _, verb := range verbs {
 		cmd := &cobra.Command{
@@ -55,20 +59,52 @@ func main() {
 				UnknownFlags: true,
 			},
 		}
-		rootCmd.AddCommand(cmd)
+		k8sCmd.AddCommand(cmd)
 	}
+}
 
+func addResultCmd(rootCmd *cobra.Command) {
 	resultCmd := &cobra.Command{
-		Use: "process_result",
-		Run: processResultFun,
+		Use:     "process_result",
+		Short:   "Process the result of the fzf output for the shell autocompletion. It will detect if namespace needs to be added or not and only output necessary fields.",
+		Example: "kubectl-fzf-completion process_result --source-cmd \"get pods -l \" --fzf-result \"minikube kube-system tier=control-plane\"",
+		Run:     processResultFun,
 	}
 	resultFlags := resultCmd.Flags()
 	resultFlags.String("fzf-result", "", "Fzf output to process")
 	resultFlags.String("source-cmd", "", "Initial completion command")
-	fetcher.SetFetchConfigFlags(resultFlags)
-	err = viper.BindPFlags(resultFlags)
+	err := viper.BindPFlags(resultFlags)
 	util.FatalIf(err)
 	rootCmd.AddCommand(resultCmd)
+}
+
+func addStatsCmd(rootCmd *cobra.Command) {
+	statsCmd := &cobra.Command{
+		Use: "stats",
+		Run: statsFun,
+	}
+	statsFlags := statsCmd.Flags()
+	fetcher.SetFetchConfigFlags(statsFlags)
+	err := viper.BindPFlags(statsFlags)
+	util.FatalIf(err)
+	rootCmd.AddCommand(statsCmd)
+}
+
+func main() {
+	var rootCmd = &cobra.Command{
+		Use: "kubectl_fzf_completion",
+		CompletionOptions: cobra.CompletionOptions{
+			DisableDefaultCmd: true,
+		},
+	}
+	rootFlags := rootCmd.PersistentFlags()
+	util.SetCommonCliFlags(rootFlags)
+	err := viper.BindPFlags(rootFlags)
+	util.FatalIf(err)
+
+	addK8sCmd(rootCmd)
+	addResultCmd(rootCmd)
+	addStatsCmd(rootCmd)
 
 	util.ConfigureViper()
 	cobra.OnInitialize(util.ConfigureLog)

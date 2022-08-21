@@ -30,7 +30,7 @@ _kubectl_fzf_get_completions()
     completionArgs="$1"
     lastChar="$2"
     # TODO: Check existence and pull it from $PATH
-    requestComp="./kubectl-fzf-completion $completionArgs"
+    requestComp="./kubectl-fzf-completion k8s_completion $completionArgs"
     if [ "${lastChar}" = "" ]; then
         __kubectl_fzf_debug "Adding extra empty parameter"
         requestComp="${requestComp} \"\""
