@@ -7,6 +7,7 @@ import (
 	"kubectlfzf/pkg/k8s/store"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,17 +42,29 @@ func (f *FzfHttpServer) resourcesRoute(c *gin.Context, resourceType resources.Re
 		c.String(http.StatusBadRequest, "Resource type unknown")
 		return
 	}
-	filePath := f.storeConfig.GetFilePath(resourceType)
 	if !f.storeConfig.FileStoreExists(resourceType) {
-		c.String(http.StatusNotFound, fmt.Sprintf("file %s not found", filePath))
+		c.String(http.StatusNotFound, fmt.Sprintf("resource file for %s not found", resourceType))
 		return
 	}
+	filePath := f.storeConfig.GetFilePath(resourceType)
 	logrus.Debugf("Serving file %s", filePath)
 	c.File(filePath)
 }
 
+func (f *FzfHttpServer) lastModifiedRoute(c *gin.Context, resourceType resources.ResourceType) {
+	filePath := f.storeConfig.GetFilePath(resourceType)
+	logrus.Debugf("Serving file %s", filePath)
+	finfo, err := os.Stat(filePath)
+	if err != nil {
+		c.String(http.StatusNotFound, fmt.Sprintf("resource file %s not found", filePath))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"modification_time": finfo.ModTime()})
+}
+
 func (f *FzfHttpServer) setupRouter() *gin.Engine {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
 	skipLogs := []string{
 		"/health",
 	}
@@ -59,12 +72,14 @@ func (f *FzfHttpServer) setupRouter() *gin.Engine {
 	router.Use(gin.Recovery())
 	router.GET("/readiness", f.readinessRoute)
 	router.GET("/stats", f.statsRoute)
+
 	resourceRoute := router.Group("/k8s/resources")
-	{
-		for r := resources.ResourceTypeApiResource; r < resources.ResourceTypeUnknown; r++ {
-			resourceRoute.GET(r.String(), curryResourceRoute(f.resourcesRoute, r))
-		}
+	lastModifiedRoute := router.Group("/k8s/lastModified")
+	for r := resources.ResourceTypeApiResource; r < resources.ResourceTypeUnknown; r++ {
+		resourceRoute.GET(r.String(), curryResourceRoute(f.resourcesRoute, r))
+		lastModifiedRoute.GET(r.String(), curryResourceRoute(f.lastModifiedRoute, r))
 	}
+
 	return router
 }
 

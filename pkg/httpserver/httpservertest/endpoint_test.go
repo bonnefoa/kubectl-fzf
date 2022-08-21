@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 func TestHttpServerApiCompletion(t *testing.T) {
 	f := StartTestHttpServer(t)
 	ctx := context.Background()
-	s, err := f.GetStatsFromHttpServer(ctx)
+	s, err := f.GetStats(ctx)
 	require.NoError(t, err)
 	assert.Len(t, s, 1)
 }
