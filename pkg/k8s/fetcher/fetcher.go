@@ -2,10 +2,12 @@ package fetcher
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"kubectlfzf/pkg/k8s/clusterconfig"
 	"kubectlfzf/pkg/k8s/portforward"
 	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/k8s/store"
 	"kubectlfzf/pkg/util"
 	"path"
 
@@ -29,7 +31,7 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 	return &f
 }
 
-func (f *Fetcher) getHttpPath(host string, r resources.ResourceType) string {
+func (f *Fetcher) getResourceHttpPath(host string, r resources.ResourceType) string {
 	fullPath := path.Join("k8s", "resources", r.String())
 	return fmt.Sprintf("http://%s/%s", host, fullPath)
 }
@@ -80,13 +82,13 @@ func (f *Fetcher) getPortForwardRequest(ctx context.Context, r resources.Resourc
 
 func loadFromFile(filePath string) (map[string]resources.K8sResource, error) {
 	resources := map[string]resources.K8sResource{}
-	err := util.LoadFromFile(&resources, filePath)
+	err := util.LoadGobFromFile(&resources, filePath)
 	return resources, err
 }
 
-func loadFromHttpServer(url string) (map[string]resources.K8sResource, error) {
+func loadResourceFromHttpServer(url string) (map[string]resources.K8sResource, error) {
 	resources := map[string]resources.K8sResource{}
-	err := util.LoadFromHttpServer(&resources, url)
+	err := util.LoadGobFromHttpServer(&resources, url)
 	return resources, err
 }
 
@@ -115,10 +117,30 @@ func (f *Fetcher) getResourcesFromPortForward(ctx context.Context, r resources.R
 	}
 	close(errChan)
 	logrus.Debug("Port forward ready")
-	httpPath := f.getHttpPath("localhost:8080", r)
-	resources, err := loadFromHttpServer(httpPath)
+	httpPath := f.getResourceHttpPath("localhost:8080", r)
+	resources, err := loadResourceFromHttpServer(httpPath)
 	stopChan <- struct{}{}
 	return resources, err
+}
+
+func (f *Fetcher) GetStatsFromHttpServer(ctx context.Context) ([]*store.Stats, error) {
+	url := fmt.Sprintf("http://%s/%s", f.httpEndpoint, "stats")
+	b, err := util.GetBodyFromHttpServer(url)
+	if err != nil {
+		return nil, errors.Wrap(err, "error on http get")
+	}
+	stats := make([]*store.Stats, 0)
+	logrus.Debugf("Received stats: %s", b)
+	err = json.Unmarshal(b, &stats)
+	return stats, err
+}
+
+func (f *Fetcher) GetStats(ctx context.Context) ([]*store.Stats, error) {
+	// TODO Handle local file
+	if f.httpEndpoint != "" && f.httpAddressReachable() {
+		return f.GetStatsFromHttpServer(ctx)
+	}
+	return nil, nil
 }
 
 func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (map[string]resources.K8sResource, error) {
@@ -129,9 +151,9 @@ func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (m
 		return resources, err
 	}
 	if f.httpEndpoint != "" && f.httpAddressReachable() {
-		httpPath := f.getHttpPath(f.httpEndpoint, r)
+		httpPath := f.getResourceHttpPath(f.httpEndpoint, r)
 		logrus.Debugf("Using %s for completion", httpPath)
-		return loadFromHttpServer(httpPath)
+		return loadResourceFromHttpServer(httpPath)
 	}
 	return f.getResourcesFromPortForward(ctx, r)
 }

@@ -15,34 +15,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func startWatchOnCluster(ctx context.Context, resourceWatcherCli resourcewatcher.ResourceWatcherCli,
-	storeConfig *store.StoreConfig) (*resourcewatcher.ResourceWatcher, error) {
+func startWatchOnCluster(ctx context.Context,
+	resourceWatcherCli resourcewatcher.ResourceWatcherCli,
+	storeConfig *store.StoreConfig) (*resourcewatcher.ResourceWatcher, []*store.Store, error) {
 	cluster := storeConfig.GetContext()
 	watcher, err := resourcewatcher.NewResourceWatcher(cluster, resourceWatcherCli, storeConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating resource watcher")
+		return nil, nil, errors.Wrap(err, "error creating resource watcher")
 	}
 	err = watcher.FetchNamespaces(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error fetching namespaces")
+		return nil, nil, errors.Wrap(err, "error fetching namespaces")
 	}
 	watchConfigs, err := watcher.GetWatchConfigs()
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting watchdog configs")
+		return nil, nil, errors.Wrap(err, "error getting watchdog configs")
 	}
-
 	logrus.Infof("Start cache build on cluster %s", cluster)
+	stores := make([]*store.Store, 0)
 	for _, watchConfig := range watchConfigs {
-		err := watcher.Start(ctx, watchConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "error starting watcher")
-		}
+		store := watcher.Start(ctx, watchConfig)
+		stores = append(stores, store)
 	}
 	err = watcher.DumpAPIResources()
 	if err != nil {
-		return nil, errors.Wrap(err, "error when dumping api resources")
+		return nil, nil, errors.Wrap(err, "error when dumping api resources")
 	}
-	return watcher, nil
+	return watcher, stores, nil
 }
 
 func handleSignals(cancel context.CancelFunc) {
@@ -73,7 +72,7 @@ func StartKubectlFzfServer() {
 	}
 
 	resourceWatcherCli := resourcewatcher.GetResourceWatcherCli()
-	watcher, err := startWatchOnCluster(ctx, resourceWatcherCli, storeConfig)
+	watcher, stores, err := startWatchOnCluster(ctx, resourceWatcherCli, storeConfig)
 	util.FatalIf(err)
 	ticker := time.NewTicker(time.Second * 5)
 
@@ -82,7 +81,7 @@ func StartKubectlFzfServer() {
 		logrus.Fatalf("Error getting client config: %s", err)
 	}
 	httpServerConfCli := httpserver.GetHttpServerConfigCli()
-	_, err = httpserver.StartHttpServer(ctx, &httpServerConfCli, storeConfig)
+	_, err = httpserver.StartHttpServer(ctx, &httpServerConfCli, storeConfig, stores)
 	if err != nil {
 		logrus.Fatalf("Error starting http server: %s", err)
 	}
@@ -99,7 +98,8 @@ func StartKubectlFzfServer() {
 				logrus.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
 				storeConfig.SetClusterNameFromCurrentContext()
-				watcher, err = startWatchOnCluster(ctx, resourceWatcherCli, storeConfig)
+				// TODO: Handle stores change
+				watcher, _, err = startWatchOnCluster(ctx, resourceWatcherCli, storeConfig)
 				util.FatalIf(err)
 				currentRestConfig = restConfig
 			}

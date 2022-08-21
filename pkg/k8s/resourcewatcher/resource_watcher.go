@@ -37,8 +37,9 @@ type ResourceWatcher struct {
 	watchedNamespaces      []*regexp.Regexp
 	namespacePollingPeriod time.Duration
 	nodePollingPeriod      time.Duration
+	ctorConfig             resources.CtorConfig
 
-	ctorConfig resources.CtorConfig
+	//stores []*store.Store
 }
 
 // WatchConfig provides the configuration to watch a specific kubernetes resource
@@ -79,26 +80,19 @@ func NewResourceWatcher(cluster string, resourceWatcherCli ResourceWatcherCli, s
 }
 
 // Start begins the watch/poll of a given k8s resource
-func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig) error {
+func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig) *store.Store {
 	ctx, cancel := context.WithCancel(parentCtx)
 	r.cancelFuncs = append(r.cancelFuncs, cancel)
-
-	if cfg.pollingPeriod > 0 {
-		store := store.NewStore(ctx, r.storeConfig, r.ctorConfig, cfg.resourceType)
-		go r.pollResource(ctx, cfg, store)
-		return nil
-	}
-
-	if cfg.splitByNamespaces {
-		logrus.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceType)
-		store := store.NewStore(ctx, r.storeConfig, r.ctorConfig, cfg.resourceType)
-		go r.watchResource(ctx, cfg, store, r.namespaces)
-		return nil
-	}
-
 	store := store.NewStore(ctx, r.storeConfig, r.ctorConfig, cfg.resourceType)
-	go r.watchResource(ctx, cfg, store, []string{""})
-	return nil
+	if cfg.pollingPeriod > 0 {
+		go r.pollResource(ctx, cfg, store)
+	} else if cfg.splitByNamespaces {
+		logrus.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceType)
+		go r.watchResource(ctx, cfg, store, r.namespaces)
+	} else {
+		go r.watchResource(ctx, cfg, store, []string{""})
+	}
+	return store
 }
 
 // Stop closes the watch/poll process of a k8s resource
@@ -120,7 +114,6 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	autoscalingGetter := clientset.AutoscalingV1().RESTClient()
 	networkingGetter := clientset.NetworkingV1().RESTClient()
 	batchGetter := clientset.BatchV1().RESTClient()
-
 	allWatchConfigs := []WatchConfig{
 		{resources.ResourceTypePod, coreGetter, &corev1.Pod{}, true, true, 0},
 		{resources.ResourceTypeConfigMap, coreGetter, &corev1.ConfigMap{}, true, true, 0},
@@ -155,7 +148,7 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	return watchConfigs, nil
 }
 
-func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore *store.Store) {
+func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, store *store.Store) {
 	obj, err := watchlist.List(metav1.ListOptions{})
 	if err != nil {
 		logrus.Warningf("Error on listing resource: %v", err)
@@ -164,7 +157,7 @@ func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, k8sStore *store.Sto
 	if err != nil {
 		logrus.Warningf("Error extracting list: %v", err)
 	}
-	k8sStore.AddResourceList(lst)
+	store.AddResourceList(lst)
 }
 
 // FetchNamespaces gets the list of namespace from the cluster and fill
@@ -215,7 +208,7 @@ func (r *ResourceWatcher) DumpAPIResources() error {
 	return err
 }
 
-func (r *ResourceWatcher) getWatchList(cfg WatchConfig, k8sStore *store.Store, namespace string) *cache.ListWatch {
+func (r *ResourceWatcher) getWatchList(cfg WatchConfig, store *store.Store, namespace string) *cache.ListWatch {
 	optionsModifier := func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.Everything().String()
 		options.ResourceVersion = "0"
@@ -226,10 +219,10 @@ func (r *ResourceWatcher) getWatchList(cfg WatchConfig, k8sStore *store.Store, n
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,
-	cfg WatchConfig, k8sStore *store.Store) {
+	cfg WatchConfig, store *store.Store) {
 	logrus.Infof("Start poller for %s", cfg.resourceType)
-	watchlist := r.getWatchList(cfg, k8sStore, "")
-	r.doPoll(watchlist, k8sStore)
+	watchlist := r.getWatchList(cfg, store, "")
+	r.doPoll(watchlist, store)
 	ticker := time.NewTicker(cfg.pollingPeriod)
 	for {
 		select {
@@ -237,31 +230,31 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 			logrus.Infof("Exiting poll of %s", cfg.resourceType)
 			return
 		case <-ticker.C:
-			r.doPoll(watchlist, k8sStore)
+			r.doPoll(watchlist, store)
 		}
 	}
 }
 
 func (r *ResourceWatcher) startWatch(cfg WatchConfig,
-	k8sStore *store.Store, namespace string, stop chan struct{}) {
-	watchlist := r.getWatchList(cfg, k8sStore, namespace)
+	store *store.Store, namespace string, stop chan struct{}) {
+	watchlist := r.getWatchList(cfg, store, namespace)
 	_, controller := cache.NewInformer(
 		watchlist, cfg.runtimeObject, time.Second*0,
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    k8sStore.AddResource,
-			DeleteFunc: k8sStore.DeleteResource,
-			UpdateFunc: k8sStore.UpdateResource,
+			AddFunc:    store.AddResource,
+			DeleteFunc: store.DeleteResource,
+			UpdateFunc: store.UpdateResource,
 		},
 	)
 	controller.Run(stop)
 }
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
-	cfg WatchConfig, k8sStore *store.Store, namespaces []string) {
+	cfg WatchConfig, store *store.Store, namespaces []string) {
 	logrus.Infof("Start watch for %s on namespace %s", cfg.resourceType, namespaces)
 	stop := make(chan struct{})
 	for _, ns := range namespaces {
-		go r.startWatch(cfg, k8sStore, ns, stop)
+		go r.startWatch(cfg, store, ns, stop)
 	}
 	<-ctx.Done()
 	logrus.Infof("Exiting watch of %s namespace %s", cfg.resourceType, namespaces)

@@ -13,25 +13,36 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type routeFunc func(*gin.Context, resources.ResourceType, *store.StoreConfig)
+type FzfHttpServer struct {
+	stores      []*store.Store
+	storeConfig *store.StoreConfig
+}
 
-func curryRoute(f routeFunc, resourceType resources.ResourceType, storeConfig *store.StoreConfig) gin.HandlerFunc {
+type routeResourceFunc func(*gin.Context, resources.ResourceType)
+
+func curryResourceRoute(f routeResourceFunc, resourceType resources.ResourceType) gin.HandlerFunc {
 	return func(g *gin.Context) {
-		f(g, resourceType, storeConfig)
+		f(g, resourceType)
 	}
 }
 
-func readinessRoute(c *gin.Context) {
+func (f *FzfHttpServer) readinessRoute(c *gin.Context) {
 	c.String(http.StatusOK, "Ok")
 }
 
-func resourcesRoute(c *gin.Context, resourceType resources.ResourceType, storeConfig *store.StoreConfig) {
+func (f *FzfHttpServer) statsRoute(c *gin.Context) {
+	stats := store.GetStatsFromStores(f.stores)
+	logrus.Debugf("Sending stats: %v", stats)
+	c.JSON(http.StatusOK, stats)
+}
+
+func (f *FzfHttpServer) resourcesRoute(c *gin.Context, resourceType resources.ResourceType) {
 	if resourceType == resources.ResourceTypeUnknown {
 		c.String(http.StatusBadRequest, "Resource type unknown")
 		return
 	}
-	filePath := storeConfig.GetFilePath(resourceType)
-	if !storeConfig.FileStoreExists(resourceType) {
+	filePath := f.storeConfig.GetFilePath(resourceType)
+	if !f.storeConfig.FileStoreExists(resourceType) {
 		c.String(http.StatusNotFound, fmt.Sprintf("file %s not found", filePath))
 		return
 	}
@@ -39,18 +50,19 @@ func resourcesRoute(c *gin.Context, resourceType resources.ResourceType, storeCo
 	c.File(filePath)
 }
 
-func setupRouter(storeConfig *store.StoreConfig) *gin.Engine {
+func (f *FzfHttpServer) setupRouter() *gin.Engine {
 	router := gin.Default()
 	skipLogs := []string{
 		"/health",
 	}
 	router.Use(gin.LoggerWithWriter(gin.DefaultWriter, skipLogs...))
 	router.Use(gin.Recovery())
-	router.GET("/readiness", readinessRoute)
+	router.GET("/readiness", f.readinessRoute)
+	router.GET("/stats", f.statsRoute)
 	resourceRoute := router.Group("/k8s/resources")
 	{
 		for r := resources.ResourceTypeApiResource; r < resources.ResourceTypeUnknown; r++ {
-			resourceRoute.GET(r.String(), curryRoute(resourcesRoute, r, storeConfig))
+			resourceRoute.GET(r.String(), curryResourceRoute(f.resourcesRoute, r))
 		}
 	}
 	return router
@@ -72,7 +84,7 @@ func startHttpServer(ctx context.Context, listener net.Listener, srv *http.Serve
 	logrus.Info("Exiting http server")
 }
 
-func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *store.StoreConfig) (int, error) {
+func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *store.StoreConfig, stores []*store.Store) (int, error) {
 	if h.ListenAddress == "" {
 		return 0, nil
 	}
@@ -86,7 +98,11 @@ func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *s
 		return 0, err
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
-	router := setupRouter(storeConfig)
+	f := FzfHttpServer{
+		stores:      stores,
+		storeConfig: storeConfig,
+	}
+	router := f.setupRouter()
 	srv := &http.Server{
 		Addr:    h.ListenAddress,
 		Handler: router,

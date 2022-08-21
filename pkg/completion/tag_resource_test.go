@@ -2,6 +2,7 @@ package completion
 
 import (
 	"context"
+	"kubectlfzf/pkg/httpserver/httpservertest"
 	"kubectlfzf/pkg/k8s/resources"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func TestTagLabel(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	labelMap, err := getTagResourceOccurrences(context.Background(), resources.ResourceTypePod, nil, fetchConfig, TagTypeLabel)
 	assert.NoError(t, err)
 	t.Log(labelMap)
@@ -21,7 +22,7 @@ func TestTagLabel(t *testing.T) {
 }
 
 func TestLabelNamespaceFiltering(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	namespace := "default"
 	labelMap, err := getTagResourceOccurrences(context.Background(), resources.ResourceTypePod, &namespace, fetchConfig, TagTypeLabel)
 	assert.NoError(t, err)
@@ -29,7 +30,7 @@ func TestLabelNamespaceFiltering(t *testing.T) {
 }
 
 func TestLabelCompletion(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	labelComps, err := GetTagResourceCompletion(context.Background(), resources.ResourceTypePod, nil, fetchConfig, TagTypeLabel)
 	assert.NoError(t, err)
 	assert.Len(t, labelComps, 12)
@@ -40,7 +41,7 @@ func TestLabelCompletion(t *testing.T) {
 }
 
 func TestGetFieldSelector(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	fieldSelectorOccurrences, err := getTagResourceOccurrences(context.Background(), resources.ResourceTypePod, nil, fetchConfig, TagTypeFieldSelector)
 	require.NoError(t, err)
 

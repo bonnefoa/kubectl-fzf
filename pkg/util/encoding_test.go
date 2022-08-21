@@ -20,7 +20,7 @@ func TestEncoding(t *testing.T) {
 	require.NoError(t, err)
 
 	var res string
-	err = LoadFromFile(&res, f.Name())
+	err = LoadGobFromFile(&res, f.Name())
 	require.NoError(t, err)
 	assert.Equal(t, "test", res)
 }

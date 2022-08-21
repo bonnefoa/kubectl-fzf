@@ -40,7 +40,7 @@ func podResource(name string, ns string, labels map[string]string) corev1.Pod {
 	return meta
 }
 
-func getPodK8sStore(t *testing.T) (string, *Store) {
+func getPodStore(t *testing.T) (string, *Store) {
 	tempDir, err := ioutil.TempDir("/tmp/", "cacheTest")
 	assert.Nil(t, err)
 
@@ -71,7 +71,7 @@ func getPodK8sStore(t *testing.T) (string, *Store) {
 }
 
 func TestDumpPodFullState(t *testing.T) {
-	tempDir, k := getPodK8sStore(t)
+	tempDir, k := getPodStore(t)
 	defer util.RemoveTempDir(tempDir)
 
 	err := k.DumpFullState()
@@ -80,7 +80,7 @@ func TestDumpPodFullState(t *testing.T) {
 	assert.FileExists(t, podFilePath)
 
 	pods := map[string]resources.K8sResource{}
-	err = util.LoadFromFile(&pods, podFilePath)
+	err = util.LoadGobFromFile(&pods, podFilePath)
 	require.NoError(t, err)
 
 	assert.Equal(t, 4, len(pods))
@@ -91,22 +91,22 @@ func TestDumpPodFullState(t *testing.T) {
 }
 
 func TestTickerPodDumpFullState(t *testing.T) {
-	tempDir, k := getPodK8sStore(t)
+	tempDir, s := getPodStore(t)
 	defer util.RemoveTempDir(tempDir)
 
 	time.Sleep(1000 * time.Millisecond)
 	podFilePath := path.Join(tempDir, "test", "pods")
 	assert.FileExists(t, podFilePath)
 	pods := map[string]resources.K8sResource{}
-	err := util.LoadFromFile(&pods, podFilePath)
+	err := util.LoadGobFromFile(&pods, podFilePath)
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(pods))
 
 	pod := podResource("Test1", "ns1", map[string]string{"app": "app1"})
-	k.AddResource(&pod)
-	assert.True(t, k.dumpRequired)
+	s.AddResource(&pod)
+	assert.True(t, s.dumpRequired)
 	time.Sleep(1000 * time.Millisecond)
-	assert.False(t, k.dumpRequired)
+	assert.False(t, s.dumpRequired)
 }
 
 func TestDumpAPIResources(t *testing.T) {
@@ -129,6 +129,6 @@ func TestDumpAPIResources(t *testing.T) {
 	require.NoError(t, err)
 
 	loadResource := map[string]resources.K8sResource{}
-	err = util.LoadFromFile(&loadResource, apiResourcesFilePath)
+	err = util.LoadGobFromFile(&loadResource, apiResourcesFilePath)
 	require.NoError(t, err)
 }

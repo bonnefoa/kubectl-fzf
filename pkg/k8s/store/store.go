@@ -34,7 +34,8 @@ type Store struct {
 }
 
 // NewStore creates a new store
-func NewStore(ctx context.Context, storeConfig *StoreConfig, ctorConfig resources.CtorConfig, resourceType resources.ResourceType) *Store {
+func NewStore(ctx context.Context, storeConfig *StoreConfig,
+	ctorConfig resources.CtorConfig, resourceType resources.ResourceType) *Store {
 	k := Store{}
 	k.data = make(map[string]resources.K8sResource, 0)
 	k.resourceCtor = resources.ResourceTypeToCtor(resourceType)
@@ -119,7 +120,6 @@ func (k *Store) DeleteResource(obj interface{}) {
 	k.dataMutex.Lock()
 	delete(k.data, key)
 	k.dataMutex.Unlock()
-
 	k.dumpRequired = true
 }
 
@@ -138,6 +138,30 @@ func (k *Store) UpdateResource(oldObj, newObj interface{}) {
 	}
 }
 
+type Stats struct {
+	ResourceType     resources.ResourceType
+	ItemPerNamespace map[string]int
+	LastDumped       time.Time
+}
+
+func (k *Store) GetStats() *Stats {
+	itemPerNamespaces := make(map[string]int, 0)
+	for _, r := range k.data {
+		namespace := r.GetNamespace()
+		_, ok := itemPerNamespaces[namespace]
+		if !ok {
+			itemPerNamespaces[namespace] = 1
+		} else {
+			itemPerNamespaces[namespace]++
+		}
+	}
+	return &Stats{
+		ResourceType:     k.resourceType,
+		ItemPerNamespace: itemPerNamespaces,
+		LastDumped:       k.lastFullDump,
+	}
+}
+
 // DumpFullState writes the full state to the cache file
 func (k *Store) DumpFullState() error {
 	if !k.dumpRequired {
@@ -153,10 +177,17 @@ func (k *Store) DumpFullState() error {
 	k.dumpRequired = false
 	k.lastFullDump = now
 	logrus.Infof("Doing full dump of %d %s", len(k.data), k.resourceType)
-
 	destFile := k.storeConfig.GetFilePath(k.resourceType)
 	k.dataMutex.Lock()
 	err := util.EncodeToFile(k.data, destFile)
 	k.dataMutex.Unlock()
 	return err
+}
+
+func GetStatsFromStores(stores []*Store) []*Stats {
+	stats := make([]*Stats, 0)
+	for _, stores := range stores {
+		stats = append(stats, stores.GetStats())
+	}
+	return stats
 }

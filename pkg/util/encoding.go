@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/gob"
-	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 
 	"github.com/pkg/errors"
@@ -38,14 +36,14 @@ func EncodeToFile(data interface{}, filePath string) error {
 	return err
 }
 
-func LoadFromFile(e interface{}, filePath string) error {
+func LoadGobFromFile(e interface{}, filePath string) error {
 	logrus.Debugf("Loading file %s", filePath)
 	n, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return errors.Wrap(err, "error reading file")
 	}
-	gzipBuf := bytes.NewBuffer(n)
-	zr, err := gzip.NewReader(gzipBuf)
+	bbuffer := bytes.NewBuffer(n)
+	zr, err := gzip.NewReader(bbuffer)
 	if err != nil {
 		return errors.Wrap(err, "error creating new gzip reader")
 	}
@@ -57,22 +55,14 @@ func LoadFromFile(e interface{}, filePath string) error {
 	return err
 }
 
-func LoadFromHttpServer(e interface{}, url string) error {
+func LoadGobFromHttpServer(e interface{}, url string) error {
 	logrus.Debugf("Loading from %s", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return errors.Wrapf(err, "error on get of %s", url)
-	}
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("error retrieving resource from server: %s", resp.Status)
-	}
-	defer resp.Body.Close()
-	n, err := ioutil.ReadAll(resp.Body)
+	b, err := GetBodyFromHttpServer(url)
 	if err != nil {
 		return errors.Wrap(err, "error reading body content")
 	}
-	gzipBuf := bytes.NewBuffer(n)
-	zr, err := gzip.NewReader(gzipBuf)
+	bbuffer := bytes.NewBuffer(b)
+	zr, err := gzip.NewReader(bbuffer)
 	if err != nil {
 		return errors.Wrap(err, "error creating new gzip reader")
 	}

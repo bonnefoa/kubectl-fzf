@@ -2,12 +2,8 @@ package completion
 
 import (
 	"context"
-	"fmt"
-	"kubectlfzf/pkg/httpserver"
-	"kubectlfzf/pkg/k8s/clusterconfig"
-	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/httpserver/httpservertest"
 	"kubectlfzf/pkg/k8s/resources"
-	"kubectlfzf/pkg/k8s/store"
 	"sort"
 	"testing"
 
@@ -15,27 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getTestClusterConfigCli() clusterconfig.ClusterConfigCli {
-	return clusterconfig.ClusterConfigCli{ClusterName: "minikube", CacheDir: "./testdata", Kubeconfig: ""}
-}
-
-func getTestStoreConfigCli() *store.StoreConfigCli {
-	return &store.StoreConfigCli{ClusterConfigCli: getTestClusterConfigCli()}
-}
-
-func getTestFetchConfig(t *testing.T) *fetcher.Fetcher {
-	f := fetcher.FetcherCli{ClusterConfigCli: getTestClusterConfigCli(), HttpEndpoint: "localhost:0"}
-	fetchConfig := fetcher.NewFetcher(&f)
-	return fetchConfig
-}
-
 type cmdArg struct {
 	verb string
 	args []string
 }
 
 func TestProcessResourceName(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"get", "pods", ""}},
 		{"get", []string{"po", ""}},
@@ -50,7 +32,7 @@ func TestProcessResourceName(t *testing.T) {
 }
 
 func TestProcessLabelCompletion(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"pods", "-l="}},
 		{"get", []string{"pods", "-l"}},
@@ -68,7 +50,7 @@ func TestProcessLabelCompletion(t *testing.T) {
 }
 
 func TestProcessFieldSelectorCompletion(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"pods", "--field-selector", ""}},
 		{"get", []string{"pods", "--field-selector"}},
@@ -82,7 +64,7 @@ func TestProcessFieldSelectorCompletion(t *testing.T) {
 }
 
 func TestPodCompletionFile(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, fetchConfig)
 	require.NoError(t, err)
 	t.Log(res)
@@ -92,7 +74,7 @@ func TestPodCompletionFile(t *testing.T) {
 }
 
 func TestNamespaceFilterFile(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 
 	// everything is filtered
 	namespace := "test"
@@ -110,7 +92,7 @@ func TestNamespaceFilterFile(t *testing.T) {
 }
 
 func TestApiResourcesFile(t *testing.T) {
-	fetchConfig := getTestFetchConfig(t)
+	fetchConfig := httpservertest.GetTestFetchConfig(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, fetchConfig)
 	require.NoError(t, err)
 	assert := assert.New(t)
@@ -118,27 +100,8 @@ func TestApiResourcesFile(t *testing.T) {
 	assert.Contains(res[0], "apiservices\tNone\tapiregistration.k8s.io/v1\tfalse\tAPIService")
 }
 
-func startTestHttpServer(t *testing.T) *fetcher.Fetcher {
-	ctx := context.Background()
-	storeConfigCli := getTestStoreConfigCli()
-	storeConfig := store.NewStoreConfig(storeConfigCli)
-	h := &httpserver.HttpServerConfigCli{ListenAddress: "localhost:0", Debug: false}
-	port, err := httpserver.StartHttpServer(ctx, h, storeConfig)
-
-	require.NoError(t, err)
-	fetchConfigCli := &fetcher.FetcherCli{
-		ClusterConfigCli: clusterconfig.ClusterConfigCli{
-			CacheDir: "doenstexist",
-		},
-		HttpEndpoint: fmt.Sprintf("localhost:%d", port),
-	}
-	f := fetcher.NewFetcher(fetchConfigCli)
-	require.NoError(t, err)
-	return f
-}
-
 func TestHttpServerApiCompletion(t *testing.T) {
-	s := startTestHttpServer(t)
+	s := httpservertest.StartTestHttpServer(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, s)
 	require.NoError(t, err)
 	sort.Strings(res)
@@ -147,7 +110,7 @@ func TestHttpServerApiCompletion(t *testing.T) {
 }
 
 func TestHttpServerPodCompletion(t *testing.T) {
-	s := startTestHttpServer(t)
+	s := httpservertest.StartTestHttpServer(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, s)
 	require.NoError(t, err)
 	assert.Contains(t, res[0], "minikube\tkube-system\t")
@@ -155,7 +118,7 @@ func TestHttpServerPodCompletion(t *testing.T) {
 }
 
 func TestHttpUnknownResourceCompletion(t *testing.T) {
-	s := startTestHttpServer(t)
+	s := httpservertest.StartTestHttpServer(t)
 	_, err := getResourceCompletion(context.Background(), resources.ResourceTypePersistentVolume, nil, s)
 	require.Error(t, err)
 }
