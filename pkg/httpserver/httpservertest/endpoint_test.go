@@ -21,5 +21,5 @@ func TestHttpServerApiCompletion(t *testing.T) {
 	ctx := context.Background()
 	s, err := f.GetStatsFromHttpServer(ctx)
 	require.NoError(t, err)
-	assert.Len(t, s, 4)
+	assert.Len(t, s, 1)
 }
