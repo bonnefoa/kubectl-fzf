@@ -7,19 +7,21 @@ import (
 	"testing"
 )
 
-func GetTestFetcher(t *testing.T, port int) *fetcher.Fetcher {
+func GetTestFetcher(t *testing.T, clusterName string, port int) (*fetcher.Fetcher, string) {
+	tempDir := t.TempDir()
 	fetchCli := &fetcher.FetcherCli{
-		FetcherCachePath: t.TempDir(),
+		FetcherCachePath: tempDir,
 		ClusterConfigCli: clusterconfig.ClusterConfigCli{
-			ClusterName: "minikube",
+			ClusterName: clusterName,
 			CacheDir:    "testdata",
 		},
 		HttpEndpoint: fmt.Sprintf("localhost:%d", port),
 	}
 	f := fetcher.NewFetcher(fetchCli)
-	return f
+	return f, tempDir
 }
 
-func GetTestFetcherWithDefaultPort(t *testing.T) *fetcher.Fetcher {
-	return GetTestFetcher(t, 8080)
+func GetTestFetcherWithDefaults(t *testing.T) *fetcher.Fetcher {
+	f, _ := GetTestFetcher(t, "minikube", 8080)
+	return f
 }

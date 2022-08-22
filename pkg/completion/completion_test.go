@@ -5,6 +5,7 @@ import (
 	"kubectlfzf/pkg/fetcher/fetchertest"
 	"kubectlfzf/pkg/httpserver/httpservertest"
 	"kubectlfzf/pkg/k8s/resources"
+	"path"
 	"sort"
 	"testing"
 
@@ -18,7 +19,7 @@ type cmdArg struct {
 }
 
 func TestProcessResourceName(t *testing.T) {
-	fetchConfig := fetchertest.GetTestFetcherWithDefaultPort(t)
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"get", "pods", ""}},
 		{"get", []string{"po", ""}},
@@ -33,7 +34,7 @@ func TestProcessResourceName(t *testing.T) {
 }
 
 func TestProcessLabelCompletion(t *testing.T) {
-	fetchConfig := fetchertest.GetTestFetcherWithDefaultPort(t)
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"pods", "-l="}},
 		{"get", []string{"pods", "-l"}},
@@ -51,7 +52,7 @@ func TestProcessLabelCompletion(t *testing.T) {
 }
 
 func TestProcessFieldSelectorCompletion(t *testing.T) {
-	fetchConfig := fetchertest.GetTestFetcherWithDefaultPort(t)
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"pods", "--field-selector", ""}},
 		{"get", []string{"pods", "--field-selector"}},
@@ -65,7 +66,7 @@ func TestProcessFieldSelectorCompletion(t *testing.T) {
 }
 
 func TestPodCompletionFile(t *testing.T) {
-	fetchConfig := fetchertest.GetTestFetcherWithDefaultPort(t)
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, fetchConfig)
 	require.NoError(t, err)
 	t.Log(res)
@@ -75,7 +76,7 @@ func TestPodCompletionFile(t *testing.T) {
 }
 
 func TestNamespaceFilterFile(t *testing.T) {
-	fetchConfig := fetchertest.GetTestFetcherWithDefaultPort(t)
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 
 	// everything is filtered
 	namespace := "test"
@@ -93,7 +94,7 @@ func TestNamespaceFilterFile(t *testing.T) {
 }
 
 func TestApiResourcesFile(t *testing.T) {
-	fetchConfig := fetchertest.GetTestFetcherWithDefaultPort(t)
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, fetchConfig)
 	require.NoError(t, err)
 	assert := assert.New(t)
@@ -103,26 +104,35 @@ func TestApiResourcesFile(t *testing.T) {
 
 func TestHttpServerApiCompletion(t *testing.T) {
 	p := httpservertest.StartTestHttpServer(t)
-	f := fetchertest.GetTestFetcher(t, p)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", p)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, f)
 	require.NoError(t, err)
 	sort.Strings(res)
 	assert.Contains(t, res[0], "apiservices\tNone\tapiregistration.k8s.io/v1\tfalse\tAPIService")
 	assert.Len(t, res, 56)
+
+	expectedPath := path.Join(tempDir, "nothing", resources.ResourceTypeApiResource.String())
+	assert.FileExists(t, expectedPath)
 }
 
 func TestHttpServerPodCompletion(t *testing.T) {
 	p := httpservertest.StartTestHttpServer(t)
-	f := fetchertest.GetTestFetcher(t, p)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", p)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
 	require.NoError(t, err)
 	assert.Contains(t, res[0], "minikube\tkube-system\t")
 	assert.Len(t, res, 7)
+
+	expectedPath := path.Join(tempDir, "nothing", resources.ResourceTypePod.String())
+	assert.FileExists(t, expectedPath)
 }
 
 func TestHttpUnknownResourceCompletion(t *testing.T) {
 	p := httpservertest.StartTestHttpServer(t)
-	f := fetchertest.GetTestFetcher(t, p)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", p)
 	_, err := getResourceCompletion(context.Background(), resources.ResourceTypePersistentVolume, nil, f)
 	require.Error(t, err)
+
+	expectedPath := path.Join(tempDir, "nothing")
+	assert.NoFileExists(t, expectedPath)
 }
