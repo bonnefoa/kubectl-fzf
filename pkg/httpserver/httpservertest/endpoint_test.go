@@ -2,6 +2,7 @@ package httpservertest
 
 import (
 	"context"
+	"kubectlfzf/pkg/fetcher/fetchertest"
 	"os"
 	"testing"
 
@@ -17,7 +18,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestHttpServerApiCompletion(t *testing.T) {
-	f := StartTestHttpServer(t)
+	p := StartTestHttpServer(t)
+	f := fetchertest.GetTestFetcher(t, p)
 	ctx := context.Background()
 	s, err := f.GetStats(ctx)
 	require.NoError(t, err)

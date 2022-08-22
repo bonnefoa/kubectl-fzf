@@ -2,7 +2,7 @@ package completion
 
 import (
 	"context"
-	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
 	"kubectlfzf/pkg/util"
 	"sort"

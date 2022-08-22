@@ -2,7 +2,7 @@ package completion
 
 import (
 	"fmt"
-	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
 	"strings"
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"kubectlfzf/pkg/completion"
-	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/store"
 	"kubectlfzf/pkg/util"
 	"os"

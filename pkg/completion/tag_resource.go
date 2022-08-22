@@ -3,7 +3,7 @@ package completion
 import (
 	"errors"
 	"fmt"
-	"kubectlfzf/pkg/k8s/fetcher"
+	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
 	"sort"
 
