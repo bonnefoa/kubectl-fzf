@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"kubectlfzf/pkg/k8s/resources"
 	"kubectlfzf/pkg/util"
-	"os"
 	"path"
 
 	"github.com/pkg/errors"
@@ -18,34 +17,26 @@ func loadResourceFromFile(filePath string) (map[string]resources.K8sResource, er
 	return resources, err
 }
 
-func (f *Fetcher) writeResourceToCache(b []byte, r resources.ResourceType) error {
-	destDir := path.Join(f.fetcherCachePath, f.GetContext())
-	err := os.MkdirAll(destDir, 0755)
+func (f *Fetcher) loadResourceFromHttpServer(endpoint string, r resources.ResourceType) (map[string]resources.K8sResource, error) {
+	resources, err := f.checkLocalCache(endpoint, r)
 	if err != nil {
-		return errors.Wrap(err, "error mkdirall")
+		logrus.Infof("Error getting resources from cache: %s", err)
 	}
-	cachePath := path.Join(destDir, r.String())
-	logrus.Debugf("Caching resource in %s", cachePath)
-	err = os.WriteFile(cachePath, b, 0644)
-	if err != nil {
-		return errors.Wrap(err, "error writing cache file")
+	if resources != nil {
+		logrus.Infof("Returning %s resources from cache", r.String())
+		return resources, nil
 	}
-	return nil
-}
-
-func (f *Fetcher) loadResourceFromHttpServer(url string, r resources.ResourceType) (map[string]resources.K8sResource, error) {
-	logrus.Debugf("Loading from %s", url)
-	b, err := util.GetBodyFromHttpServer(url)
+	logrus.Debugf("Loading from %s", endpoint)
+	resourcePath := f.getResourceHttpPath(endpoint, r)
+	headers, body, err := util.GetFromHttpServer(resourcePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading body content")
 	}
-	err = f.writeResourceToCache(b, r)
+	err = f.writeResourceToCache(headers, body, r)
 	if err != nil {
 		return nil, errors.Wrap(err, "error writing fetcher cache")
 	}
-
-	resources := map[string]resources.K8sResource{}
-	util.DecodeGob(&resources, b)
+	util.DecodeGob(&resources, body)
 	return resources, err
 }
 
@@ -59,8 +50,8 @@ func (f *Fetcher) getResourcesFromPortForward(ctx context.Context, r resources.R
 	if err != nil {
 		return nil, err
 	}
-	httpPath := f.getResourceHttpPath(fmt.Sprintf("localhost:%d", f.portForwardLocalPort), r)
-	resources, err := f.loadResourceFromHttpServer(httpPath, r)
+	endpoint := fmt.Sprintf("localhost:%d", f.portForwardLocalPort)
+	resources, err := f.loadResourceFromHttpServer(endpoint, r)
 	stopChan <- struct{}{}
 	return resources, err
 }
@@ -72,10 +63,8 @@ func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (m
 		resources, err := loadResourceFromFile(filePath)
 		return resources, err
 	}
-	if f.httpEndpoint != "" && f.httpAddressReachable() {
-		httpPath := f.getResourceHttpPath(f.httpEndpoint, r)
-		logrus.Debugf("Using %s for completion", httpPath)
-		return f.loadResourceFromHttpServer(httpPath, r)
+	if util.IsAddressReachable(f.httpEndpoint) {
+		return f.loadResourceFromHttpServer(f.httpEndpoint, r)
 	}
 	return f.getResourcesFromPortForward(ctx, r)
 }

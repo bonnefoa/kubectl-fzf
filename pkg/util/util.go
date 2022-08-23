@@ -15,6 +15,9 @@ type stackTracer interface {
 }
 
 func IsAddressReachable(address string) bool {
+	if address == "" {
+		return false
+	}
 	conn, err := net.DialTimeout("tcp", address, time.Second)
 	if err != nil {
 		logrus.Infof("Couldn't connect to %s: %s", address, err)

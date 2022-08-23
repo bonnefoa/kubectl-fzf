@@ -19,13 +19,13 @@ func GetTestStoreConfigCli() *store.StoreConfigCli {
 	return &store.StoreConfigCli{ClusterConfigCli: GetTestClusterConfigCli()}
 }
 
-func StartTestHttpServer(t *testing.T) int {
+func StartTestHttpServer(t *testing.T) *httpserver.FzfHttpServer {
 	ctx := context.Background()
 	storeConfigCli := GetTestStoreConfigCli()
 	storeConfig := store.NewStoreConfig(storeConfigCli)
 	_, podStore := storetest.GetTestPodStore(t)
 	h := &httpserver.HttpServerConfigCli{ListenAddress: "localhost:0", Debug: false}
-	port, err := httpserver.StartHttpServer(ctx, h, storeConfig, []*store.Store{podStore})
+	fzfHttpServer, err := httpserver.StartHttpServer(ctx, h, storeConfig, []*store.Store{podStore})
 	require.NoError(t, err)
-	return port
+	return fzfHttpServer
 }

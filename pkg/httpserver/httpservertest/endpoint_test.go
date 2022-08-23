@@ -18,8 +18,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestHttpServerApiCompletion(t *testing.T) {
-	p := StartTestHttpServer(t)
-	f := fetchertest.GetTestFetcher(t, p)
+	fzfHttpServer := StartTestHttpServer(t)
+	f, _ := fetchertest.GetTestFetcher(t, "nothing", fzfHttpServer.Port)
 	ctx := context.Background()
 	s, err := f.GetStats(ctx)
 	require.NoError(t, err)

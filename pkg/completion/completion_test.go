@@ -103,8 +103,8 @@ func TestApiResourcesFile(t *testing.T) {
 }
 
 func TestHttpServerApiCompletion(t *testing.T) {
-	p := httpservertest.StartTestHttpServer(t)
-	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", p)
+	fzfHttpServer := httpservertest.StartTestHttpServer(t)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", fzfHttpServer.Port)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypeApiResource, nil, f)
 	require.NoError(t, err)
 	sort.Strings(res)
@@ -116,8 +116,8 @@ func TestHttpServerApiCompletion(t *testing.T) {
 }
 
 func TestHttpServerPodCompletion(t *testing.T) {
-	p := httpservertest.StartTestHttpServer(t)
-	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", p)
+	fzfHttpServer := httpservertest.StartTestHttpServer(t)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", fzfHttpServer.Port)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
 	require.NoError(t, err)
 	assert.Contains(t, res[0], "minikube\tkube-system\t")
@@ -128,11 +128,28 @@ func TestHttpServerPodCompletion(t *testing.T) {
 }
 
 func TestHttpUnknownResourceCompletion(t *testing.T) {
-	p := httpservertest.StartTestHttpServer(t)
-	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", p)
+	fzfHttpServer := httpservertest.StartTestHttpServer(t)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", fzfHttpServer.Port)
 	_, err := getResourceCompletion(context.Background(), resources.ResourceTypePersistentVolume, nil, f)
 	require.Error(t, err)
 
 	expectedPath := path.Join(tempDir, "nothing")
 	assert.NoFileExists(t, expectedPath)
+}
+
+func TestHttpServerCachePod(t *testing.T) {
+	fzfHttpServer := httpservertest.StartTestHttpServer(t)
+	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", fzfHttpServer.Port)
+	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
+	require.NoError(t, err)
+	assert.Len(t, res, 7)
+
+	podCache := path.Join(tempDir, "nothing", resources.ResourceTypePod.String())
+	assert.FileExists(t, podCache)
+	require.Equal(t, fzfHttpServer.ResourceHit, 1)
+	lastModified := path.Join(tempDir, "nothing", "lastModified")
+	assert.FileExists(t, lastModified)
+
+	res, err = getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
+	require.Equal(t, fzfHttpServer.ResourceHit, 1)
 }

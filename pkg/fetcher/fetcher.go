@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"kubectlfzf/pkg/k8s/clusterconfig"
 	"kubectlfzf/pkg/k8s/portforward"
-	"kubectlfzf/pkg/util"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -17,6 +17,7 @@ type Fetcher struct {
 	clusterconfig.ClusterConfig
 	fetcherCachePath     string
 	httpEndpoint         string
+	minimumCache         time.Duration
 	portForwardLocalPort int // Local port to use for port-forward
 }
 
@@ -25,13 +26,9 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 	f.ClusterConfig = clusterconfig.NewClusterConfig(&fetchConfigCli.ClusterConfigCli)
 	f.httpEndpoint = fetchConfigCli.HttpEndpoint
 	f.fetcherCachePath = fetchConfigCli.FetcherCachePath
+	f.minimumCache = fetchConfigCli.MinimumCache
 	f.portForwardLocalPort = fetchConfigCli.PortForwardLocalPort
 	return &f
-}
-
-func (f *Fetcher) httpAddressReachable() bool {
-	logrus.Debugf("Checking if %s is reachable", f.httpEndpoint)
-	return util.IsAddressReachable(f.httpEndpoint)
 }
 
 func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest portforward.PortForwardRequest, err error) {

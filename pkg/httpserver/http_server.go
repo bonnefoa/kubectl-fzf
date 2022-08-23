@@ -7,7 +7,6 @@ import (
 	"kubectlfzf/pkg/k8s/store"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +14,10 @@ import (
 )
 
 type FzfHttpServer struct {
+	Port        int
+	ResourceHit int
+	//LastModifiedHit int
+
 	stores      []*store.Store
 	storeConfig *store.StoreConfig
 }
@@ -38,6 +41,9 @@ func (f *FzfHttpServer) statsRoute(c *gin.Context) {
 }
 
 func (f *FzfHttpServer) resourcesRoute(c *gin.Context, resourceType resources.ResourceType) {
+	if c.Request.Method == "GET" {
+		f.ResourceHit++
+	}
 	if resourceType == resources.ResourceTypeUnknown {
 		c.String(http.StatusBadRequest, "Resource type unknown")
 		return
@@ -49,17 +55,6 @@ func (f *FzfHttpServer) resourcesRoute(c *gin.Context, resourceType resources.Re
 	filePath := f.storeConfig.GetFilePath(resourceType)
 	logrus.Debugf("Serving file %s", filePath)
 	c.File(filePath)
-}
-
-func (f *FzfHttpServer) lastModifiedRoute(c *gin.Context, resourceType resources.ResourceType) {
-	filePath := f.storeConfig.GetFilePath(resourceType)
-	logrus.Debugf("Serving file %s", filePath)
-	finfo, err := os.Stat(filePath)
-	if err != nil {
-		c.String(http.StatusNotFound, fmt.Sprintf("resource file %s not found", filePath))
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"modification_time": finfo.ModTime()})
 }
 
 func (f *FzfHttpServer) setupRouter() *gin.Engine {
@@ -74,10 +69,9 @@ func (f *FzfHttpServer) setupRouter() *gin.Engine {
 	router.GET("/stats", f.statsRoute)
 
 	resourceRoute := router.Group("/k8s/resources")
-	lastModifiedRoute := router.Group("/k8s/lastModified")
 	for r := resources.ResourceTypeApiResource; r < resources.ResourceTypeUnknown; r++ {
 		resourceRoute.GET(r.String(), curryResourceRoute(f.resourcesRoute, r))
-		lastModifiedRoute.GET(r.String(), curryResourceRoute(f.lastModifiedRoute, r))
+		resourceRoute.HEAD(r.String(), curryResourceRoute(f.resourcesRoute, r))
 	}
 
 	return router
@@ -99,9 +93,9 @@ func startHttpServer(ctx context.Context, listener net.Listener, srv *http.Serve
 	logrus.Info("Exiting http server")
 }
 
-func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *store.StoreConfig, stores []*store.Store) (int, error) {
+func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *store.StoreConfig, stores []*store.Store) (*FzfHttpServer, error) {
 	if h.ListenAddress == "" {
-		return 0, nil
+		return nil, nil
 	}
 	if h.Debug {
 		gin.SetMode(gin.DebugMode)
@@ -110,10 +104,11 @@ func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *s
 	}
 	listener, err := net.Listen("tcp", h.ListenAddress)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	f := FzfHttpServer{
+		Port:        port,
 		stores:      stores,
 		storeConfig: storeConfig,
 	}
@@ -123,5 +118,5 @@ func StartHttpServer(ctx context.Context, h *HttpServerConfigCli, storeConfig *s
 		Handler: router,
 	}
 	go startHttpServer(ctx, listener, srv)
-	return port, nil
+	return &f, nil
 }
