@@ -16,8 +16,12 @@ import (
 
 func completeFun(cmd *cobra.Command, args []string) {
 	header, comps, err := completion.ProcessCommandArgs(cmd.Use, args)
-	if unknownError, ok := err.(completion.UnknownResourceError); ok {
-		logrus.Warnf("Unknown resource type: %s", unknownError)
+	if e, ok := err.(completion.UnknownResourceError); ok {
+		logrus.Warnf("Unknown resource type: %s", e)
+		os.Exit(6)
+	}
+	if e, ok := err.(completion.UnmanagedFlagError); ok {
+		logrus.Warnf("Unmanaged flag: %s", e)
 		os.Exit(6)
 	}
 	if err != nil {

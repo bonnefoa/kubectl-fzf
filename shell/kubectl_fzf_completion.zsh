@@ -103,16 +103,6 @@ _kubectl_fzf_kubectl()
         zle "${kubectl_fzf_default_completion:-expand-or-complete}"
         return
     fi
-    # Last word is an unmanaged flag
-    if [[ $currentWord == -* && $currentWord != -i && $currentWord != -t && $currentWord != --selector* && $currentWord != -l* && $currentWord != --field-selector* ]]; then
-        zle "${kubectl_fzf_default_completion:-expand-or-complete}"
-        return
-    fi
-    # Previous word is an unmanaged flag expecting a value
-    if [[ $previousWord == -* && $previousWord != -i && $previousWord != -t && $previousWord != --all-namespaces && $previousWord != -l && $previousWord != --selector && $previousWord != --field-selector ]]; then
-        zle "${kubectl_fzf_default_completion:-expand-or-complete}"
-        return
-    fi
 
     completionArgs="${words[2,-1]}"
     completionOutput=$(_kubectl_fzf_get_completions "$completionArgs" "$lastChar")

@@ -114,9 +114,9 @@ func TestUnmanagedCompletion(t *testing.T) {
 		{"get", []string{"--all-namespaces"}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
-		require.NoError(t, err)
-		require.Nil(t, comps)
+		_, _, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.Error(t, err)
+		require.IsType(t, UnmanagedFlagError(""), err)
 	}
 }
 

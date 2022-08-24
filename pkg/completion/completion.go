@@ -19,6 +19,12 @@ func (u UnknownResourceError) Error() string {
 	return string(u)
 }
 
+type UnmanagedFlagError string
+
+func (u UnmanagedFlagError) Error() string {
+	return string(u)
+}
+
 func getNamespace(args []string) *string {
 	for k, arg := range args {
 		if (arg == "-n" || arg == "--namespace") && len(args) > k+1 {
@@ -52,7 +58,7 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 	flagCompletion := checkFlagManaged(args)
 	if flagCompletion == FlagUnmanaged {
 		logrus.Infof("Flag is unmanaged in %s, bailing out", args)
-		return nil, nil, nil
+		return nil, nil, UnmanagedFlagError(strings.Join(args, " "))
 	}
 	var comps []string
 	var err error
@@ -74,16 +80,6 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
 		return fieldSelectorHeader, comps, err
 	}
-
-	//if len(args) >= 2 {
-	//lastWord := args[len(args)-1]
-	//penultimateWord := args[len(args)-2]
-	//logrus.Debugf("Checking lastWord '%s' and penultimateWord '%s'", lastWord, penultimateWord)
-	//if penultimateWord == "-l" || penultimateWord == "--selector" || lastWord == "-l" || lastWord == "-l=" || lastWord == "--selector=" || lastWord == "--selector" {
-	//}
-	//if penultimateWord == "--field-selector" || lastWord == "--field-selector" || lastWord == "--field-selector=" {
-	//}
-	//}
 
 	header := resources.ResourceToHeader(resourceType)
 	comps, err = getResourceCompletion(ctx, resourceType, namespace, fetchConfig)
