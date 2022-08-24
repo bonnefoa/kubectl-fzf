@@ -21,7 +21,7 @@ func (u UnknownResourceError) Error() string {
 
 func getNamespace(args []string) *string {
 	for k, arg := range args {
-		if arg == "-n" || arg == "--namespace" {
+		if (arg == "-n" || arg == "--namespace") && len(args) > k+1 {
 			return &args[k+1]
 		}
 		if strings.HasPrefix(arg, "--namespace=") {
@@ -48,11 +48,16 @@ func getResourceCompletion(ctx context.Context, r resources.ResourceType, namesp
 }
 
 func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher.Fetcher,
-	cmdUse string, args []string) ([]string, []string, error) {
+	cmdVerb string, args []string) ([]string, []string, error) {
+	flagCompletion := checkFlagManaged(args)
+	if flagCompletion == FlagUnmanaged {
+		logrus.Infof("Flag is unmanaged in %s, bailing out", args)
+		return nil, nil, nil
+	}
 	var comps []string
 	var err error
-	resourceType := getResourceType(cmdUse, args)
-	logrus.Debugf("Call Get Fun with %+v, resource type detected %s", args, resourceType)
+	resourceType := getResourceType(cmdVerb, args)
+	logrus.Debugf("Call Get Fun with %+v, resource type detected %s, flag detected %s", args, resourceType, flagCompletion)
 
 	if resourceType == resources.ResourceTypeUnknown {
 		return nil, comps, UnknownResourceError(strings.Join(args, " "))
@@ -62,19 +67,23 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 	fieldSelectorHeader := []string{"Cluster", "Namespace", "FieldSelector", "Occurrences"}
 
 	namespace := getNamespace(args)
-	if len(args) >= 2 {
-		lastWord := args[len(args)-1]
-		penultimateWord := args[len(args)-2]
-		logrus.Debugf("Checking lastWord '%s' and penultimateWord '%s'", lastWord, penultimateWord)
-		if penultimateWord == "-l" || penultimateWord == "--selector" || lastWord == "-l" || lastWord == "-l=" || lastWord == "--selector=" || lastWord == "--selector" {
-			comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
-			return labelHeader, comps, err
-		}
-		if penultimateWord == "--field-selector" || lastWord == "--field-selector" || lastWord == "--field-selector=" {
-			comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
-			return fieldSelectorHeader, comps, err
-		}
+	if flagCompletion == FlagLabel {
+		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
+		return labelHeader, comps, err
+	} else if flagCompletion == FlagFieldSelector {
+		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
+		return fieldSelectorHeader, comps, err
 	}
+
+	//if len(args) >= 2 {
+	//lastWord := args[len(args)-1]
+	//penultimateWord := args[len(args)-2]
+	//logrus.Debugf("Checking lastWord '%s' and penultimateWord '%s'", lastWord, penultimateWord)
+	//if penultimateWord == "-l" || penultimateWord == "--selector" || lastWord == "-l" || lastWord == "-l=" || lastWord == "--selector=" || lastWord == "--selector" {
+	//}
+	//if penultimateWord == "--field-selector" || lastWord == "--field-selector" || lastWord == "--field-selector=" {
+	//}
+	//}
 
 	header := resources.ResourceToHeader(resourceType)
 	comps, err = getResourceCompletion(ctx, resourceType, namespace, fetchConfig)
@@ -85,7 +94,7 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 	return header, comps, err
 }
 
-func ProcessCommandArgs(cmdUse string, args []string) (string, []string, error) {
+func ProcessCommandArgs(cmdVerb string, args []string) (string, []string, error) {
 	fetchConfigCli := fetcher.GetFetchConfigCli()
 	f := fetcher.NewFetcher(&fetchConfigCli)
 	err := f.SetClusterNameFromCurrentContext()
@@ -93,7 +102,7 @@ func ProcessCommandArgs(cmdUse string, args []string) (string, []string, error) 
 		return "", nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	header, comps, err := processCommandArgsWithFetchConfig(ctx, f, cmdUse, args)
+	header, comps, err := processCommandArgsWithFetchConfig(ctx, f, cmdVerb, args)
 	cancel()
 	return util.DumpLine(header), comps, err
 }

@@ -126,6 +126,24 @@ func LastURLPart(url string) string {
 	return urlArray[len(urlArray)-1]
 }
 
+func IsStringIn(element string, slice []string) bool {
+	for _, v := range slice {
+		if element == v {
+			return true
+		}
+	}
+	return false
+}
+
+func IsCharIn(c byte, slice []byte) bool {
+	for _, v := range slice {
+		if c == v {
+			return true
+		}
+	}
+	return false
+}
+
 func StringSliceToRegexps(s []string) ([]*regexp.Regexp, error) {
 	res := make([]*regexp.Regexp, len(s))
 	for i, ns := range s {

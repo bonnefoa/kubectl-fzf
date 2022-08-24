@@ -18,6 +18,11 @@ type cmdArg struct {
 	args []string
 }
 
+type flagTest struct {
+	flag   []string
+	result FlagCompletion
+}
+
 func TestProcessResourceName(t *testing.T) {
 	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
@@ -29,7 +34,8 @@ func TestProcessResourceName(t *testing.T) {
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		assert.Contains(t, comps[0], "minikube\tkube-system\tcoredns-6d4b75cb6d-m6m4q\t172.17.0.3\t192.168.49.2\tminikube\tRunning\tBurstable\tcoredns\tCriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule\tNone")
+		require.Greater(t, len(comps), 0)
+		require.Contains(t, comps[0], "minikube\tkube-system\tcoredns-6d4b75cb6d-m6m4q\t172.17.0.3\t192.168.49.2\tminikube\tRunning\tBurstable\tcoredns\tCriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule\tNone")
 	}
 }
 
@@ -40,14 +46,13 @@ func TestProcessLabelCompletion(t *testing.T) {
 		{"get", []string{"pods", "-l"}},
 		{"get", []string{"pods", "-l", ""}},
 		{"get", []string{"pods", "--selector", ""}},
-		{"get", []string{"pods", "--selector"}},
 		{"get", []string{"pods", "--selector="}},
 	}
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		assert.Equal(t, "minikube\tkube-system\ttier=control-plane\t4", comps[0])
-		assert.Len(t, comps, 12)
+		require.Equal(t, "minikube\tkube-system\ttier=control-plane\t4", comps[0])
+		require.Len(t, comps, 12)
 	}
 }
 
@@ -55,13 +60,83 @@ func TestProcessFieldSelectorCompletion(t *testing.T) {
 	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"pods", "--field-selector", ""}},
-		{"get", []string{"pods", "--field-selector"}},
 		{"get", []string{"pods", "--field-selector="}},
 	}
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
 		assert.Equal(t, "minikube\tkube-system\tspec.nodeName=minikube\t7", comps[0])
+	}
+}
+
+func TestUnmanagedArgs(t *testing.T) {
+	cmdArgs := [][]string{
+		{"-t"},
+		{"-i"},
+		{"-n"},
+		{"-n", ""},
+		{"--namespace", ""},
+		{"--field-selector"},
+		{"--selector"},
+	}
+	for _, args := range cmdArgs {
+		r := checkFlagManaged(args)
+		require.Equal(t, FlagUnmanaged.String(), r.String())
+	}
+}
+
+func TestManagedArgs(t *testing.T) {
+	cmdArgs := []flagTest{
+		{[]string{"--selector="}, FlagLabel},
+		{[]string{"--field-selector", ""}, FlagFieldSelector},
+		{[]string{"--field-selector="}, FlagFieldSelector},
+		{[]string{"--all-namespaces", ""}, FlagNone},
+		{[]string{"-t", ""}, FlagNone},
+		{[]string{"-i", ""}, FlagNone},
+		{[]string{"-ti", ""}, FlagNone},
+		{[]string{"-it", ""}, FlagNone},
+	}
+	for _, args := range cmdArgs {
+		r := checkFlagManaged(args.flag)
+		require.Equal(t, args.result, r)
+	}
+}
+
+func TestUnmanagedCompletion(t *testing.T) {
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
+	cmdArgs := []cmdArg{
+		{"get", []string{"-t"}},
+		{"get", []string{"-i"}},
+		{"get", []string{"-n"}},
+		{"get", []string{"-n", ""}},
+		{"get", []string{"--field-selector"}},
+		{"get", []string{"--selector"}},
+		{"get", []string{"--all-namespaces"}},
+	}
+	for _, cmdArg := range cmdArgs {
+		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.NoError(t, err)
+		require.Nil(t, comps)
+	}
+}
+
+func TestManagedCompletion(t *testing.T) {
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
+	cmdArgs := []cmdArg{
+		{"get", []string{"pods", "--selector", ""}},
+		{"get", []string{"pods", "--selector="}},
+		{"get", []string{"pods", "--field-selector", ""}},
+		{"get", []string{"pods", "--field-selector="}},
+		{"get", []string{"pods", "--all-namespaces", ""}},
+		{"get", []string{"pods", "-t", ""}},
+		{"get", []string{"pods", "-i", ""}},
+		{"get", []string{"pods", "-ti", ""}},
+		{"get", []string{"pods", "-it", ""}},
+	}
+	for _, cmdArg := range cmdArgs {
+		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.NoError(t, err)
+		require.NotNil(t, comps)
 	}
 }
 
