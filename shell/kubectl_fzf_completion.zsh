@@ -1,4 +1,3 @@
-KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e --no-hscroll --no-sort --cycle)
 KUBECTL_FZF_COMPLETION_BIN=${KUBECTL_FZF_COMPLETION_BIN:-kubectl-fzf-completion}
 
 __kubectl_fzf_debug()
@@ -7,22 +6,6 @@ __kubectl_fzf_debug()
     if [[ -n ${file} ]]; then
         echo "$*" >> "${file}"
     fi
-}
-
-_kubectl_fzf_call_fzf()
-{
-    local fzfPreviewOptions numFields completionOutput query
-    completionOutput="$1"
-    query="$2"
-
-    header=$(echo "$completionOutput" | head -n1)
-    numFields=$(echo "$header" | wc -w | sed 's/  *//g')
-
-    fzfPreviewOptions=(--preview-window=down:"$numFields" --preview "echo -e \"${header}\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=\$i} (NR==2){for (i in a) {printf a[i] \": \" \$i \"\n\"} }' | column -t | fold -w \$COLUMNS" )
-
-    (printf "%s" "$completionOutput") \
-        | fzf "${fzfPreviewOptions[@]}" "${KUBECTL_FZF_OPTIONS[@]}" -q "$query" \
-        | awk '{print $1,$2,$3}'
 }
 
 _kubectl_fzf_get_completions()
@@ -59,36 +42,11 @@ _kubectl_fzf_get_completions()
     echo "$completionOutput"
 }
 
-_kubectl_fzf_process_result()
-{
-    local processCommand outResult completionArgs fzfResults
-    completionArgs="$1"
-    fzfResults="$2"
-
-    processCommand="./kubectl-fzf-completion process_result --source-cmd \"${completionArgs}\" --fzf-result \"$fzfResults\""
-    __kubectl_fzf_debug "About to call: eval ${processCommand}"
-    outResult=$(eval "${processCommand}")
-    exitCode=$?
-    __kubectl_fzf_debug "processed result code $exitCode: ${outResult}"
-
-    if [[ $exitCode != 0 ]]; then
-        echo "Error when calling process result. Command: $processCommand"
-        echo "Output: $outResult"
-        return
-    else
-        __kubectl_fzf_debug "Adding to the LBUFFER: '$outResult '"
-        if [[ ${LBUFFER[-1]} != " " ]]; then
-            zle backward-kill-word
-        fi
-        LBUFFER+="$outResult "
-    fi
-}
-
 _kubectl_fzf_kubectl()
 {
     local currentWord previousWord lastChar
     local requestComp completionArgs
-    local fzfResults completionOutput
+    local completionOutput
 
     __kubectl_fzf_debug "CURRENT: ${CURRENT}, words[*]: '${words[*]}', ${#words[@]}"
     words=("${=words[1,CURRENT]}")
@@ -133,6 +91,7 @@ _kubectl_fzf_kubectl()
 }
 
 
+# Completion entry point
 kubectl_fzf_completion()
 {
     local words firstWord
@@ -160,12 +119,6 @@ kubectl_fzf_completion()
       zle "${kubectl_fzf_default_completion:-expand-or-complete}"
       return
   fi
-
-  #query=${words[${#words[@]}]}
-  #if [[ $query == -* ]]; then
-  #zle ${kubectl_fzf_default_completion:-expand-or-complete}
-  #return
-  #fi
 
   if [[ "$firstWord" != "kubectl" ]]; then
       # Try to resolve alias
