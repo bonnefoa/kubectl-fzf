@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"kubectlfzf/pkg/completion"
 	"kubectlfzf/pkg/fetcher"
+	"kubectlfzf/pkg/fzf"
 	"kubectlfzf/pkg/k8s/store"
 	"kubectlfzf/pkg/util"
 	"os"
@@ -31,14 +32,16 @@ func completeFun(cmd *cobra.Command, args []string) {
 		logrus.Warn("No completion found")
 		os.Exit(5)
 	}
-	fmt.Print(completion.FormatCompletion(header, comps))
-}
+	formattedComps := completion.FormatCompletion(header, comps)
 
-func processResultFun(cmd *cobra.Command, args []string) {
-	fzfResult := viper.GetString("fzf-result")
-	sourceCmd := viper.GetString("source-cmd")
-	res, err := completion.ProcessResult(fzfResult, sourceCmd)
-	util.FatalIf(err)
+	fzfResult, err := fzf.CallFzf(formattedComps, "")
+	if err != nil {
+		logrus.Fatalf("Call fzf error: %s", err)
+	}
+	res, err := completion.ProcessResult(cmd.Use, args, fzfResult)
+	if err != nil {
+		logrus.Fatalf("Process result error: %s", err)
+	}
 	fmt.Print(res)
 }
 
@@ -73,21 +76,6 @@ func addK8sCmd(rootCmd *cobra.Command) {
 	}
 }
 
-func addResultCmd(rootCmd *cobra.Command) {
-	resultCmd := &cobra.Command{
-		Use:     "process_result",
-		Short:   "Process the result of the fzf output for the shell autocompletion. It will detect if namespace needs to be added or not and only output necessary fields.",
-		Example: "kubectl-fzf-completion process_result --source-cmd \"get pods -l \" --fzf-result \"minikube kube-system tier=control-plane\"",
-		Run:     processResultFun,
-	}
-	resultFlags := resultCmd.Flags()
-	resultFlags.String("fzf-result", "", "Fzf output to process")
-	resultFlags.String("source-cmd", "", "Initial completion command")
-	err := viper.BindPFlags(resultFlags)
-	util.FatalIf(err)
-	rootCmd.AddCommand(resultCmd)
-}
-
 func addStatsCmd(rootCmd *cobra.Command) {
 	statsCmd := &cobra.Command{
 		Use: "stats",
@@ -113,7 +101,6 @@ func main() {
 	util.FatalIf(err)
 
 	addK8sCmd(rootCmd)
-	addResultCmd(rootCmd)
 	addStatsCmd(rootCmd)
 
 	util.ConfigureViper()

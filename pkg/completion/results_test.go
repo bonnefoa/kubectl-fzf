@@ -2,6 +2,7 @@ package completion
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -16,15 +17,15 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseNamespaceFlag(t *testing.T) {
-	r, err := parseNamespaceFlag("get pods -ntest")
+	r, err := parseNamespaceFlag([]string{"get", "pods", "-ntest"})
 	require.NoError(t, err)
 	assert.Equal(t, "test", *r)
 
-	r, err = parseNamespaceFlag("get pods --namespace kube-system")
+	r, err = parseNamespaceFlag([]string{"get", "pods", "--namespace", "kube-system"})
 	require.NoError(t, err)
 	assert.Equal(t, "kube-system", *r)
 
-	r, err = parseNamespaceFlag("get pods --context minikube --namespace kube-system")
+	r, err = parseNamespaceFlag([]string{"get", "pods", "--context", "minikube", "--namespace", "kube-system"})
 	require.NoError(t, err)
 	assert.Equal(t, "kube-system", *r)
 }
@@ -51,7 +52,8 @@ func TestResult(t *testing.T) {
 		{"apiservices.apiregistration.k8s.io None apiregistration.k8s.io/v1", "get ", "default", "apiservices.apiregistration.k8s.io"},
 	}
 	for _, testData := range testDatas {
-		res, err := processResultWithNamespace(testData.fzfResult, testData.sourceCmd, testData.currentNamespace)
+		cmdArgs := strings.Split(testData.sourceCmd, " ")
+		res, err := processResultWithNamespace(testData.fzfResult, cmdArgs, testData.currentNamespace)
 		assert.NoError(t, err)
 		assert.Equal(t, testData.expectedResult, res, "Fzf result %s, source cmd %s, current namespace %s, res: %s", testData.fzfResult, testData.sourceCmd, testData.currentNamespace, res)
 	}

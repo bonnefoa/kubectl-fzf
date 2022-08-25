@@ -1,4 +1,5 @@
 KUBECTL_FZF_OPTIONS=(-1 --header-lines=1 --layout reverse -e --no-hscroll --no-sort --cycle)
+KUBECTL_FZF_COMPLETION_BIN=${KUBECTL_FZF_COMPLETION_BIN:-kubectl-fzf-completion}
 
 __kubectl_fzf_debug()
 {
@@ -30,8 +31,7 @@ _kubectl_fzf_get_completions()
     completionArgs="$1"
     lastChar="$2"
 
-    # TODO: Check existence and pull it from $PATH
-    requestComp="kubectl-fzf-completion k8s_completion $completionArgs"
+    requestComp="$KUBECTL_FZF_COMPLETION_BIN k8s_completion $completionArgs"
     if [ "${lastChar}" = "" ]; then
         __kubectl_fzf_debug "Adding extra empty parameter"
         requestComp="${requestComp} \"\""
@@ -104,8 +104,15 @@ _kubectl_fzf_kubectl()
         return
     fi
 
+    if [[ $currentWord != " " ]]; then
+        query="$currentWord"
+        query=${query#-l}
+        query=${query#--field-selector}
+        query=${query#=}
+    fi
+
     completionArgs="${words[2,-1]}"
-    completionOutput=$(_kubectl_fzf_get_completions "$completionArgs" "$lastChar")
+    completionOutput=$(_kubectl_fzf_get_completions "$completionArgs" "$lastChar" "$query")
     if [[ "$completionOutput" == "" ]]; then
         return
     fi
@@ -118,20 +125,11 @@ _kubectl_fzf_kubectl()
         return
     fi
 
-    if [[ $currentWord != " " ]]; then
-        query="$currentWord"
-        query=${query#-l}
-        query=${query#--field-selector}
-        query=${query#=}
+    __kubectl_fzf_debug "Adding to the LBUFFER: '$completionOutput '"
+    if [[ ${LBUFFER[-1]} != " " ]]; then
+        zle backward-kill-word
     fi
-
-    IFS=" " read -r -A fzfResults <<< "$(_kubectl_fzf_call_fzf "$completionOutput" "$query")"
-    if [[ "$fzfResults" == "" ]]; then
-        echo "Completion cancelled"
-        return
-    fi
-
-    _kubectl_fzf_process_result "$completionArgs" "$fzfResults"
+    LBUFFER+="$completionOutput "
 }
 
 
