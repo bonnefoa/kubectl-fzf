@@ -7,6 +7,8 @@ import (
 	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/fzf"
 	"kubectlfzf/pkg/k8s/store"
+	"kubectlfzf/pkg/parse"
+	"kubectlfzf/pkg/results"
 	"kubectlfzf/pkg/util"
 	"os"
 
@@ -17,11 +19,11 @@ import (
 
 func completeFun(cmd *cobra.Command, args []string) {
 	header, comps, err := completion.ProcessCommandArgs(cmd.Use, args)
-	if e, ok := err.(completion.UnknownResourceError); ok {
+	if e, ok := err.(parse.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
 		os.Exit(6)
 	}
-	if e, ok := err.(completion.UnmanagedFlagError); ok {
+	if e, ok := err.(parse.UnmanagedFlagError); ok {
 		logrus.Warnf("Unmanaged flag: %s", e)
 		os.Exit(6)
 	}
@@ -38,7 +40,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Call fzf error: %s", err)
 	}
-	res, err := completion.ProcessResult(cmd.Use, args, fzfResult)
+	res, err := results.ProcessResult(cmd.Use, args, fzfResult)
 	if err != nil {
 		logrus.Fatalf("Process result error: %s", err)
 	}

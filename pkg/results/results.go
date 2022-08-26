@@ -1,9 +1,11 @@
-package completion
+package results
 
 import (
 	"fmt"
 	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/parse"
+	"kubectlfzf/pkg/util"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -52,30 +54,37 @@ func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult strin
 		return "", fmt.Errorf("fzf result should have at least 3 elements, got %v", resultFields)
 	}
 	logrus.Debugf("Processing fzfResult '%s', cmdArgs '%s', current namespace '%s'", fzfResult, cmdArgs, currentNamespace)
-	resourceType := getResourceType(cmdUse, cmdArgs)
-	if resourceType == resources.ResourceTypeUnknown {
-		return "", fmt.Errorf("unkonwn resource type from source command %s", cmdArgs)
+	resourceType, flagCompletion, err := parse.ParseFlagAndResources(cmdUse, cmdArgs)
+	if err != nil {
+		return "", err
 	}
-	logrus.Debugf("Resource type found: %s", resourceType)
+	logrus.Debugf("Resource type %s, flagCompletion %s", resourceType, flagCompletion)
+
 	if resourceType == resources.ResourceTypeApiResource {
 		return resultFields[0], nil
-	}
-	if resourceType == resources.ResourceTypeNamespace {
-		return resultFields[1], nil
 	}
 
 	// Generic resource
 	resultNamespace := resultFields[1]
 	resultValue := resultFields[2]
+
+	if resourceType == resources.ResourceTypeNamespace {
+		resultValue = resultFields[1]
+	}
+
 	logrus.Debugf("Result namespace: %s, resultValue: %s", resultNamespace, resultValue)
 
-	cmdNamespace, err := parseNamespaceFlag(cmdArgs)
-	if err != nil {
-		return "", errors.Wrapf(err, "Error parsing commands %s", cmdArgs)
+	var cmdNamespace *string
+	if flagCompletion != parse.FlagNamespace {
+		cmdNamespace, err = parseNamespaceFlag(cmdArgs)
+		if err != nil {
+			return "", errors.Wrapf(err, "Error parsing commands %s", cmdArgs)
+		}
 	}
 	lastWord := cmdArgs[len(cmdArgs)-1]
 	// add flag to the completion
-	if lastWord == "-l=" || lastWord == "-l" || lastWord == "--field-selector=" || lastWord == "--selector=" {
+	lastFlags := []string{"-l=", "-l", "--field-selector=", "--selector=", "-n=", "--namespace=", "-n"}
+	if util.IsStringIn(lastWord, lastFlags) {
 		resultValue = fmt.Sprintf("%s%s", lastWord, resultValue)
 	}
 
@@ -83,7 +92,7 @@ func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult strin
 		return resultValue, nil
 	}
 
-	if resultNamespace != currentNamespace {
+	if resultNamespace != currentNamespace && flagCompletion != parse.FlagNamespace {
 		completion := fmt.Sprintf("%s -n %s", resultValue, resultNamespace)
 		return completion, nil
 	}

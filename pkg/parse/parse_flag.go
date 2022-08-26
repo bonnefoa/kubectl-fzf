@@ -1,4 +1,4 @@
-package completion
+package parse
 
 import (
 	"strings"
@@ -11,12 +11,13 @@ type FlagCompletion int
 const (
 	FlagLabel FlagCompletion = iota
 	FlagFieldSelector
+	FlagNamespace
 	FlagNone
 	FlagUnmanaged
 )
 
 func (f FlagCompletion) String() string {
-	flagStr := [...]string{"Label", "FieldSelector", "None", "Unmanaged"}
+	flagStr := [...]string{"Label", "FieldSelector", "Namespace", "None", "Unmanaged"}
 	if len(flagStr) < int(f) {
 		return "Unknown"
 	}
@@ -35,8 +36,7 @@ func parsePreviousFlag(s string) FlagCompletion {
 	case "n":
 		fallthrough
 	case "namespace":
-		// TODO: Manage namespaces
-		return FlagUnmanaged
+		return FlagNamespace
 	}
 	return FlagNone
 }
@@ -45,18 +45,24 @@ func parseLastFlag(s string) FlagCompletion {
 	logrus.Debugf("Parsing last flag '%s'", s)
 	switch s {
 	case "l":
-		return FlagLabel
+		fallthrough
 	case "l=":
-		return FlagLabel
+		fallthrough
 	case "selector=":
 		return FlagLabel
+	case "n":
+		fallthrough
+	case "n=":
+		fallthrough
+	case "namespace=":
+		return FlagNamespace
 	case "field-selector=":
 		return FlagFieldSelector
 	}
 	return FlagUnmanaged
 }
 
-func checkFlagManaged(args []string) FlagCompletion {
+func CheckFlagManaged(args []string) FlagCompletion {
 	logrus.Infof("Checking Managed Flag '%s'", args)
 	lastArg := args[len(args)-1]
 	if strings.HasPrefix(lastArg, "-") {

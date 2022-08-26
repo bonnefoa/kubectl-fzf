@@ -1,4 +1,4 @@
-package completion
+package results
 
 import (
 	"os"
@@ -41,6 +41,10 @@ func TestResult(t *testing.T) {
 		{"minikube kube-system coredns-64897985d-nrblm", "get", []string{"pods", "--context", "minikube", "--namespace", "kube-system", ""}, "default", "coredns-64897985d-nrblm"},
 		{"minikube kube-system kube-controller-manager-minikube", "get", []string{"pods", " "}, "default", "kube-controller-manager-minikube -n kube-system"},
 		{"minikube kube-system kube-controller-manager-minikube", "get", []string{"pods", "-nkube-system", " "}, "default", "kube-controller-manager-minikube"},
+		// Namespace
+		{"incluster default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n="}, "default", "-n=default"},
+		{"incluster default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n"}, "default", "-ndefault"},
+		{"incluster default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n", " "}, "default", "default"},
 		// Label
 		{"minikube kube-system tier=control-plane", "get", []string{"pods", "-l="}, "default", "-l=tier=control-plane -n kube-system"},
 		{"minikube kube-system tier=control-plane", "get", []string{"pods", "-l", " "}, "default", "tier=control-plane -n kube-system"},
@@ -53,7 +57,9 @@ func TestResult(t *testing.T) {
 	}
 	for _, testData := range testDatas {
 		res, err := processResultWithNamespace(testData.cmdUse, testData.cmdArgs, testData.fzfResult, testData.currentNamespace)
-		assert.NoError(t, err)
-		assert.Equal(t, testData.expectedResult, res, "Fzf result %s, cmdUse %s, cmdArgs %s, current namespace %s, res: %s", testData.fzfResult, testData.cmdUse, testData.cmdArgs, testData.currentNamespace, res)
+		require.NoError(t, err)
+		require.Equal(t, testData.expectedResult, res,
+			"Fzf result %s, cmdUse %s, cmdArgs %s, current namespace %s, res: %s", testData.fzfResult, testData.cmdUse,
+			testData.cmdArgs, testData.currentNamespace, res)
 	}
 }

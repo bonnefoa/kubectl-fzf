@@ -1,5 +1,7 @@
 package resources
 
+import "github.com/sirupsen/logrus"
+
 type ResourceType int64
 
 const (
@@ -165,6 +167,29 @@ func ParseResourceType(s string) ResourceType {
 		fallthrough
 	case "sts":
 		return ResourceTypeStatefulSet
+	}
+	return ResourceTypeUnknown
+}
+
+func GetResourceType(cmdUse string, args []string) ResourceType {
+	logrus.Debugf("Getting resource type from '%s', %d", args, len(args))
+	resourceType := ResourceTypeApiResource
+	if cmdUse == "logs" {
+		return ResourceTypePod
+	}
+	if cmdUse == "exec" {
+		return ResourceTypePod
+	}
+	// No resource type or we have only
+	// get ''#
+	if len(args) <= 1 {
+		return resourceType
+	}
+	for _, v := range args {
+		resourceType = ParseResourceType(v)
+		if resourceType != ResourceTypeUnknown {
+			return resourceType
+		}
 	}
 	return ResourceTypeUnknown
 }

@@ -5,6 +5,7 @@ import (
 	"kubectlfzf/pkg/fetcher/fetchertest"
 	"kubectlfzf/pkg/httpserver/httpservertest"
 	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/parse"
 	"path"
 	"sort"
 	"testing"
@@ -16,11 +17,6 @@ import (
 type cmdArg struct {
 	verb string
 	args []string
-}
-
-type flagTest struct {
-	flag   []string
-	result FlagCompletion
 }
 
 func TestProcessResourceName(t *testing.T) {
@@ -36,6 +32,22 @@ func TestProcessResourceName(t *testing.T) {
 		require.NoError(t, err)
 		require.Greater(t, len(comps), 0)
 		require.Contains(t, comps[0], "minikube\tkube-system\tcoredns-6d4b75cb6d-m6m4q\t172.17.0.3\t192.168.49.2\tminikube\tRunning\tBurstable\tcoredns\tCriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule\tNone")
+	}
+}
+
+func TestProcessNamespace(t *testing.T) {
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
+	cmdArgs := []cmdArg{
+		{"get", []string{"pods", "-n"}},
+		{"get", []string{"po", "-n="}},
+		{"logs", []string{"--namespace", ""}},
+		{"logs", []string{"--namespace="}},
+	}
+	for _, cmdArg := range cmdArgs {
+		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		require.NoError(t, err)
+		require.Greater(t, len(comps), 0)
+		require.Contains(t, comps[0], "minikube\tdefault\t30d\tkubernetes.io/metadata.name=default")
 	}
 }
 
@@ -69,46 +81,11 @@ func TestProcessFieldSelectorCompletion(t *testing.T) {
 	}
 }
 
-func TestUnmanagedArgs(t *testing.T) {
-	cmdArgs := [][]string{
-		{"-t"},
-		{"-i"},
-		{"-n"},
-		{"-n", ""},
-		{"--namespace", ""},
-		{"--field-selector"},
-		{"--selector"},
-	}
-	for _, args := range cmdArgs {
-		r := checkFlagManaged(args)
-		require.Equal(t, FlagUnmanaged.String(), r.String())
-	}
-}
-
-func TestManagedArgs(t *testing.T) {
-	cmdArgs := []flagTest{
-		{[]string{"--selector="}, FlagLabel},
-		{[]string{"--field-selector", ""}, FlagFieldSelector},
-		{[]string{"--field-selector="}, FlagFieldSelector},
-		{[]string{"--all-namespaces", ""}, FlagNone},
-		{[]string{"-t", ""}, FlagNone},
-		{[]string{"-i", ""}, FlagNone},
-		{[]string{"-ti", ""}, FlagNone},
-		{[]string{"-it", ""}, FlagNone},
-	}
-	for _, args := range cmdArgs {
-		r := checkFlagManaged(args.flag)
-		require.Equal(t, args.result, r)
-	}
-}
-
 func TestUnmanagedCompletion(t *testing.T) {
 	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"-t"}},
 		{"get", []string{"-i"}},
-		{"get", []string{"-n"}},
-		{"get", []string{"-n", ""}},
 		{"get", []string{"--field-selector"}},
 		{"get", []string{"--selector"}},
 		{"get", []string{"--all-namespaces"}},
@@ -116,7 +93,7 @@ func TestUnmanagedCompletion(t *testing.T) {
 	for _, cmdArg := range cmdArgs {
 		_, _, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.Error(t, err)
-		require.IsType(t, UnmanagedFlagError(""), err)
+		require.IsType(t, parse.UnmanagedFlagError(""), err)
 	}
 }
 
@@ -132,6 +109,8 @@ func TestManagedCompletion(t *testing.T) {
 		{"get", []string{"pods", "-i", ""}},
 		{"get", []string{"pods", "-ti", ""}},
 		{"get", []string{"pods", "-it", ""}},
+		{"get", []string{"-n"}},
+		{"get", []string{"-n", ""}},
 	}
 	for _, cmdArg := range cmdArgs {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)

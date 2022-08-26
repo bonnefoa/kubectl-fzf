@@ -4,6 +4,7 @@ import (
 	"context"
 	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/parse"
 	"kubectlfzf/pkg/util"
 	"sort"
 	"strings"
@@ -12,18 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
-
-type UnknownResourceError string
-
-func (u UnknownResourceError) Error() string {
-	return string(u)
-}
-
-type UnmanagedFlagError string
-
-func (u UnmanagedFlagError) Error() string {
-	return string(u)
-}
 
 func getNamespace(args []string) *string {
 	for k, arg := range args {
@@ -55,28 +44,21 @@ func getResourceCompletion(ctx context.Context, r resources.ResourceType, namesp
 
 func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher.Fetcher,
 	cmdVerb string, args []string) ([]string, []string, error) {
-	flagCompletion := checkFlagManaged(args)
-	if flagCompletion == FlagUnmanaged {
-		logrus.Infof("Flag is unmanaged in %s, bailing out", args)
-		return nil, nil, UnmanagedFlagError(strings.Join(args, " "))
-	}
 	var comps []string
 	var err error
-	resourceType := getResourceType(cmdVerb, args)
-	logrus.Debugf("Call Get Fun with %+v, resource type detected %s, flag detected %s", args, resourceType, flagCompletion)
-
-	if resourceType == resources.ResourceTypeUnknown {
-		return nil, comps, UnknownResourceError(strings.Join(args, " "))
+	resourceType, flagCompletion, err := parse.ParseFlagAndResources(cmdVerb, args)
+	if err != nil {
+		return nil, nil, err
 	}
-
+	logrus.Debugf("Call Get Fun with %+v, resource type detected %s, flag detected %s", args, resourceType, flagCompletion)
 	labelHeader := []string{"Cluster", "Namespace", "Label", "Occurrences"}
 	fieldSelectorHeader := []string{"Cluster", "Namespace", "FieldSelector", "Occurrences"}
 
 	namespace := getNamespace(args)
-	if flagCompletion == FlagLabel {
+	if flagCompletion == parse.FlagLabel {
 		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
 		return labelHeader, comps, err
-	} else if flagCompletion == FlagFieldSelector {
+	} else if flagCompletion == parse.FlagFieldSelector {
 		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
 		return fieldSelectorHeader, comps, err
 	}
