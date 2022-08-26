@@ -28,6 +28,7 @@ func GetFetchConfigCli() FetcherCli {
 	f := FetcherCli{
 		ClusterConfigCli: clusterconfig.GetClusterConfigCli(),
 	}
+	f.FetcherCachePath = viper.GetString("fetcher-cache-path")
 	f.HttpEndpoint = viper.GetString("http-endpoint")
 	f.MinimumCache = viper.GetDuration("minimum-cache")
 	f.PortForwardLocalPort = viper.GetInt("port-forward-local-port")
