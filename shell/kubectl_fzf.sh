@@ -1,4 +1,5 @@
 #!/bin/bash
+KUBECTL_FZF_COMPLETION_BIN=${KUBECTL_FZF_COMPLETION_BIN:-kubectl-fzf-completion}
 
 __kubectl_fzf_debug()
 {
@@ -26,8 +27,9 @@ __kubectl_fzf_get_completions()
     cmdArgs="$1"
     lastChar="$2"
     # TODO Handle query
-    query="$3"
+    currentWord="$3"
 
+    __kubectl_fzf_debug "Get completions: cmdArgs: '$cmdArgs', lastChar: '$lastChar', currentWord: '$currentWord'"
     requestComp="$KUBECTL_FZF_COMPLETION_BIN k8s_completion $cmdArgs"
     if [ "${lastChar}" = "" ]; then
         __kubectl_fzf_debug "Adding extra empty parameter"

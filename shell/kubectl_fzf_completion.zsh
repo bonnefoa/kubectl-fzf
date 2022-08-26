@@ -1,4 +1,3 @@
-KUBECTL_FZF_COMPLETION_BIN=${KUBECTL_FZF_COMPLETION_BIN:-kubectl-fzf-completion}
 . "${0:A:h}/kubectl_fzf.sh"
 
 __kubectl_fzf_kubectl() {
@@ -20,10 +19,8 @@ __kubectl_fzf_kubectl() {
         return
     fi
 
-    query=$(__kubectl_fzf_query_from_word "$currentWord")
-
     cmdArgs="${words[2, -1]}"
-    completionOutput=$(__kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$query")
+    completionOutput=$(__kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$currentWord")
     if [[ "$completionOutput" == "" ]]; then
         return
     fi
