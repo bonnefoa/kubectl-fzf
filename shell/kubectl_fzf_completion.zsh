@@ -1,51 +1,10 @@
 KUBECTL_FZF_COMPLETION_BIN=${KUBECTL_FZF_COMPLETION_BIN:-kubectl-fzf-completion}
+. "${0:A:h}/kubectl_fzf.sh"
 
-__kubectl_fzf_debug()
-{
-    local file="$KUBECTL_FZF_COMP_DEBUG_FILE"
-    if [[ -n ${file} ]]; then
-        echo "$*" >> "${file}"
-    fi
-}
-
-_kubectl_fzf_get_completions()
-{
-    local completionArgs completionOutput requestComp lastChar
-    completionArgs="$1"
-    lastChar="$2"
-
-    requestComp="$KUBECTL_FZF_COMPLETION_BIN k8s_completion $completionArgs"
-    if [ "${lastChar}" = "" ]; then
-        __kubectl_fzf_debug "Adding extra empty parameter"
-        requestComp="${requestComp} \"\""
-    fi
-    __kubectl_fzf_debug "About to call: eval '${requestComp}'"
-    completionOutput=$(eval "${requestComp}")
-    exitCode=$?
-    __kubectl_fzf_debug "completion output: ${completionOutput}, exit code ${exitCode}"
-
-    if [[ $exitCode == 5 ]]; then
-        # No completion available
-        echo "error: No completion available: $requestComp"
-        return
-    fi
-    if [[ $exitCode == 6 ]]; then
-        # Unknow resource type, fallback to default completion
-        echo "fallback"
-        return
-    fi
-    if [[ $exitCode != 0 ]]; then
-        # Error on completion
-        echo "error when calling kubectl-fzf-completion: $requestComp. Output: $completionOutput"
-        return
-    fi
-    echo "$completionOutput"
-}
-
-_kubectl_fzf_kubectl()
+__kubectl_fzf_kubectl()
 {
     local currentWord previousWord lastChar
-    local requestComp completionArgs
+    local cmdArgs
     local completionOutput
 
     __kubectl_fzf_debug "CURRENT: ${CURRENT}, words[*]: '${words[*]}', ${#words[@]}"
@@ -62,15 +21,10 @@ _kubectl_fzf_kubectl()
         return
     fi
 
-    if [[ $currentWord != " " ]]; then
-        query="$currentWord"
-        query=${query#-l}
-        query=${query#--field-selector}
-        query=${query#=}
-    fi
+    query=$(__kubectl_fzf_query_from_word "$currentWord")
 
-    completionArgs="${words[2,-1]}"
-    completionOutput=$(_kubectl_fzf_get_completions "$completionArgs" "$lastChar" "$query")
+    cmdArgs="${words[2,-1]}"
+    completionOutput=$(__kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$query")
     if [[ "$completionOutput" == "" ]]; then
         return
     fi
@@ -97,7 +51,6 @@ kubectl_fzf_completion()
     local words firstWord
     setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
     words=(${(z)LBUFFER})
-
     __kubectl_fzf_debug "\n========= starting completion logic =========="
     __kubectl_fzf_debug "LBUFFER: '$LBUFFER', words: '${words[*]}', ${#words}"
 
@@ -142,7 +95,7 @@ kubectl_fzf_completion()
       words+=(" ")
   fi
   CURRENT=${#words[@]}
-  _kubectl_fzf_kubectl
+  __kubectl_fzf_kubectl
 }
 
 if [[ -z "$kubectl_fzf_default_completion" ]]; then
