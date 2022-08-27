@@ -13,7 +13,7 @@ type LogConf struct {
 	LogLevel logrus.Level
 }
 
-func GetLogConf() LogConf {
+func getLogConf() LogConf {
 	logLevelStr := viper.GetString("log-level")
 	logLevel, err := logrus.ParseLevel(logLevelStr)
 	FatalIf(err)
@@ -23,8 +23,8 @@ func GetLogConf() LogConf {
 	return l
 }
 
-func ConfigureLog() {
-	logConf := GetLogConf()
+func configureLog() {
+	logConf := getLogConf()
 	logrus.Debugf("Setting log level %v", logConf.LogLevel)
 	logrus.SetLevel(logConf.LogLevel)
 	logrus.SetReportCaller(true)

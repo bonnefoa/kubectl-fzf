@@ -12,6 +12,7 @@ import (
 	"kubectlfzf/pkg/results"
 	"kubectlfzf/pkg/util"
 	"os"
+	"runtime/pprof"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -107,7 +108,8 @@ func main() {
 	addStatsCmd(rootCmd)
 
 	util.ConfigureViper()
-	cobra.OnInitialize(util.ConfigureLog)
+	cobra.OnInitialize(util.CommonInitialization)
+	defer pprof.StopCPUProfile()
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatalf("Root command failed: %v", err)
 	}

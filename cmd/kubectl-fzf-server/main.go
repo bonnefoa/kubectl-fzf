@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/pprof"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -82,7 +83,8 @@ func main() {
 	util.FatalIf(err)
 
 	util.ConfigureViper()
-	cobra.OnInitialize(util.ConfigureLog)
+	cobra.OnInitialize(util.CommonInitialization)
+	defer pprof.StopCPUProfile()
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatalf("Root command failed: %v", err)
 	}

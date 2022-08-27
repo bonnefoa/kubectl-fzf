@@ -2,15 +2,31 @@ package util
 
 import (
 	"flag"
+	"os"
+	"runtime/pprof"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 func SetCommonCliFlags(fs *pflag.FlagSet, defaultLogLevel string) {
 	fs.String("log-level", defaultLogLevel, "Log level to use")
-	fs.Bool("cpu-profile", false, "Start with cpu profiling")
+	fs.String("cpu-profile", "", "Destination file for cpu profiling")
+}
+
+func CommonInitialization() {
+	configureLog()
+	cpuProfile := viper.GetString("cpu-profile")
+	if cpuProfile != "" {
+		f, err := os.Create(cpuProfile)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+	}
+
 }
 
 func ConfigureViper() {
