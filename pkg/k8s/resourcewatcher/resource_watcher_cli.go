@@ -20,7 +20,7 @@ type ResourceWatcherCli struct {
 func SetResourceWatcherCli(fs *pflag.FlagSet) {
 	fs.StringSlice("watched-resources", []string{}, "Resources to watch, separated by comma.")
 	fs.StringSlice("excluded-resources", []string{}, "Resources to exclude, separated by comma. To exclude everything: pods,configmaps,services,serviceaccounts,replicasets,daemonsets,secrets,statefulsets,deployments,endpoints,ingresses,cronjobs,jobs,horizontalpodautoscalers,persistentvolumes,persistentvolumeclaims,nodes,namespaces.")
-	fs.StringSlice("watcher-namespaces", []string{}, "Namespace regexps to watch, separated by comma.")
+	fs.StringSlice("watched-namespaces", []string{}, "Namespace regexps to watch, separated by comma.")
 	fs.StringSlice("excluded-namespaces", []string{}, "Namespace regexps to exclude, separated by comma.")
 	fs.StringSlice("ignored-node-roles", []string{}, "List of node role to ommit in the dump. It won't appaear in the completion. Useful to save space and remove cluster for 'common' node role. Separated by comma.")
 	fs.Duration("node-polling-period", 300*time.Second, "Polling period for nodes.")
