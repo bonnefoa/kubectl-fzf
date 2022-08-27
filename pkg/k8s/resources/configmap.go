@@ -32,7 +32,6 @@ func (c *ConfigMap) HasChanged(k K8sResource) bool {
 // ToStrings serializes the object to strings
 func (c *ConfigMap) ToStrings() []string {
 	line := []string{
-		c.Cluster,
 		c.Namespace,
 		c.Name,
 		c.resourceAge(),

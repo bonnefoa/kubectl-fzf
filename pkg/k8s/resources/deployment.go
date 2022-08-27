@@ -46,7 +46,6 @@ func (d *Deployment) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (d *Deployment) ToStrings() []string {
 	line := []string{
-		d.Cluster,
 		d.Namespace,
 		d.Name,
 		d.DesiredReplicas,

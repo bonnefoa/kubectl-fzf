@@ -52,7 +52,6 @@ func (j *Job) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (j *Job) ToStrings() []string {
 	lst := []string{
-		j.Cluster,
 		j.Namespace,
 		j.Name,
 		j.Completions,

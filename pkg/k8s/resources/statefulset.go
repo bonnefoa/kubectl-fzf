@@ -44,7 +44,6 @@ func (s *StatefulSet) HasChanged(k K8sResource) bool {
 func (s *StatefulSet) ToStrings() []string {
 	selectorList := util.JoinSlicesOrNone(s.selectors, ",")
 	line := []string{
-		s.Cluster,
 		s.Namespace,
 		s.Name,
 		fmt.Sprintf("%d/%d", s.currentReplicas, s.replicas),

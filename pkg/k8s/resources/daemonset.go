@@ -59,7 +59,6 @@ func (d *DaemonSet) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (d *DaemonSet) ToStrings() []string {
 	lst := []string{
-		d.Cluster,
 		d.Namespace,
 		d.Name,
 		d.Desired,

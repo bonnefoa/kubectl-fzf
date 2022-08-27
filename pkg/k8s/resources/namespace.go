@@ -32,7 +32,6 @@ func (c *Namespace) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (c *Namespace) ToStrings() []string {
 	line := []string{
-		c.Cluster,
 		c.Name,
 		c.resourceAge(),
 		c.labelsString(),

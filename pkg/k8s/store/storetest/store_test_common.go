@@ -52,7 +52,7 @@ func GetTestPodStore(t *testing.T) (string, *store.Store) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctorConfig := resources.CtorConfig{Cluster: "clstr"}
+	ctorConfig := resources.CtorConfig{}
 	k8sStore := store.NewStore(ctx, storeConfig, ctorConfig, resources.ResourceTypePod)
 	assert.Nil(t, err)
 	pods := []corev1.Pod{

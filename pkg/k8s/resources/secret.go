@@ -39,7 +39,6 @@ func (s *Secret) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (s *Secret) ToStrings() []string {
 	line := []string{
-		s.Cluster,
 		s.Namespace,
 		s.Name,
 		s.SecretType,

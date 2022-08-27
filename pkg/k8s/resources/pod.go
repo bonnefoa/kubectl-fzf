@@ -122,7 +122,6 @@ func (p *Pod) GetFieldSelectors() map[string]string {
 // ToString serializes the object to strings
 func (p *Pod) ToStrings() []string {
 	lst := []string{
-		p.Cluster,
 		p.Namespace,
 		p.Name,
 		p.PodIP,

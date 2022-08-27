@@ -43,7 +43,6 @@ func (pvc *PersistentVolumeClaim) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (pvc *PersistentVolumeClaim) ToStrings() []string {
 	lst := []string{
-		pvc.Cluster,
 		pvc.Namespace,
 		pvc.Name,
 		pvc.Status,

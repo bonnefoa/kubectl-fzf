@@ -90,7 +90,6 @@ func (n *Node) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (n *Node) ToStrings() []string {
 	line := []string{
-		n.Cluster,
 		n.Name,
 		util.JoinSlicesOrNone(n.Roles, ","),
 		n.Status,

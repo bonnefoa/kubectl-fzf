@@ -51,7 +51,6 @@ func (c *CronJob) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (c *CronJob) ToStrings() []string {
 	lst := []string{
-		c.Cluster,
 		c.Namespace,
 		c.Name,
 		c.Schedule,

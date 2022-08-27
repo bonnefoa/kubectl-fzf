@@ -16,9 +16,9 @@ func TestTagLabel(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(labelMap)
 
-	assert.Contains(t, labelMap, TagResourceKey{"minikube", "kube-system", "k8s-app=kube-dns"})
-	assert.Contains(t, labelMap, TagResourceKey{"minikube", "kube-system", "tier=control-plane"})
-	assert.Equal(t, 4, labelMap[TagResourceKey{"minikube", "kube-system", "tier=control-plane"}])
+	assert.Contains(t, labelMap, TagResourceKey{"kube-system", "k8s-app=kube-dns"})
+	assert.Contains(t, labelMap, TagResourceKey{"kube-system", "tier=control-plane"})
+	assert.Equal(t, 4, labelMap[TagResourceKey{"kube-system", "tier=control-plane"}])
 }
 
 func TestLabelNamespaceFiltering(t *testing.T) {
@@ -36,8 +36,8 @@ func TestLabelCompletion(t *testing.T) {
 	assert.Len(t, labelComps, 12)
 
 	t.Log(labelComps)
-	assert.Equal(t, "minikube\tkube-system\ttier=control-plane\t4", labelComps[0])
-	assert.Equal(t, "minikube\tkube-system\taddonmanager.kubernetes.io/mode=Reconcile\t1", labelComps[1])
+	assert.Equal(t, "kube-system\ttier=control-plane\t4", labelComps[0])
+	assert.Equal(t, "kube-system\taddonmanager.kubernetes.io/mode=Reconcile\t1", labelComps[1])
 }
 
 func TestGetFieldSelector(t *testing.T) {
@@ -45,6 +45,6 @@ func TestGetFieldSelector(t *testing.T) {
 	fieldSelectorOccurrences, err := getTagResourceOccurrences(context.Background(), resources.ResourceTypePod, nil, fetchConfig, TagTypeFieldSelector)
 	require.NoError(t, err)
 
-	assert.Contains(t, fieldSelectorOccurrences, TagResourceKey{"minikube", "kube-system", "spec.nodeName=minikube"})
-	assert.Equal(t, 7, fieldSelectorOccurrences[TagResourceKey{"minikube", "kube-system", "spec.nodeName=minikube"}])
+	assert.Contains(t, fieldSelectorOccurrences, TagResourceKey{"kube-system", "spec.nodeName=minikube"})
+	assert.Equal(t, 7, fieldSelectorOccurrences[TagResourceKey{"kube-system", "spec.nodeName=minikube"}])
 }

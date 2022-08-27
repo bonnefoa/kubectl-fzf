@@ -54,7 +54,6 @@ func (s *Service) ToStrings() []string {
 	portList := util.JoinSlicesOrNone(s.Ports, ",")
 	selectorList := util.JoinSlicesOrNone(s.Selectors, ",")
 	line := []string{
-		s.Cluster,
 		s.Namespace,
 		s.Name,
 		s.ServiceType,

@@ -14,7 +14,6 @@ import (
 // K8sResource is the generic information of a k8s entity
 type K8sResource interface {
 	GetNamespace() string
-	GetCluster() string
 	GetLabels() map[string]string
 	GetFieldSelectors() map[string]string
 
@@ -25,15 +24,10 @@ type K8sResource interface {
 
 // ResourceMeta is the generic information of a k8s entity
 type ResourceMeta struct {
-	Cluster      string
 	Name         string
 	Namespace    string // Namespace can be None
 	Labels       map[string]string
 	CreationTime time.Time
-}
-
-func (r *ResourceMeta) GetCluster() string {
-	return r.Cluster
 }
 
 func (r *ResourceMeta) GetNamespace() string {
@@ -52,7 +46,6 @@ func (r *ResourceMeta) GetLabels() map[string]string {
 func (r *ResourceMeta) FromObjectMeta(meta metav1.ObjectMeta, config CtorConfig) {
 	r.Name = meta.Name
 	r.Namespace = meta.Namespace
-	r.Cluster = config.Cluster
 	r.Labels = meta.Labels
 	r.CreationTime = meta.CreationTimestamp.Time
 }
@@ -62,7 +55,6 @@ func (r *ResourceMeta) FromDynamicMeta(u *unstructured.Unstructured, config Ctor
 	metadata := u.Object["metadata"].(map[string]interface{})
 	r.Name = metadata["name"].(string)
 	r.Namespace = metadata["namespace"].(string)
-	r.Cluster = config.Cluster
 	var err error
 	var found bool
 	r.Labels, found, err = unstructured.NestedStringMap(u.Object, "metadata", "labels")
@@ -95,25 +87,25 @@ func (r *ResourceMeta) labelsString() string {
 }
 
 func ResourceToHeader(r ResourceType) []string {
-	replicaSetHeader := []string{"Cluster", "Namespace", "Name", "Replicas", "AvailableReplicas", "ReadyReplicas", "Selector", "Age", "Labels"}
+	replicaSetHeader := []string{"Namespace", "Name", "Replicas", "AvailableReplicas", "ReadyReplicas", "Selector", "Age", "Labels"}
 	apiResourceHeader := []string{"Name", "Shortnames", "ApiVersion", "Namespaced", "Kind"}
-	configMapHeader := []string{"Cluster", "Namespace", "Name", "Age", "Labels"}
-	cronJobHeader := []string{"Cluster", "Namespace", "Name", "Schedule", "LastSchedule", "Containers", "Age", "Labels"}
-	daemonSetHeader := []string{"Cluster", "Namespace", "Name", "Desired", "Current", "Ready", "LabelSelector", "Containers", "Age", "Labels"}
-	deploymentHeader := []string{"Cluster", "Namespace", "Name", "Desired", "Current", "Up-to-date", "Available", "Age", "Labels"}
-	endpointsHeader := []string{"Cluster", "Namespace", "Name", "Age", "ReadyIps", "ReadyPods", "NotReadyIps", "NotReadyPods", "Labels"}
-	horizontalPodAutoscalerHeader := []string{"Cluster", "Namespace", "Name", "Reference", "Targets", "MinPods", "MaxPods", "Replicas", "Age", "Labels"}
-	ingressHeader := []string{"Cluster", "Namespace", "Name", "Address", "Age", "Labels"}
-	jobHeader := []string{"Cluster", "Namespace", "Name", "Completions", "Containers", "Age", "Labels"}
-	namespaceHeader := []string{"Cluster", "Name", "Age", "Labels"}
-	nodeHeader := []string{"Cluster", "Name", "Roles", "Status", "InstanceType", "Zone", "InternalIp", "Taints", "InstanceID", "Age", "Labels"}
-	podHeader := []string{"Cluster", "Namespace", "Name", "PodIp", "HostIp", "NodeName", "Phase", "QOSClass", "Containers", "Tolerations", "Claims", "Age", "Labels"}
-	persistentVolumeHeader := []string{"Cluster", "Name", "Status", "StorageClass", "Zone", "Claim", "Volume", "Affinities", "Age", "Labels"}
-	persistentVolumeClaimHeader := []string{"Cluster", "Namespace", "Name", "Status", "Capacity", "VolumeName", "StorageClass", "Age", "Labels"}
-	secretHeader := []string{"Cluster", "Namespace", "Name", "Type", "Data", "Age", "Labels"}
-	serviceHeader := []string{"Cluster", "Namespace", "Name", "Type", "ClusterIp", "Ports", "Selector", "Age", "Labels"}
-	serviceAccountHeader := []string{"Cluster", "Namespace", "Name", "Secrets", "Age", "Labels"}
-	statefulSetHeader := []string{"Cluster", "Namespace", "Name", "Replicas", "Selector", "Age", "Labels"}
+	configMapHeader := []string{"Namespace", "Name", "Age", "Labels"}
+	cronJobHeader := []string{"Namespace", "Name", "Schedule", "LastSchedule", "Containers", "Age", "Labels"}
+	daemonSetHeader := []string{"Namespace", "Name", "Desired", "Current", "Ready", "LabelSelector", "Containers", "Age", "Labels"}
+	deploymentHeader := []string{"Namespace", "Name", "Desired", "Current", "Up-to-date", "Available", "Age", "Labels"}
+	endpointsHeader := []string{"Namespace", "Name", "Age", "ReadyIps", "ReadyPods", "NotReadyIps", "NotReadyPods", "Labels"}
+	horizontalPodAutoscalerHeader := []string{"Namespace", "Name", "Reference", "Targets", "MinPods", "MaxPods", "Replicas", "Age", "Labels"}
+	ingressHeader := []string{"Namespace", "Name", "Address", "Age", "Labels"}
+	jobHeader := []string{"Namespace", "Name", "Completions", "Containers", "Age", "Labels"}
+	namespaceHeader := []string{"Name", "Age", "Labels"}
+	nodeHeader := []string{"Name", "Roles", "Status", "InstanceType", "Zone", "InternalIp", "Taints", "InstanceID", "Age", "Labels"}
+	podHeader := []string{"Namespace", "Name", "PodIp", "HostIp", "NodeName", "Phase", "QOSClass", "Containers", "Tolerations", "Claims", "Age", "Labels"}
+	persistentVolumeHeader := []string{"Name", "Status", "StorageClass", "Zone", "Claim", "Volume", "Affinities", "Age", "Labels"}
+	persistentVolumeClaimHeader := []string{"Namespace", "Name", "Status", "Capacity", "VolumeName", "StorageClass", "Age", "Labels"}
+	secretHeader := []string{"Namespace", "Name", "Type", "Data", "Age", "Labels"}
+	serviceHeader := []string{"Namespace", "Name", "Type", "ClusterIp", "Ports", "Selector", "Age", "Labels"}
+	serviceAccountHeader := []string{"Namespace", "Name", "Secrets", "Age", "Labels"}
+	statefulSetHeader := []string{"Namespace", "Name", "Replicas", "Selector", "Age", "Labels"}
 	switch r {
 	case ResourceTypeApiResource:
 		return apiResourceHeader

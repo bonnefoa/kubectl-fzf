@@ -3,7 +3,6 @@ package resources
 // CtorConfig is the configuration passed to all resource constructors
 type CtorConfig struct {
 	IgnoredNodeRoles map[string]bool
-	Cluster          string
 }
 
 type ResourceCtor func(obj interface{}, config CtorConfig) K8sResource

@@ -51,8 +51,8 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 		return nil, nil, err
 	}
 	logrus.Debugf("Call Get Fun with %+v, resource type detected %s, flag detected %s", args, resourceType, flagCompletion)
-	labelHeader := []string{"Cluster", "Namespace", "Label", "Occurrences"}
-	fieldSelectorHeader := []string{"Cluster", "Namespace", "FieldSelector", "Occurrences"}
+	labelHeader := []string{"Namespace", "Label", "Occurrences"}
+	fieldSelectorHeader := []string{"Namespace", "FieldSelector", "Occurrences"}
 
 	namespace := getNamespace(args)
 	if flagCompletion == parse.FlagLabel {

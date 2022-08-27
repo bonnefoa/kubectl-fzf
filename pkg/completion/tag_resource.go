@@ -18,7 +18,6 @@ const (
 )
 
 type TagResourceKey struct {
-	Cluster   string
 	Namespace string
 	Value     string
 }
@@ -33,20 +32,17 @@ type TagResourcePairList []TagResourcePair
 func (p TagResourcePairList) Len() int { return len(p) }
 func (p TagResourcePairList) Less(i, j int) bool {
 	if p[i].Occurrences == p[j].Occurrences {
-		if p[i].Key.Cluster == p[j].Key.Cluster {
-			if p[i].Key.Namespace == p[j].Key.Namespace {
-				return p[i].Key.Value < p[j].Key.Value
-			}
-			return p[i].Key.Namespace < p[j].Key.Namespace
+		if p[i].Key.Namespace == p[j].Key.Namespace {
+			return p[i].Key.Value < p[j].Key.Value
 		}
-		return p[i].Key.Cluster < p[j].Key.Cluster
+		return p[i].Key.Namespace < p[j].Key.Namespace
 	}
 	return p[i].Occurrences > p[j].Occurrences
 }
 func (p TagResourcePairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 func (l *TagResourcePair) ToString() string {
-	return fmt.Sprintf("%s\t%s\t%s\t%d", l.Key.Cluster, l.Key.Namespace,
+	return fmt.Sprintf("%s\t%s\t%d", l.Key.Namespace,
 		l.Key.Value, l.Occurrences)
 }
 
@@ -70,7 +66,7 @@ func getTagResourceOccurrences(ctx context.Context, r resources.ResourceType, na
 			}
 			for k, v := range tagResource {
 				valueStr := fmt.Sprintf("%s=%s", k, v)
-				valueKey := TagResourceKey{resource.GetCluster(), resource.GetNamespace(), valueStr}
+				valueKey := TagResourceKey{resource.GetNamespace(), valueStr}
 				resourceKeyToOccurrences[valueKey] += 1
 			}
 		}

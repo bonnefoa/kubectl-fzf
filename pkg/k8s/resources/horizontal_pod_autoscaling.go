@@ -47,7 +47,6 @@ func (h *HorizontalPodAutoscaler) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (h *HorizontalPodAutoscaler) ToStrings() []string {
 	line := []string{
-		h.Cluster,
 		h.Namespace,
 		h.Name,
 		h.Reference,

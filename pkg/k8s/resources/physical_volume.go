@@ -67,7 +67,6 @@ func (pv *PersistentVolume) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (pv *PersistentVolume) ToStrings() []string {
 	lst := []string{
-		pv.Cluster,
 		pv.Name,
 		pv.Status,
 		pv.StorageClass,

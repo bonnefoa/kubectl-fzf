@@ -37,7 +37,6 @@ func (ingress *Ingress) HasChanged(k K8sResource) bool {
 func (ingress *Ingress) ToStrings() []string {
 	addressList := util.JoinSlicesOrNone(ingress.Address, ",")
 	lst := []string{
-		ingress.Cluster,
 		ingress.Namespace,
 		ingress.Name,
 		addressList,

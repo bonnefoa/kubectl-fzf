@@ -49,7 +49,6 @@ func (r *ReplicaSet) HasChanged(k K8sResource) bool {
 func (r *ReplicaSet) ToStrings() []string {
 	selectorList := util.JoinSlicesOrNone(r.Selectors, ",")
 	line := []string{
-		r.Cluster,
 		r.Namespace,
 		r.Name,
 		r.Replicas,

@@ -54,7 +54,6 @@ func (e *Endpoints) HasChanged(k K8sResource) bool {
 // ToString serializes the object to strings
 func (e *Endpoints) ToStrings() []string {
 	line := []string{
-		e.Cluster,
 		e.Namespace,
 		e.Name,
 		e.resourceAge(),

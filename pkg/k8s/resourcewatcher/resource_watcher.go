@@ -82,7 +82,6 @@ func NewResourceWatcher(cluster string, resourceWatcherCli ResourceWatcherCli, s
 		namespacePollingPeriod: resourceWatcherCli.namespacePollingPeriod,
 		ctorConfig: resources.CtorConfig{
 			IgnoredNodeRoles: ignoredNodeRoles,
-			Cluster:          cluster,
 		},
 	}
 	return &resourceWatcher, nil
