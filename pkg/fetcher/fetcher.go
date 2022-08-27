@@ -49,7 +49,7 @@ func (f *Fetcher) getKubectlFzfPod(ctx context.Context) (*corev1.Pod, error) {
 		ns = f.getCachedNamespace()
 		pulledNamespaceFromCache = true
 	}
-	logrus.Infof("Looking for fzf pod in namespace '%s'", f.fzfNamespace)
+	logrus.Infof("Looking for fzf pod in namespace '%s'", ns)
 	podList, err := clientset.CoreV1().Pods(f.fzfNamespace).List(ctx, listOptions)
 	if err != nil {
 		return nil, err
