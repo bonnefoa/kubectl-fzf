@@ -1,13 +1,17 @@
 package resources
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 )
 
-type UnknownResourceError string
+type UnknownResourceError struct {
+	ResourceStr string
+}
 
 func (u UnknownResourceError) Error() string {
-	return string(u)
+	return fmt.Sprintf("Resource %s is unknown", u.ResourceStr)
 }
 
 type ResourceType int64
@@ -184,7 +188,7 @@ func GetResourceSetFromSlice(resourceSlice []string) (map[ResourceType]bool, err
 	for _, resourceStr := range resourceSlice {
 		r := ParseResourceType(resourceStr)
 		if r == ResourceTypeUnknown {
-			return nil, UnknownResourceError(resourceStr)
+			return nil, UnknownResourceError{resourceStr}
 		}
 		res[r] = true
 	}

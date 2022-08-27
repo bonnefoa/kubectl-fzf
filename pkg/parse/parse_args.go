@@ -29,7 +29,7 @@ func ParseFlagAndResources(cmdVerb string, cmdArgs []string) (resourceType resou
 	resourceType = resources.GetResourceType(cmdVerb, cmdArgs)
 
 	if resourceType == resources.ResourceTypeUnknown {
-		err = resources.UnknownResourceError(strings.Join(cmdArgs, " "))
+		err = resources.UnknownResourceError{ResourceStr: strings.Join(cmdArgs, " ")}
 		return
 	}
 	return
