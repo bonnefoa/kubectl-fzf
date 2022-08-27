@@ -47,7 +47,7 @@ func TestProcessNamespace(t *testing.T) {
 		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
 		require.Greater(t, len(comps), 0)
-		require.Contains(t, comps[0], "minikube\tdefault\t30d\tkubernetes.io/metadata.name=default")
+		require.Contains(t, comps[0], "minikube\tdefault\t")
 	}
 }
 
