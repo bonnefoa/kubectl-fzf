@@ -15,6 +15,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -123,8 +124,8 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	networkingGetter := clientset.NetworkingV1().RESTClient()
 	batchGetter := clientset.BatchV1().RESTClient()
 	allWatchConfigs := []WatchConfig{
-		{resources.ResourceTypePod, coreGetter, &corev1.Pod{}, true, true, 0},
-		{resources.ResourceTypeConfigMap, coreGetter, &corev1.ConfigMap{}, true, true, 0},
+		{resources.ResourceTypePod, coreGetter, &corev1.Pod{}, true, false, 0},
+		{resources.ResourceTypeConfigMap, coreGetter, &corev1.ConfigMap{}, true, false, 0},
 		{resources.ResourceTypeService, coreGetter, &corev1.Service{}, true, false, 0},
 		{resources.ResourceTypeServiceAccount, coreGetter, &corev1.ServiceAccount{}, true, false, 0},
 		{resources.ResourceTypeReplicaSet, appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
@@ -156,8 +157,8 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	return watchConfigs, nil
 }
 
-func (r *ResourceWatcher) doPoll(watchlist *cache.ListWatch, store *store.Store) {
-	obj, err := watchlist.List(metav1.ListOptions{})
+func (r *ResourceWatcher) doPoll(cacheListWatch *cache.ListWatch, store *store.Store) {
+	obj, err := cacheListWatch.List(metav1.ListOptions{})
 	if err != nil {
 		logrus.Warningf("Error on listing resource: %v", err)
 	}
@@ -216,21 +217,21 @@ func (r *ResourceWatcher) DumpAPIResources() error {
 	return err
 }
 
-func (r *ResourceWatcher) getWatchList(cfg WatchConfig, store *store.Store, namespace string) *cache.ListWatch {
+func (r *ResourceWatcher) getCacheListWatch(cfg WatchConfig, store *store.Store, namespace string) *cache.ListWatch {
 	optionsModifier := func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.Everything().String()
 		options.ResourceVersion = "0"
 	}
-	watchlist := cache.NewFilteredListWatchFromClient(cfg.getter,
+	cacheListWatch := cache.NewFilteredListWatchFromClient(cfg.getter,
 		cfg.resourceType.String(), namespace, optionsModifier)
-	return watchlist
+	return cacheListWatch
 }
 
 func (r *ResourceWatcher) pollResource(ctx context.Context,
 	cfg WatchConfig, store *store.Store) {
 	logrus.Infof("Start poller for %s", cfg.resourceType)
-	watchlist := r.getWatchList(cfg, store, "")
-	r.doPoll(watchlist, store)
+	cacheListWatch := r.getCacheListWatch(cfg, store, "")
+	r.doPoll(cacheListWatch, store)
 	ticker := time.NewTicker(cfg.pollingPeriod)
 	for {
 		select {
@@ -238,22 +239,33 @@ func (r *ResourceWatcher) pollResource(ctx context.Context,
 			logrus.Infof("Exiting poll of %s", cfg.resourceType)
 			return
 		case <-ticker.C:
-			r.doPoll(watchlist, store)
+			r.doPoll(cacheListWatch, store)
 		}
 	}
 }
 
 func (r *ResourceWatcher) startWatch(cfg WatchConfig,
 	store *store.Store, namespace string, stop chan struct{}) {
-	watchlist := r.getWatchList(cfg, store, namespace)
-	_, controller := cache.NewInformer(
-		watchlist, cfg.runtimeObject, time.Second*0,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc:    store.AddResource,
-			DeleteFunc: store.DeleteResource,
-			UpdateFunc: store.UpdateResource,
-		},
+	cacheListWatch := r.getCacheListWatch(cfg, store, namespace)
+	resourceHandlers := cache.ResourceEventHandlerFuncs{
+		AddFunc:    store.AddResource,
+		DeleteFunc: store.DeleteResource,
+		UpdateFunc: store.UpdateResource,
+	}
+	controller := cache.NewSharedInformer(
+		cacheListWatch,
+		cfg.runtimeObject,
+		// No resync
+		time.Second*0,
 	)
+	controller.AddEventHandler(resourceHandlers)
+	watchErrorHandler := func(r *cache.Reflector, err error) {
+		if errors.IsForbidden(err) {
+			logrus.Warnf("Resource %s is forbidden, stopping watcher. err: %s", cfg.resourceType, err)
+			close(stop)
+		}
+	}
+	controller.SetWatchErrorHandler(watchErrorHandler)
 	controller.Run(stop)
 }
 
