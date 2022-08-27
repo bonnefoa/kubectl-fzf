@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -55,6 +56,9 @@ func CallFzf(comps string, query string) (string, error) {
 		return "", err
 	}
 
+	for cmd.Process == nil {
+		time.Sleep(time.Millisecond * 10)
+	}
 	err = cmd.Wait()
 	if err != nil {
 		return "", err
