@@ -6,6 +6,7 @@ import (
 	"kubectlfzf/pkg/completion"
 	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/fzf"
+	"kubectlfzf/pkg/k8s/resources"
 	"kubectlfzf/pkg/k8s/store"
 	"kubectlfzf/pkg/parse"
 	"kubectlfzf/pkg/results"
@@ -19,7 +20,7 @@ import (
 
 func completeFun(cmd *cobra.Command, args []string) {
 	header, comps, err := completion.ProcessCommandArgs(cmd.Use, args)
-	if e, ok := err.(parse.UnknownResourceError); ok {
+	if e, ok := err.(resources.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
 		os.Exit(6)
 	}

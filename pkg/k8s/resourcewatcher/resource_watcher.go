@@ -31,8 +31,8 @@ type ResourceWatcher struct {
 	cancelFuncs []context.CancelFunc
 	storeConfig *store.StoreConfig
 
-	watchedResourcesSet    map[string]bool
-	excludedResourcesSet   map[string]bool
+	watchedResourcesSet    map[resources.ResourceType]bool
+	excludedResourcesSet   map[resources.ResourceType]bool
 	excludedNamespaces     []*regexp.Regexp
 	watchedNamespaces      []*regexp.Regexp
 	namespacePollingPeriod time.Duration
@@ -63,10 +63,18 @@ func NewResourceWatcher(cluster string, resourceWatcherCli ResourceWatcherCli, s
 		return nil, err
 	}
 	ignoredNodeRoles := util.StringSliceToSet(resourceWatcherCli.ignoredNodeRoles)
+	excludedResources, err := resources.GetResourceSetFromSlice(resourceWatcherCli.excludedResources)
+	if err != nil {
+		return nil, err
+	}
+	watchedResources, err := resources.GetResourceSetFromSlice(resourceWatcherCli.watchedResources)
+	if err != nil {
+		return nil, err
+	}
 	resourceWatcher := ResourceWatcher{
 		storeConfig:            storeConfig,
-		excludedResourcesSet:   util.StringSliceToSet(resourceWatcherCli.excludedResources),
-		watchedResourcesSet:    util.StringSliceToSet(resourceWatcherCli.watchedResources),
+		excludedResourcesSet:   excludedResources,
+		watchedResourcesSet:    watchedResources,
 		excludedNamespaces:     excludedNamespaces,
 		watchedNamespaces:      watchedNamespaces,
 		nodePollingPeriod:      resourceWatcherCli.nodePollingPeriod,
@@ -136,10 +144,10 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	}
 	watchConfigs := []WatchConfig{}
 	for _, w := range allWatchConfigs {
-		if _, ok := r.excludedResourcesSet[w.resourceType.String()]; ok {
+		if _, ok := r.excludedResourcesSet[w.resourceType]; ok {
 			continue
 		}
-		_, ok := r.watchedResourcesSet[w.resourceType.String()]
+		_, ok := r.watchedResourcesSet[w.resourceType]
 		if len(r.watchedResourcesSet) > 0 && !ok {
 			continue
 		}

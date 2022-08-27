@@ -13,12 +13,6 @@ func (u UnmanagedFlagError) Error() string {
 	return string(u)
 }
 
-type UnknownResourceError string
-
-func (u UnknownResourceError) Error() string {
-	return string(u)
-}
-
 func ParseFlagAndResources(cmdVerb string, cmdArgs []string) (resourceType resources.ResourceType, flagCompletion FlagCompletion, err error) {
 	resourceType = resources.ResourceTypeUnknown
 	flagCompletion = CheckFlagManaged(cmdArgs)
@@ -35,7 +29,7 @@ func ParseFlagAndResources(cmdVerb string, cmdArgs []string) (resourceType resou
 	resourceType = resources.GetResourceType(cmdVerb, cmdArgs)
 
 	if resourceType == resources.ResourceTypeUnknown {
-		err = UnknownResourceError(strings.Join(cmdArgs, " "))
+		err = resources.UnknownResourceError(strings.Join(cmdArgs, " "))
 		return
 	}
 	return

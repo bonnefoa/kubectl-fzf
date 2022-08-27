@@ -1,6 +1,14 @@
 package resources
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+)
+
+type UnknownResourceError string
+
+func (u UnknownResourceError) Error() string {
+	return string(u)
+}
 
 type ResourceType int64
 
@@ -171,6 +179,18 @@ func ParseResourceType(s string) ResourceType {
 	return ResourceTypeUnknown
 }
 
+func GetResourceSetFromSlice(resourceSlice []string) (map[ResourceType]bool, error) {
+	res := make(map[ResourceType]bool, 0)
+	for _, resourceStr := range resourceSlice {
+		r := ParseResourceType(resourceStr)
+		if r == ResourceTypeUnknown {
+			return nil, UnknownResourceError(resourceStr)
+		}
+		res[r] = true
+	}
+	return res, nil
+}
+
 func GetResourceType(cmdUse string, args []string) ResourceType {
 	logrus.Debugf("Getting resource type from '%s', %d", args, len(args))
 	resourceType := ResourceTypeApiResource
@@ -185,8 +205,8 @@ func GetResourceType(cmdUse string, args []string) ResourceType {
 	if len(args) <= 1 {
 		return resourceType
 	}
-	for _, v := range args {
-		resourceType = ParseResourceType(v)
+	for _, arg := range args {
+		resourceType = ParseResourceType(arg)
 		if resourceType != ResourceTypeUnknown {
 			return resourceType
 		}

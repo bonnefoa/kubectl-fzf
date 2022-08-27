@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseResourceType(t *testing.T) {
@@ -35,5 +36,27 @@ func TestGetResourceType(t *testing.T) {
 	for _, testData := range testDatas {
 		parsedType := GetResourceType("get", testData.args)
 		assert.Equal(t, testData.resourceType, parsedType, "Args: %s, type %s, result: %s", testData.args, testData.resourceType, parsedType)
+	}
+}
+
+func TestGetResourceSetFromSliceWithErrors(t *testing.T) {
+	testDatas := [][]string{
+		{"po", "t", "secrets"},
+		{"saa", "pod"},
+	}
+	for _, testData := range testDatas {
+		_, err := GetResourceSetFromSlice(testData)
+		require.Error(t, err)
+	}
+}
+
+func TestGetResourceSetFromSlice(t *testing.T) {
+	testDatas := [][]string{
+		{"pods", "secrets"},
+		{"sa", "pod"},
+	}
+	for _, testData := range testDatas {
+		_, err := GetResourceSetFromSlice(testData)
+		require.NoError(t, err)
 	}
 }
