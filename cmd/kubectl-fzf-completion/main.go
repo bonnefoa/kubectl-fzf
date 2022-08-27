@@ -98,7 +98,7 @@ func main() {
 		},
 	}
 	rootFlags := rootCmd.PersistentFlags()
-	util.SetCommonCliFlags(rootFlags)
+	util.SetCommonCliFlags(rootFlags, "warning")
 	err := viper.BindPFlags(rootFlags)
 	util.FatalIf(err)
 

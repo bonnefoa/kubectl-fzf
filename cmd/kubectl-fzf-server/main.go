@@ -60,7 +60,7 @@ func main() {
 	store.SetStoreConfigCli(rootFlags)
 	httpserver.SetHttpServerConfigFlags(rootFlags)
 	resourcewatcher.SetResourceWatcherCli(rootFlags)
-	util.SetCommonCliFlags(rootFlags)
+	util.SetCommonCliFlags(rootFlags, "info")
 	err := viper.BindPFlags(rootFlags)
 	util.FatalIf(err)
 

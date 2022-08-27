@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func SetCommonCliFlags(fs *pflag.FlagSet) {
-	fs.String("log-level", "fatal", "Log level to use")
+func SetCommonCliFlags(fs *pflag.FlagSet, defaultLogLevel string) {
+	fs.String("log-level", defaultLogLevel, "Log level to use")
 	fs.Bool("cpu-profile", false, "Start with cpu profiling")
 }
 
