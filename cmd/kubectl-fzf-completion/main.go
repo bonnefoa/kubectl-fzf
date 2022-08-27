@@ -20,7 +20,7 @@ import (
 )
 
 func completeFun(cmd *cobra.Command, args []string) {
-	header, comps, err := completion.ProcessCommandArgs(cmd.Use, args)
+	completionResults, err := completion.ProcessCommandArgs(cmd.Use, args)
 	if e, ok := err.(resources.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
 		os.Exit(6)
@@ -32,12 +32,13 @@ func completeFun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Completion error: %s", err)
 	}
-	if len(comps) == 0 {
+	if len(completionResults.Completions) == 0 {
 		logrus.Warn("No completion found")
 		os.Exit(5)
 	}
-	formattedComps := util.FormatCompletion(header, comps)
+	formattedComps := completionResults.GetFormattedOutput()
 
+	// TODO pass query
 	fzfResult, err := fzf.CallFzf(formattedComps, "")
 	if err != nil {
 		logrus.Fatalf("Call fzf error: %s", err)

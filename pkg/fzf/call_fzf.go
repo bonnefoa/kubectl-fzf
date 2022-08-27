@@ -30,14 +30,14 @@ func setCompsInStdin(cmd *exec.Cmd, comps string) error {
 
 func CallFzf(comps string, query string) (string, error) {
 	var result strings.Builder
-	header := strings.Split(comps, "\n")[0]
+	header := strings.Split(comps, "\n")[1]
 	numFields := len(strings.Fields(header))
 	logrus.Debugf("header: %s, numFields: %d", header, numFields)
 	previewWindow := fmt.Sprintf("--preview-window=down:%d", numFields)
 	previewCmd := fmt.Sprintf("echo -e \"%s\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=$i} (NR==2){for (i in a) {printf a[i] \": \" $i \"\\n\"} }' | column -t | fold -w $COLUMNS", header)
 
 	// TODO Make fzf options configurable
-	fzfArgs := []string{"-1", "--header-lines=1", "--layout", "reverse", "-e", "--no-hscroll", "--no-sort", "--cycle", "-q", query, previewWindow, "--preview", previewCmd}
+	fzfArgs := []string{"-1", "--header-lines=2", "--layout", "reverse", "-e", "--no-hscroll", "--no-sort", "--cycle", "-q", query, previewWindow, "--preview", previewCmd}
 	logrus.Infof("fzf args: %+v", fzfArgs)
 	cmd := exec.Command("fzf", fzfArgs...)
 	cmd.Stdout = &result

@@ -8,13 +8,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FormatCompletion(header string, comps []string) string {
+func FormatCompletion(lines []string) string {
 	logrus.Info("formating completion")
 	b := new(strings.Builder)
 	w := tabwriter.NewWriter(b, 0, 0, 1, ' ', tabwriter.StripEscape)
-	fmt.Fprintln(w, header)
-	for _, c := range comps {
-		fmt.Fprintln(w, c)
+	for _, line := range lines {
+		fmt.Fprintln(w, line)
 	}
 	w.Flush()
 	return b.String()

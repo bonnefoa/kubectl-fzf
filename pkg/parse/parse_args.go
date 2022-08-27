@@ -34,3 +34,15 @@ func ParseFlagAndResources(cmdVerb string, cmdArgs []string) (resourceType resou
 	}
 	return
 }
+
+func ParseNamespaceFromArgs(args []string) *string {
+	for k, arg := range args {
+		if (arg == "-n" || arg == "--namespace") && len(args) > k+1 {
+			return &args[k+1]
+		}
+		if strings.HasPrefix(arg, "--namespace=") {
+			return &strings.Split(arg, "=")[1]
+		}
+	}
+	return nil
+}

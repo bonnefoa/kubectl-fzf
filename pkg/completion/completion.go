@@ -5,26 +5,15 @@ import (
 	"kubectlfzf/pkg/fetcher"
 	"kubectlfzf/pkg/k8s/resources"
 	"kubectlfzf/pkg/parse"
-	"kubectlfzf/pkg/util"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func getNamespace(args []string) *string {
-	for k, arg := range args {
-		if (arg == "-n" || arg == "--namespace") && len(args) > k+1 {
-			return &args[k+1]
-		}
-		if strings.HasPrefix(arg, "--namespace=") {
-			return &strings.Split(arg, "=")[1]
-		}
-	}
-	return nil
-}
+const labelHeader = "Namespace\tLabel\tOccurrences"
+const fieldSelectorHeader = "Namespace\tFieldSelector\tOccurrences"
 
 func getResourceCompletion(ctx context.Context, r resources.ResourceType, namespace *string,
 	fetchConfig *fetcher.Fetcher) ([]string, error) {
@@ -43,44 +32,44 @@ func getResourceCompletion(ctx context.Context, r resources.ResourceType, namesp
 }
 
 func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher.Fetcher,
-	cmdVerb string, args []string) ([]string, []string, error) {
-	var comps []string
+	cmdVerb string, args []string) (*CompletionResult, error) {
 	var err error
 	resourceType, flagCompletion, err := parse.ParseFlagAndResources(cmdVerb, args)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	logrus.Debugf("Call Get Fun with %+v, resource type detected %s, flag detected %s", args, resourceType, flagCompletion)
-	labelHeader := []string{"Namespace", "Label", "Occurrences"}
-	fieldSelectorHeader := []string{"Namespace", "FieldSelector", "Occurrences"}
 
-	namespace := getNamespace(args)
+	completionResult := &CompletionResult{Cluster: fetchConfig.GetContext()}
+	namespace := parse.ParseNamespaceFromArgs(args)
 	if flagCompletion == parse.FlagLabel {
-		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
-		return labelHeader, comps, err
+		completionResult.Completions, err = GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
+		completionResult.Header = labelHeader
+		return completionResult, err
 	} else if flagCompletion == parse.FlagFieldSelector {
-		comps, err := GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
-		return fieldSelectorHeader, comps, err
+		completionResult.Completions, err = GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
+		completionResult.Header = fieldSelectorHeader
+		return completionResult, err
 	}
 
-	header := resources.ResourceToHeader(resourceType)
-	comps, err = getResourceCompletion(ctx, resourceType, namespace, fetchConfig)
+	completionResult.Header = resources.ResourceToHeader(resourceType)
+	completionResult.Completions, err = getResourceCompletion(ctx, resourceType, namespace, fetchConfig)
 	if err != nil {
-		return header, comps, errors.Wrap(err, "error getting resource completion")
+		return completionResult, errors.Wrap(err, "error getting resource completion")
 	}
-	sort.Strings(comps)
-	return header, comps, err
+	sort.Strings(completionResult.Completions)
+	return completionResult, err
 }
 
-func ProcessCommandArgs(cmdVerb string, args []string) (string, []string, error) {
+func ProcessCommandArgs(cmdVerb string, args []string) (*CompletionResult, error) {
 	fetchConfigCli := fetcher.GetFetchConfigCli()
 	f := fetcher.NewFetcher(&fetchConfigCli)
 	err := f.SetClusterNameFromCurrentContext()
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	header, comps, err := processCommandArgsWithFetchConfig(ctx, f, cmdVerb, args)
+	completionResult, err := processCommandArgsWithFetchConfig(ctx, f, cmdVerb, args)
 	cancel()
-	return util.DumpLine(header), comps, err
+	return completionResult, err
 }

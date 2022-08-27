@@ -28,10 +28,10 @@ func TestProcessResourceName(t *testing.T) {
 		{"exec", []string{"-ti", ""}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		completionResults, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		require.Greater(t, len(comps), 0)
-		require.Contains(t, comps[0], "kube-system\tcoredns-6d4b75cb6d-m6m4q\t172.17.0.3\t192.168.49.2\tminikube\tRunning\tBurstable\tcoredns\tCriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule\tNone")
+		require.Greater(t, len(completionResults.Completions), 0)
+		require.Contains(t, completionResults.Completions[0], "kube-system\tcoredns-6d4b75cb6d-m6m4q\t172.17.0.3\t192.168.49.2\tminikube\tRunning\tBurstable\tcoredns\tCriticalAddonsOnly:,node-role.kubernetes.io/master:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule\tNone")
 	}
 }
 
@@ -44,10 +44,10 @@ func TestProcessNamespace(t *testing.T) {
 		{"logs", []string{"--namespace="}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		completionResults, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		require.Greater(t, len(comps), 0)
-		require.Contains(t, comps[0], "default\t")
+		require.Greater(t, len(completionResults.Completions), 0)
+		require.Contains(t, completionResults.Completions[0], "default\t")
 	}
 }
 
@@ -61,10 +61,10 @@ func TestProcessLabelCompletion(t *testing.T) {
 		{"get", []string{"pods", "--selector="}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		completionResults, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		require.Equal(t, "kube-system\ttier=control-plane\t4", comps[0])
-		require.Len(t, comps, 12)
+		require.Equal(t, "kube-system\ttier=control-plane\t4", completionResults.Completions[0])
+		require.Len(t, completionResults.Completions, 12)
 	}
 }
 
@@ -75,9 +75,9 @@ func TestProcessFieldSelectorCompletion(t *testing.T) {
 		{"get", []string{"pods", "--field-selector="}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		completionResults, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		assert.Equal(t, "kube-system\tspec.nodeName=minikube\t7", comps[0])
+		assert.Equal(t, "kube-system\tspec.nodeName=minikube\t7", completionResults.Completions[0])
 	}
 }
 
@@ -91,7 +91,7 @@ func TestUnmanagedCompletion(t *testing.T) {
 		{"get", []string{"--all-namespaces"}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, _, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		_, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.Error(t, err)
 		require.IsType(t, parse.UnmanagedFlagError(""), err)
 	}
@@ -113,9 +113,9 @@ func TestManagedCompletion(t *testing.T) {
 		{"get", []string{"-n", ""}},
 	}
 	for _, cmdArg := range cmdArgs {
-		_, comps, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
+		completionResults, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
 		require.NoError(t, err)
-		require.NotNil(t, comps)
+		require.NotNil(t, completionResults)
 	}
 }
 

@@ -86,26 +86,26 @@ func (r *ResourceMeta) labelsString() string {
 	return util.JoinSlicesOrNone(els, ",")
 }
 
-func ResourceToHeader(r ResourceType) []string {
-	replicaSetHeader := []string{"Namespace", "Name", "Replicas", "AvailableReplicas", "ReadyReplicas", "Selector", "Age", "Labels"}
-	apiResourceHeader := []string{"Name", "Shortnames", "ApiVersion", "Namespaced", "Kind"}
-	configMapHeader := []string{"Namespace", "Name", "Age", "Labels"}
-	cronJobHeader := []string{"Namespace", "Name", "Schedule", "LastSchedule", "Containers", "Age", "Labels"}
-	daemonSetHeader := []string{"Namespace", "Name", "Desired", "Current", "Ready", "LabelSelector", "Containers", "Age", "Labels"}
-	deploymentHeader := []string{"Namespace", "Name", "Desired", "Current", "Up-to-date", "Available", "Age", "Labels"}
-	endpointsHeader := []string{"Namespace", "Name", "Age", "ReadyIps", "ReadyPods", "NotReadyIps", "NotReadyPods", "Labels"}
-	horizontalPodAutoscalerHeader := []string{"Namespace", "Name", "Reference", "Targets", "MinPods", "MaxPods", "Replicas", "Age", "Labels"}
-	ingressHeader := []string{"Namespace", "Name", "Address", "Age", "Labels"}
-	jobHeader := []string{"Namespace", "Name", "Completions", "Containers", "Age", "Labels"}
-	namespaceHeader := []string{"Name", "Age", "Labels"}
-	nodeHeader := []string{"Name", "Roles", "Status", "InstanceType", "Zone", "InternalIp", "Taints", "InstanceID", "Age", "Labels"}
-	podHeader := []string{"Namespace", "Name", "PodIp", "HostIp", "NodeName", "Phase", "QOSClass", "Containers", "Tolerations", "Claims", "Age", "Labels"}
-	persistentVolumeHeader := []string{"Name", "Status", "StorageClass", "Zone", "Claim", "Volume", "Affinities", "Age", "Labels"}
-	persistentVolumeClaimHeader := []string{"Namespace", "Name", "Status", "Capacity", "VolumeName", "StorageClass", "Age", "Labels"}
-	secretHeader := []string{"Namespace", "Name", "Type", "Data", "Age", "Labels"}
-	serviceHeader := []string{"Namespace", "Name", "Type", "ClusterIp", "Ports", "Selector", "Age", "Labels"}
-	serviceAccountHeader := []string{"Namespace", "Name", "Secrets", "Age", "Labels"}
-	statefulSetHeader := []string{"Namespace", "Name", "Replicas", "Selector", "Age", "Labels"}
+func ResourceToHeader(r ResourceType) string {
+	replicaSetHeader := "Namespace\tName\tReplicas\tAvailableReplicas\tReadyReplicas\tSelector\tAge\tLabels"
+	apiResourceHeader := "Name\tShortnames\tApiVersion\tNamespaced\tKind"
+	configMapHeader := "Namespace\tName\tAge\tLabels"
+	cronJobHeader := "Namespace\tName\tSchedule\tLastSchedule\tContainers\tAge\tLabels"
+	daemonSetHeader := "Namespace\tName\tDesired\tCurrent\tReady\tLabelSelector\tContainers\tAge\tLabels"
+	deploymentHeader := "Namespace\tName\tDesired\tCurrent\tUp-to-date\tAvailable\tAge\tLabels"
+	endpointsHeader := "Namespace\tName\tAge\tReadyIps\tReadyPods\tNotReadyIps\tNotReadyPods\tLabels"
+	horizontalPodAutoscalerHeader := "Namespace\tName\tReference\tTargets\tMinPods\tMaxPods\tReplicas\tAge\tLabels"
+	ingressHeader := "Namespace\tName\tAddress\tAge\tLabels"
+	jobHeader := "Namespace\tName\tCompletions\tContainers\tAge\tLabels"
+	namespaceHeader := "Name\tAge\tLabels"
+	nodeHeader := "Name\tRoles\tStatus\tInstanceType\tZone\tInternalIp\tTaints\tInstanceID\tAge\tLabels"
+	podHeader := "Namespace\tName\tPodIp\tHostIp\tNodeName\tPhase\tQOSClass\tContainers\tTolerations\tClaims\tAge\tLabels"
+	persistentVolumeHeader := "Name\tStatus\tStorageClass\tZone\tClaim\tVolume\tAffinities\tAge\tLabels"
+	persistentVolumeClaimHeader := "Namespace\tName\tStatus\tCapacity\tVolumeName\tStorageClass\tAge\tLabels"
+	secretHeader := "Namespace\tName\tType\tData\tAge\tLabels"
+	serviceHeader := "Namespace\tName\tType\tClusterIp\tPorts\tSelector\tAge\tLabels"
+	serviceAccountHeader := "Namespace\tName\tSecrets\tAge\tLabels"
+	statefulSetHeader := "Namespace\tName\tReplicas\tSelector\tAge\tLabels"
 	switch r {
 	case ResourceTypeApiResource:
 		return apiResourceHeader
@@ -146,6 +146,6 @@ func ResourceToHeader(r ResourceType) []string {
 	case ResourceTypeStatefulSet:
 		return statefulSetHeader
 	default:
-		return []string{"Unknown"}
+		return "Unknown"
 	}
 }
