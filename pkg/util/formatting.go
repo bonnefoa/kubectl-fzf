@@ -1,4 +1,4 @@
-package completion
+package util
 
 import (
 	"fmt"

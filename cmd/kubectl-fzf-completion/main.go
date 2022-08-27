@@ -34,7 +34,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 		logrus.Warn("No completion found")
 		os.Exit(5)
 	}
-	formattedComps := completion.FormatCompletion(header, comps)
+	formattedComps := util.FormatCompletion(header, comps)
 
 	fzfResult, err := fzf.CallFzf(formattedComps, "")
 	if err != nil {

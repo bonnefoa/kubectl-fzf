@@ -14,5 +14,8 @@ docker:
 test:
 	go test ./...
 
+graph:
+	goda graph ./... | dot -Tsvg -o graph.svg
+
 clean:
 	go clean
