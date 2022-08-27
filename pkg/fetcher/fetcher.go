@@ -17,6 +17,7 @@ type Fetcher struct {
 	clusterconfig.ClusterConfig
 	fetcherCachePath     string
 	httpEndpoint         string
+	fzfNamespace         string
 	minimumCache         time.Duration
 	portForwardLocalPort int // Local port to use for port-forward
 }
@@ -25,6 +26,7 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 	f := Fetcher{}
 	f.ClusterConfig = clusterconfig.NewClusterConfig(&fetchConfigCli.ClusterConfigCli)
 	f.httpEndpoint = fetchConfigCli.HttpEndpoint
+	f.fzfNamespace = fetchConfigCli.FzfNamespace
 	f.fetcherCachePath = fetchConfigCli.FetcherCachePath
 	f.minimumCache = fetchConfigCli.MinimumCache
 	f.portForwardLocalPort = fetchConfigCli.PortForwardLocalPort
@@ -33,7 +35,6 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 
 func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest portforward.PortForwardRequest, err error) {
 	logrus.Debugf("Falling back to port forwarding")
-	ns := "default"
 	listOptions := metav1.ListOptions{
 		LabelSelector: "app=kubectl-fzf",
 		FieldSelector: "status.phase=Running",
@@ -42,7 +43,7 @@ func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest
 	if err != nil {
 		return
 	}
-	podList, err := clientset.CoreV1().Pods(ns).List(ctx, listOptions)
+	podList, err := clientset.CoreV1().Pods(f.fzfNamespace).List(ctx, listOptions)
 	if err != nil {
 		return
 	}
