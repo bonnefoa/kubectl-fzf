@@ -43,14 +43,9 @@ func (f *Fetcher) getKubectlFzfPod(ctx context.Context) (*corev1.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
-	ns := f.fzfNamespace
-	pulledNamespaceFromCache := false
-	if ns == "" {
-		ns = f.getCachedNamespace()
-		pulledNamespaceFromCache = true
-	}
+	ns, needNamespaceWrite := f.getCachedNamespace()
 	logrus.Infof("Looking for fzf pod in namespace '%s'", ns)
-	podList, err := clientset.CoreV1().Pods(f.fzfNamespace).List(ctx, listOptions)
+	podList, err := clientset.CoreV1().Pods(ns).List(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +58,7 @@ func (f *Fetcher) getKubectlFzfPod(ctx context.Context) (*corev1.Pod, error) {
 		err = fmt.Errorf("kubectl-fzf pod should have only one container, got %d", len(pod.Spec.Containers))
 		return nil, err
 	}
-	if pulledNamespaceFromCache {
+	if needNamespaceWrite {
 		err = f.writeCachedNamespace(pod.Namespace)
 		if err != nil {
 			return nil, err
