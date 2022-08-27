@@ -41,12 +41,20 @@ func CallFzf(comps string, query string) (string, error) {
 	cmd := exec.Command("fzf", fzfArgs...)
 	cmd.Stdout = &result
 	cmd.Stderr = os.Stderr
-	setCompsInStdin(cmd, comps)
 
-	err := cmd.Start()
+	go func() {
+		logrus.Info("Start fzf command")
+		err := cmd.Start()
+		if err != nil {
+			logrus.Fatalf("Error when running fzf: %s", err)
+		}
+	}()
+
+	err := setCompsInStdin(cmd, comps)
 	if err != nil {
-		return "", errors.Wrapf(err, "error running fzf")
+		return "", err
 	}
+
 	err = cmd.Wait()
 	if err != nil {
 		return "", err
