@@ -37,22 +37,22 @@ func TestResult(t *testing.T) {
 		currentNamespace string
 		expectedResult   string
 	}{
-		{"minikube kube-system kube-controller-manager-minikube", "get", []string{"pods", " "}, "kube-system", "kube-controller-manager-minikube"},
-		{"minikube kube-system coredns-64897985d-nrblm", "get", []string{"pods", "--context", "minikube", "--namespace", "kube-system", ""}, "default", "coredns-64897985d-nrblm"},
-		{"minikube kube-system kube-controller-manager-minikube", "get", []string{"pods", " "}, "default", "kube-controller-manager-minikube -n kube-system"},
-		{"minikube kube-system kube-controller-manager-minikube", "get", []string{"pods", "-nkube-system", " "}, "default", "kube-controller-manager-minikube"},
+		{"kube-system kube-controller-manager-minikube", "get", []string{"pods", " "}, "kube-system", "kube-controller-manager-minikube"},
+		{"kube-system coredns-64897985d-nrblm", "get", []string{"pods", "--context", "minikube", "--namespace", "kube-system", ""}, "default", "coredns-64897985d-nrblm"},
+		{"kube-system kube-controller-manager-minikube", "get", []string{"pods", " "}, "default", "kube-controller-manager-minikube -n kube-system"},
+		{"kube-system kube-controller-manager-minikube", "get", []string{"pods", "-nkube-system", " "}, "default", "kube-controller-manager-minikube"},
 		// Namespace
-		{"incluster default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n="}, "default", "-n=default"},
-		{"incluster default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n"}, "default", "-ndefault"},
-		{"incluster default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n", " "}, "default", "default"},
+		{"default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n="}, "default", "-n=default"},
+		{"default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n"}, "default", "-ndefault"},
+		{"default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n", " "}, "default", "default"},
 		// Label
-		{"minikube kube-system tier=control-plane", "get", []string{"pods", "-l="}, "default", "-l=tier=control-plane -n kube-system"},
-		{"minikube kube-system tier=control-plane", "get", []string{"pods", "-l", " "}, "default", "tier=control-plane -n kube-system"},
-		{"minikube kube-system tier=control-plane", "get", []string{"pods", "-l"}, "default", "-ltier=control-plane -n kube-system"},
+		{"kube-system tier=control-plane", "get", []string{"pods", "-l="}, "default", "-l=tier=control-plane -n kube-system"},
+		{"kube-system tier=control-plane", "get", []string{"pods", "-l", " "}, "default", "tier=control-plane -n kube-system"},
+		{"kube-system tier=control-plane", "get", []string{"pods", "-l"}, "default", "-ltier=control-plane -n kube-system"},
 		// Field selector
-		{"minikube kube-system spec.nodeName=minikube", "get", []string{"pods", "--field-selector="}, "default", "--field-selector=spec.nodeName=minikube -n kube-system"},
-		{"minikube kube-system spec.nodeName=minikube", "get", []string{"pods", "--field-selector", " "}, "default", "spec.nodeName=minikube -n kube-system"},
-		{"minikube kube-system coredns-64897985d-nrblm", "get", []string{"pods", "c"}, "default", "coredns-64897985d-nrblm -n kube-system"},
+		{"kube-system spec.nodeName=minikube", "get", []string{"pods", "--field-selector="}, "default", "--field-selector=spec.nodeName=minikube -n kube-system"},
+		{"kube-system spec.nodeName=minikube", "get", []string{"pods", "--field-selector", " "}, "default", "spec.nodeName=minikube -n kube-system"},
+		{"kube-system coredns-64897985d-nrblm", "get", []string{"pods", "c"}, "default", "coredns-64897985d-nrblm -n kube-system"},
 		{"apiservices.apiregistration.k8s.io None apiregistration.k8s.io/v1", "get", []string{" "}, "default", "apiservices.apiregistration.k8s.io"},
 	}
 	for _, testData := range testDatas {

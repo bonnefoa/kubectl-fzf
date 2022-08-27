@@ -46,11 +46,11 @@ func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult strin
 	// If apiresource:
 	// 0 -> fullname, 1 -> shortname, 2 -> groupversion
 	// If namespace:
-	// 0 -> cluster, 1 -> name, 2 -> age
+	// 0 -> name, 1 -> age
 	// Otherwise:
-	// 0 -> cluster, 1 -> namespace, 2 -> value
+	// 0 -> namespace, 1 -> value
 	resultFields := strings.Fields(fzfResult)
-	if len(resultFields) < 3 {
+	if len(resultFields) < 2 {
 		return "", fmt.Errorf("fzf result should have at least 3 elements, got %v", resultFields)
 	}
 	logrus.Debugf("Processing fzfResult '%s', cmdArgs '%s', current namespace '%s'", fzfResult, cmdArgs, currentNamespace)
@@ -65,11 +65,11 @@ func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult strin
 	}
 
 	// Generic resource
-	resultNamespace := resultFields[1]
-	resultValue := resultFields[2]
+	resultNamespace := resultFields[0]
+	resultValue := resultFields[1]
 
 	if resourceType == resources.ResourceTypeNamespace {
-		resultValue = resultFields[1]
+		resultValue = resultFields[0]
 	}
 
 	logrus.Debugf("Result namespace: %s, resultValue: %s", resultNamespace, resultValue)

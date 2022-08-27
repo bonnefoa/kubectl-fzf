@@ -31,7 +31,8 @@ func setCompsInStdin(cmd *exec.Cmd, comps string) error {
 func CallFzf(comps string, query string) (string, error) {
 	var result strings.Builder
 	header := strings.Split(comps, "\n")[1]
-	numFields := len(strings.Fields(header))
+	// Leave an additional line for overflow
+	numFields := len(strings.Fields(header)) + 1
 	logrus.Debugf("header: %s, numFields: %d", header, numFields)
 	previewWindow := fmt.Sprintf("--preview-window=down:%d", numFields)
 	previewCmd := fmt.Sprintf("echo -e \"%s\n{}\" | sed -e \"s/'//g\" | awk '(NR==1){for (i=1; i<=NF; i++) a[i]=$i} (NR==2){for (i in a) {printf a[i] \": \" $i \"\\n\"} }' | column -t | fold -w $COLUMNS", header)
