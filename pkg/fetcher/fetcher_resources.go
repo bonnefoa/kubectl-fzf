@@ -46,6 +46,7 @@ func (f *Fetcher) getResourceHttpPath(host string, r resources.ResourceType) str
 }
 
 func (f *Fetcher) getResourcesFromPortForward(ctx context.Context, r resources.ResourceType) (map[string]resources.K8sResource, error) {
+	logrus.Infof("Getting resources %s from port forward", r)
 	stopChan, err := f.openPortForward(ctx)
 	if err != nil {
 		return nil, err
@@ -58,9 +59,9 @@ func (f *Fetcher) getResourcesFromPortForward(ctx context.Context, r resources.R
 
 func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (map[string]resources.K8sResource, error) {
 	if f.FileStoreExists(r) {
-		filePath := f.GetFilePath(r)
-		logrus.Debugf("%s found, using resources from file", filePath)
-		resources, err := loadResourceFromFile(filePath)
+		resourceStorePath := f.GetResourceStorePath(r)
+		logrus.Infof("%s found, using resources from file", resourceStorePath)
+		resources, err := loadResourceFromFile(resourceStorePath)
 		return resources, err
 	}
 	if util.IsAddressReachable(f.httpEndpoint) {

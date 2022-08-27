@@ -31,15 +31,17 @@ func (f *Fetcher) getLastModifiedTimesPath() string {
 func (f *Fetcher) getCachedNamespace() (string, bool) {
 	if f.fzfNamespace != "" {
 		logrus.Infof("Namespace '%s' was provided in the command line, using it", f.fzfNamespace)
-		return f.fzfNamespace, true
+		return f.fzfNamespace, false
 	}
 	filePath := path.Join(f.fetcherCachePath, f.GetContext(), "fzfNamespace")
 	b, err := os.ReadFile(filePath)
 	if err != nil {
 		logrus.Warnf("Couldn't read namespace cache path %s", filePath)
-		return "", false
+		return "", true
 	}
-	return string(b), true
+	ns := string(b)
+	logrus.Infof("Found cached namespace '%s'", ns)
+	return ns, false
 }
 
 func (f *Fetcher) createCacheDir() (string, error) {

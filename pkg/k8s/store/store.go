@@ -171,7 +171,7 @@ func (k *Store) DumpFullState() error {
 	k.dumpRequired = false
 	k.lastFullDump = now
 	logrus.Infof("Doing full dump of %d %s", len(k.data), k.resourceType)
-	destFile := k.storeConfig.GetFilePath(k.resourceType)
+	destFile := k.storeConfig.GetResourceStorePath(k.resourceType)
 	k.dataMutex.Lock()
 	err := util.EncodeToFile(k.data, destFile)
 	k.dataMutex.Unlock()

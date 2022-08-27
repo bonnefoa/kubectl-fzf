@@ -68,7 +68,6 @@ func (f *Fetcher) getKubectlFzfPod(ctx context.Context) (*corev1.Pod, error) {
 }
 
 func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest portforward.PortForwardRequest, err error) {
-	logrus.Debugf("Falling back to port forwarding")
 	pod, err := f.getKubectlFzfPod(ctx)
 	if err != nil {
 		return

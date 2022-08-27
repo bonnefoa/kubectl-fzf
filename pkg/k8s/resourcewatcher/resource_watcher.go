@@ -198,7 +198,7 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 
 // DumpAPIResources dumps api resources file
 func (r *ResourceWatcher) DumpAPIResources() error {
-	destFile := r.storeConfig.GetFilePath(resources.ResourceTypeApiResource)
+	destFile := r.storeConfig.GetResourceStorePath(resources.ResourceTypeApiResource)
 	clientset, err := r.storeConfig.GetClientset()
 	if err != nil {
 		return err

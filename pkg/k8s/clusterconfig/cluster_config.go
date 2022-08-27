@@ -58,12 +58,12 @@ func (c *ClusterConfig) CreateDestDir() error {
 	return err
 }
 
-func (c *ClusterConfig) GetFilePath(r resources.ResourceType) string {
+func (c *ClusterConfig) GetResourceStorePath(r resources.ResourceType) string {
 	return path.Join(c.destDir, r.String())
 }
 
 func (c *ClusterConfig) FileStoreExists(r resources.ResourceType) bool {
-	p := c.GetFilePath(r)
+	p := c.GetResourceStorePath(r)
 	return util.FileExists(p)
 }
 

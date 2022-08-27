@@ -52,7 +52,7 @@ func (f *FzfHttpServer) resourcesRoute(c *gin.Context, resourceType resources.Re
 		c.String(http.StatusNotFound, fmt.Sprintf("resource file for %s not found", resourceType))
 		return
 	}
-	filePath := f.storeConfig.GetFilePath(resourceType)
+	filePath := f.storeConfig.GetResourceStorePath(resourceType)
 	logrus.Debugf("Serving file %s", filePath)
 	c.File(filePath)
 }
