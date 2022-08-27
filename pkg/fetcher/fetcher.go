@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,27 +34,48 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 	return &f
 }
 
-func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest portforward.PortForwardRequest, err error) {
-	logrus.Debugf("Falling back to port forwarding")
+func (f *Fetcher) getKubectlFzfPod(ctx context.Context) (*corev1.Pod, error) {
 	listOptions := metav1.ListOptions{
 		LabelSelector: "app=kubectl-fzf",
 		FieldSelector: "status.phase=Running",
 	}
 	clientset, err := f.GetClientset()
 	if err != nil {
-		return
+		return nil, err
 	}
+	ns := f.fzfNamespace
+	pulledNamespaceFromCache := false
+	if ns == "" {
+		ns = f.getCachedNamespace()
+		pulledNamespaceFromCache = true
+	}
+	logrus.Infof("Looking for fzf pod in namespace '%s'", f.fzfNamespace)
 	podList, err := clientset.CoreV1().Pods(f.fzfNamespace).List(ctx, listOptions)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if len(podList.Items) == 0 {
 		err = fmt.Errorf("no kubectl-fzf pods found, bailing out")
-		return
+		return nil, err
 	}
 	pod := podList.Items[0]
 	if len(pod.Spec.Containers) != 1 {
 		err = fmt.Errorf("kubectl-fzf pod should have only one container, got %d", len(pod.Spec.Containers))
+		return nil, err
+	}
+	if pulledNamespaceFromCache {
+		err = f.writeCachedNamespace(pod.Namespace)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &pod, nil
+}
+
+func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest portforward.PortForwardRequest, err error) {
+	logrus.Debugf("Falling back to port forwarding")
+	pod, err := f.getKubectlFzfPod(ctx)
+	if err != nil {
 		return
 	}
 	containerPorts := pod.Spec.Containers[0].Ports
@@ -77,7 +99,7 @@ func (f *Fetcher) openPortForward(ctx context.Context) (chan (struct{}), error) 
 	errChan := make(chan error)
 	portForwardRequest, err := f.getPortForwardRequest(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create port forward")
 	}
 	go func() {
 		restConfig, err := f.GetClientConfig()

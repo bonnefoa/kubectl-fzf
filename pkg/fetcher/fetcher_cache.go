@@ -2,7 +2,6 @@ package fetcher
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"kubectlfzf/pkg/k8s/resources"
 	"kubectlfzf/pkg/util"
 	"net/http"
@@ -29,12 +28,43 @@ func (f *Fetcher) getLastModifiedTimesPath() string {
 	return path.Join(f.fetcherCachePath, f.GetContext(), "lastModified")
 }
 
+func (f *Fetcher) getCachedNamespace() string {
+	filePath := path.Join(f.fetcherCachePath, f.GetContext(), "fzfNamespace")
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		logrus.Warnf("Couldn't read namespace cache path %s", filePath)
+		return ""
+	}
+	return string(b)
+}
+
+func (f *Fetcher) createCacheDir() (string, error) {
+	cacheDir := path.Join(f.fetcherCachePath, f.GetContext())
+	logrus.Infof("Creating cache dir %s", cacheDir)
+	err := os.MkdirAll(cacheDir, 0755)
+	if err != nil {
+		return cacheDir, errors.Wrap(err, "error mkdirall")
+	}
+	return cacheDir, nil
+}
+
+func (f *Fetcher) writeCachedNamespace(ns string) error {
+	cacheDir, err := f.createCacheDir()
+	if err != nil {
+		return err
+	}
+	filePath := path.Join(cacheDir, "fzfNamespace")
+	logrus.Infof("Writing kubectl fzf namespace '%s' in cache file %s", ns, filePath)
+	err = os.WriteFile(filePath, []byte(ns), 0644)
+	return err
+}
+
 func (f *Fetcher) loadLastModifiedTimes() (map[string]time.Time, error) {
 	lastModifiedTimesPath := f.getLastModifiedTimesPath()
 	if !util.FileExists(lastModifiedTimesPath) {
 		return map[string]time.Time{}, nil
 	}
-	b, err := ioutil.ReadFile(lastModifiedTimesPath)
+	b, err := os.ReadFile(lastModifiedTimesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -51,18 +81,17 @@ func (f *Fetcher) updateLastModifiedTimes(r resources.ResourceType, newTime time
 	}
 	lastModifiedTimes[r.String()] = newTime
 	b, err := json.Marshal(lastModifiedTimes)
-	return ioutil.WriteFile(f.getLastModifiedTimesPath(), b, 0644)
+	return os.WriteFile(f.getLastModifiedTimesPath(), b, 0644)
 }
 
 func (f *Fetcher) writeResourceToCache(headers http.Header, b []byte, r resources.ResourceType) error {
-	destDir := path.Join(f.fetcherCachePath, f.GetContext())
-	err := os.MkdirAll(destDir, 0755)
+	cacheDir, err := f.createCacheDir()
 	if err != nil {
-		return errors.Wrap(err, "error mkdirall")
+		return err
 	}
-	cachePath := path.Join(destDir, r.String())
-	logrus.Debugf("Caching resource in %s", cachePath)
-	err = os.WriteFile(cachePath, b, 0644)
+	resourcePath := path.Join(cacheDir, r.String())
+	logrus.Debugf("Caching resource in %s", resourcePath)
+	err = os.WriteFile(resourcePath, b, 0644)
 	if err != nil {
 		return errors.Wrap(err, "error writing cache file")
 	}
