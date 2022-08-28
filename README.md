@@ -30,7 +30,7 @@ Table of Contents
 # Features
 
 - Seamless integration with kubectl autocompletion
-- Sub second completion
+- Fast completion
 - Label autocompletion
 - Automatic namespace switch
 
@@ -60,7 +60,7 @@ install kubectl-fzf-server ~/local/bin/kubectl-fzf-server
 
 ### As a kubernetes deployment
 
-You can deploy the cache builder as a pod in your cluster.
+You can deploy `kubectl-fzf-server` as a pod in your cluster.
 
 ```shell
 
@@ -76,14 +76,16 @@ Source the autocompletion functions:
 # kubectl_fzf.sh needs to be sourced after kubectl completion.
 
 # bash version
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/kubectl_fzf.sh -O ~/.kubectl_fzf.sh
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.sh -O ~/.kubectl_fzf.sh
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf_completion.bash -O ~/.kubectl_fzf_completion.bash
 echo "source <(kubectl completion bash)" >> ~/.bashrc
-echo "source ~/.kubectl_fzf.sh" >> ~/.bashrc
+echo "source ~/.kubectl_fzf_completion.bash" >> ~/.bashrc
 
 # zsh version
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/kubectl_fzf.plugin.zsh -O ~/.kubectl_fzf.plugin.zsh
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.sh -O ~/.kubectl_fzf.sh
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf_completion.zsh -O ~/.kubectl_fzf_completion.zsh
 echo "source <(kubectl completion zsh)" >> ~/.zshrc
-echo "source ~/.kubectl_fzf.plugin.zsh" >> ~/.zshrc
+echo "source ~/.kubectl_fzf_completion.zsh" >> ~/.zshrc
 ```
 
 ### Using zplug
@@ -139,38 +141,20 @@ excluded-namespaces:
 
 - It can be CPU and memory intensive on big clusters
 - It also can be bandwidth intensive. The most expensive is the initial listing at startup and on error/disconnection. Big namespace can increase the probability of errors during initial listing.
+- It can generate load on the kube-api servers if multiple user are running it
 
 ## kubectl-fzf-server: pod version
 
-If the pod is deployed in your cluster, the autocompletion fetch the cache files from the pod using rsync.
-
-To check if you can reach the pod, try:
-
-```shell
-IP=$(k get endpoints -l app=kubectl-fzf --all-namespaces -o=jsonpath='{.items[*].subsets[*].addresses[*].ip}')
-nc -v -z $IP 80
-```
-
-By default, it will use the port 80.
-You can change it by deploying the chart with a different port value and using `KUBECTL_FZF_RSYNC_PORT`:
-
-```shell
-helm template --namespace myns --set port=873 . | kubectl apply -f -
-export KUBECTL_FZF_RSYNC_PORT=873
-```
-
-If there's no direct access, a `port-forward` will be opened.
-Opening a `port-forward` can take several seconds and thus, slow the autocompletion.
-If you want to avoid this, you can keep the `open_port_forward.sh` script running which will keep the `port-forward` opened.
+If the pod is deployed in your cluster, the autocompletion will be fetched with port forward.
 
 ### Advantages
 
 - No need to run a local `kubectl-fzf-server`
-- Bandwidth usage is limited to the rsync transfert which is low.
+- Only a single instance of `kubectl-fzf-server` per cluster is needed, making it more optimal on kube-api servers.
 
 ### Drawbacks
 
-- Rsynced resources are cached for 30 seconds so the autocompletion can get outdated.
+- Resources need to be fetched remotely, this can increased the completion time. A local cache is maintained to lower this.
 
 ## kubectl_fzf
 
@@ -179,74 +163,18 @@ Once `kubectl-fzf-server` is running, you will be able to use `kubectl_fzf` by c
 kubectl get pod <TAB>
 ```
 
-### Options
-
-| Environment variable        | Description                                            | Default                                     |
-| --------------------        | --------------------                                   | --------------------                        |
-| KUBECTL_FZF_CACHE           | Cache files location                                   | `/tmp/kubectl_fzf_cache`                    |
-| KUBECTL_FZF_EXCLUDE         | Exclusion patterns passed to the autocompletion        | ""                                          |
-| KUBECTL_FZF_OPTIONS         | fzf parameters                                         | `-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort `   |
-
-To turn down exact match in search:
-```shell
-export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse)
-```
-
-To enable hscroll
-```shell
-export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e)
-```
-
-To bind space to accept current result (You can check the list of available keys and actions in the fzf man)
-```shell
-export KUBECTL_FZF_OPTIONS=(-1 --header-lines=2 --layout reverse -e --no-hscroll --no-sort --bind space:accept)
-```
-
-
-To exclude all namespaces starting with "dev" and consul-agent resources:
-```shell
-export KUBECTL_FZF_EXCLUDE=("^dev" "consul-agent")
-```
-
-# Caveats
-
-With zsh, if the suggested completion doesn't match the start of the query, the completion will fail.
-
-```shell
-k get pod pr<TAB>
-# result needs to start with `pr` otherwise autocompletion will fail
-```
-
----
-
-If you're using an out-of-the-box `oh-my-zsh` configuration, the default `matcher-list` zstyle (`zstyle ':completion:*' matcher-list 'r:|=*' 'l:|=* r:|=*'`) will interfere with the search. If fzf does not find any match, or if you interrupt it by pressing `Esc` or `Ctrl-C/Cmd-C`, zsh will see it as a failed completion and will restart it again.
-
-Changing the zstyle to `zstyle ':completion:*' matcher-list 'r:|=*'` fixes the issue.
-
 # Troubleshooting
 
-## Debug logs
+## Debug Completion
+
+To directly call completion with debug logs, run: 
+```
+KUBECTL_FZF_LOG_LEVEL=debug kubectl-fzf-completion k8s_completion get pods ""
+```
+
+## Debug Server
 
 To launch kubectl-fzf-server with debug logs
 ```shell
-kubectl-fzf-server -logtostderr -v 14
+kubectl-fzf-server --log-level debug
 ```
-
-## The normal autocompletion is used
-
-First, check if cache files are correctly generated in `/tmp/kubectl_fzf_cache`.
-The autocompletion will fallback to normal method if cache files are absent.
-
-If the files are present, check that the `__kubectl_get_containers` is correctly overloaded
-
-```
-# Incorrect type
-type __kubectl_get_containers
-__kubectl_get_containers is a shell function from /dev/fd/15
-
-# Expected output
-type __kubectl_get_containers
-__kubectl_get_containers is a shell function from .../kubectl-fzf/kubectl_fzf.plugin.zsh
-```
-
-Be sure that `kubectl_fzf.plugin` is loaded after `kubectl completion zsh` in your bashrc/zshrc.
