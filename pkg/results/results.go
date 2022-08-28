@@ -15,20 +15,13 @@ import (
 
 // ProcessResult handles fzf output and provides completion to use
 // The fzfResult should have the first 3 columns of the fzf preview
-func ProcessResult(cmdUse string, cmdArgs []string, fzfResult string) (string, error) {
+func ProcessResult(cmdUse string, cmdArgs []string,
+	f *fetcher.Fetcher, fzfResult string) (string, error) {
 	logrus.Debugf("Processing fzf result %s", fzfResult)
 	logrus.Debugf("Cmd command %s", cmdArgs)
-	fetchConfigCli := fetcher.GetFetchConfigCli()
-	fetcher := fetcher.NewFetcher(&fetchConfigCli)
-	namespace := ""
-	err := fetcher.SetClusterNameFromCurrentContext()
+	namespace, err := f.GetNamespace()
 	if err != nil {
-		logrus.Debugf("Error building fetcher: %v, falling back to empty namespace", err)
-	} else {
-		namespace, err = fetcher.GetNamespace()
-		if err != nil {
-			logrus.Debugf("Error getting namespace: %v, falling back to empty namespace", err)
-		}
+		return "", err
 	}
 	return processResultWithNamespace(cmdUse, cmdArgs, fzfResult, namespace)
 }

@@ -20,7 +20,21 @@ import (
 )
 
 func completeFun(cmd *cobra.Command, args []string) {
-	completionResults, err := completion.ProcessCommandArgs(cmd.Use, args)
+	fetchConfigCli := fetcher.GetFetchConfigCli()
+	f := fetcher.NewFetcher(&fetchConfigCli)
+	err := f.LoadFetcherState()
+	if err != nil {
+		logrus.Warnf("Error loading fetcher state")
+		os.Exit(6)
+	}
+
+	completionResults, err := completion.ProcessCommandArgs(cmd.Use, args, f)
+
+	err = f.SaveFetcherState()
+	if err != nil {
+		logrus.Warnf("Error saving fetcher state")
+		os.Exit(6)
+	}
 	if e, ok := err.(resources.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
 		os.Exit(6)
@@ -43,7 +57,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Call fzf error: %s", err)
 	}
-	res, err := results.ProcessResult(cmd.Use, args, fzfResult)
+	res, err := results.ProcessResult(cmd.Use, args, f, fzfResult)
 	if err != nil {
 		logrus.Fatalf("Process result error: %s", err)
 	}

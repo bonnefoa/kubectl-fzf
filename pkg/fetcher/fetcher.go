@@ -2,15 +2,12 @@ package fetcher
 
 import (
 	"context"
-	"fmt"
 	"kubectlfzf/pkg/k8s/clusterconfig"
-	"kubectlfzf/pkg/k8s/portforward"
+	"kubectlfzf/pkg/k8s/resources"
+	"kubectlfzf/pkg/util"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Fetcher defines configuration to fetch completion datas
@@ -21,96 +18,60 @@ type Fetcher struct {
 	fzfNamespace         string
 	minimumCache         time.Duration
 	portForwardLocalPort int // Local port to use for port-forward
+	fetcherState         FetcherState
 }
 
 func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
-	f := Fetcher{}
-	f.ClusterConfig = clusterconfig.NewClusterConfig(&fetchConfigCli.ClusterConfigCli)
-	f.httpEndpoint = fetchConfigCli.HttpEndpoint
-	f.fzfNamespace = fetchConfigCli.FzfNamespace
-	f.fetcherCachePath = fetchConfigCli.FetcherCachePath
-	f.minimumCache = fetchConfigCli.MinimumCache
-	f.portForwardLocalPort = fetchConfigCli.PortForwardLocalPort
+	f := Fetcher{
+		ClusterConfig:        clusterconfig.NewClusterConfig(&fetchConfigCli.ClusterConfigCli),
+		httpEndpoint:         fetchConfigCli.HttpEndpoint,
+		fzfNamespace:         fetchConfigCli.FzfNamespace,
+		fetcherCachePath:     fetchConfigCli.FetcherCachePath,
+		minimumCache:         fetchConfigCli.MinimumCache,
+		portForwardLocalPort: fetchConfigCli.PortForwardLocalPort,
+		fetcherState:         *newFetcherState(fetchConfigCli.FetcherCachePath),
+	}
 	return &f
 }
 
-func (f *Fetcher) getKubectlFzfPod(ctx context.Context) (*corev1.Pod, error) {
-	listOptions := metav1.ListOptions{
-		LabelSelector: "app=kubectl-fzf",
-		FieldSelector: "status.phase=Running",
-	}
-	clientset, err := f.GetClientset()
+func (f *Fetcher) LoadFetcherState() error {
+	err := f.SetClusterNameFromCurrentContext()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	ns, needNamespaceWrite := f.getCachedNamespace()
-	logrus.Infof("Looking for fzf pod in namespace '%s'", ns)
-	podList, err := clientset.CoreV1().Pods(ns).List(ctx, listOptions)
-	if err != nil {
-		return nil, err
-	}
-	if len(podList.Items) == 0 {
-		err = fmt.Errorf("no kubectl-fzf pods found, bailing out")
-		return nil, err
-	}
-	pod := podList.Items[0]
-	if len(pod.Spec.Containers) != 1 {
-		err = fmt.Errorf("kubectl-fzf pod should have only one container, got %d", len(pod.Spec.Containers))
-		return nil, err
-	}
-	if needNamespaceWrite {
-		err = f.writeCachedNamespace(pod.Namespace)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &pod, nil
+	return f.fetcherState.loadStateFromDisk()
 }
 
-func (f *Fetcher) getPortForwardRequest(ctx context.Context) (portForwardRequest portforward.PortForwardRequest, err error) {
-	pod, err := f.getKubectlFzfPod(ctx)
-	if err != nil {
-		return
-	}
-	containerPorts := pod.Spec.Containers[0].Ports
-	if len(containerPorts) != 1 {
-		err = fmt.Errorf("kubectl-fzf container should have only one port, got %d", len(containerPorts))
-		return
-	}
-	podPort := int(containerPorts[0].ContainerPort)
-	if podPort <= 0 {
-		err = fmt.Errorf("container port invalid, should be > 0, got %d", podPort)
-		return
-	}
-	portForwardRequest = portforward.NewPortForwardRequest(pod.Name, pod.Namespace, f.portForwardLocalPort, podPort)
-	logrus.Infof("Found a kubectl-fzf pod found, trying port-forward to %s", pod.Name)
-	return
+func (f *Fetcher) SaveFetcherState() error {
+	return f.fetcherState.writeToDisk()
 }
 
-func (f *Fetcher) openPortForward(ctx context.Context) (chan (struct{}), error) {
-	stopChan := make(chan struct{})
-	readyChan := make(chan struct{})
-	errChan := make(chan error)
-	portForwardRequest, err := f.getPortForwardRequest(ctx)
+func loadResourceFromFile(filePath string) (map[string]resources.K8sResource, error) {
+	resources := map[string]resources.K8sResource{}
+	err := util.LoadGobFromFile(&resources, filePath)
+	return resources, err
+}
+
+func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (map[string]resources.K8sResource, error) {
+	if f.FileStoreExists(r) {
+		resourceStorePath := f.GetResourceStorePath(r)
+		logrus.Infof("%s found, using resources from file", resourceStorePath)
+		resources, err := loadResourceFromFile(resourceStorePath)
+		return resources, err
+	}
+
+	// Check for recent cache
+	resources, err := f.checkRecentCache(r)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create port forward")
+		return nil, err
 	}
-	go func() {
-		restConfig, err := f.GetClientConfig()
-		if err != nil {
-			errChan <- err
-		}
-		err = portforward.OpenPortForward(restConfig, portForwardRequest, readyChan, stopChan)
-		if err != nil {
-			errChan <- err
-		}
-	}()
-	select {
-	case err := <-errChan:
-		return nil, errors.Wrap(err, "error opening port forward")
-	case <-readyChan:
+	if resources != nil {
+		return resources, err
 	}
-	close(errChan)
-	logrus.Debug("Port forward ready")
-	return stopChan, nil
+
+	// Fetch remote
+	if util.IsAddressReachable(f.httpEndpoint) {
+		return f.loadResourceFromHttpServer(f.httpEndpoint, r)
+	}
+	return f.getResourcesFromPortForward(ctx, r)
 }

@@ -61,13 +61,7 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 	return completionResult, err
 }
 
-func ProcessCommandArgs(cmdVerb string, args []string) (*CompletionResult, error) {
-	fetchConfigCli := fetcher.GetFetchConfigCli()
-	f := fetcher.NewFetcher(&fetchConfigCli)
-	err := f.SetClusterNameFromCurrentContext()
-	if err != nil {
-		return nil, err
-	}
+func ProcessCommandArgs(cmdVerb string, args []string, f *fetcher.Fetcher) (*CompletionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	completionResult, err := processCommandArgsWithFetchConfig(ctx, f, cmdVerb, args)
 	cancel()

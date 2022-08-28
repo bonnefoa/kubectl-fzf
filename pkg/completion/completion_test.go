@@ -196,13 +196,15 @@ func TestHttpServerCachePod(t *testing.T) {
 	f, tempDir := fetchertest.GetTestFetcher(t, "nothing", fzfHttpServer.Port)
 	res, err := getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
 	require.NoError(t, err)
+	err = f.SaveFetcherState()
+	require.NoError(t, err)
 	assert.Len(t, res, 7)
 
 	podCache := path.Join(tempDir, "nothing", resources.ResourceTypePod.String())
 	assert.FileExists(t, podCache)
 	require.Equal(t, fzfHttpServer.ResourceHit, 1)
-	lastModified := path.Join(tempDir, "nothing", "lastModified")
-	assert.FileExists(t, lastModified)
+	fetcher_state := path.Join(tempDir, "fetcher_state")
+	assert.FileExists(t, fetcher_state)
 
 	res, err = getResourceCompletion(context.Background(), resources.ResourceTypePod, nil, f)
 	require.Equal(t, fzfHttpServer.ResourceHit, 1)
