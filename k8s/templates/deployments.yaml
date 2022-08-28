@@ -31,7 +31,7 @@ spec:
         effect: NoSchedule
       {{- end }}
       containers:
-      - name: cache-builder
+      - name: kubectl-fzf-server
         image: {{ $.Values.image.kubectl_fzf_server.name }}:{{ $.Values.image.kubectl_fzf_server.tag }}
         imagePullPolicy: {{ $.Values.docker.pullPolicy }}
         volumeMounts:
