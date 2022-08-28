@@ -18,7 +18,7 @@ Table of Contents
   * [Shell autocompletion](#shell-autocompletion)
 	 * [Using zplug](#using-zplug)
 * [Usage](#usage)
-  * [cache_builder](#cache_builder)
+  * [kubectl-fzf-server](#kubectl-fzf-server)
 	 * [Configuration](#configuration)
   * [kubectl_fzf](#kubectl_fzf)
 	 * [Options](#options)
@@ -36,16 +36,16 @@ Table of Contents
 
 # Requirements
 
-- go (minimum version 1.12)
+- go (minimum version 1.18)
 - [fzf](https://github.com/junegunn/fzf)
 
 # Installation
 
-## Cache builder
+## kubectl-fzf-server
 
 ### Local installation
 
-Install `cache_builder`:
+Install `kubectl-fzf-server`:
 ```shell
 # Mac
 FILE="kubectl-fzf_darwin_amd64.tar.gz"
@@ -55,7 +55,7 @@ FILE="kubectl-fzf_linux_amd64.tar.gz"
 cd /tmp
 wget "https://github.com/bonnefoa/kubectl-fzf/releases/latest/download/$FILE"
 tar -xf $FILE
-install cache_builder ~/local/bin/cache_builder
+install kubectl-fzf-server ~/local/bin/kubectl-fzf-server
 ```
 
 ### As a kubernetes deployment
@@ -64,7 +64,7 @@ You can deploy the cache builder as a pod in your cluster.
 
 ```shell
 
-helm template --namespace myns --set image.cache_builder.tag=1.0.11 --set toleration=aToleration . | kubectl apply -f -
+helm template --namespace myns --set image.kubectl_fzf_server.tag=1.0.11 --set toleration=aToleration . | kubectl apply -f -
 ```
 
 You can check the latest image version [here](https://cloud.docker.com/repository/docker/bonnefoa/kubectl-fzf/general).
@@ -96,25 +96,25 @@ zplug "bonnefoa/kubectl-fzf", defer:3
 
 # Usage
 
-## cache_builder: local version
+## kubectl-fzf-server: local version
 
-`cache_builder` will watch cluster resources and keep the current state of the cluster in local files.
+`kubectl-fzf-server` will watch cluster resources and keep the current state of the cluster in local files.
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
 
 To create cache files necessary for `kubectl_fzf`, just run in a tmux or a screen
 
 ```shell
-cache_builder
+kubectl-fzf-server
 ```
 
-It will watch the cluster in the current context. If you switch context, `cache_builder` will detect and start watching the new cluster.
+It will watch the cluster in the current context. If you switch context, `kubectl-fzf-server` will detect and start watching the new cluster.
 The initial resource listing can be long on big clusters and autocompletion might need 30s+.
 
-`connect: connection refused` or similar messages are expected if there's network issues/interruptions and `cache_builder` will automatically reconnect.
+`connect: connection refused` or similar messages are expected if there's network issues/interruptions and `kubectl-fzf-server` will automatically reconnect.
 
 ### Configuration
 
-You can configure `cache_builder` with the configuration file `$HOME/.kubectl_fzf.yaml`
+You can configure `kubectl-fzf-server` with the configuration file `$HOME/.kubectl_fzf.yaml`
 
 ```yaml
 # Role to hide from the role list in node completion
@@ -140,7 +140,7 @@ excluded-namespaces:
 - It can be CPU and memory intensive on big clusters
 - It also can be bandwidth intensive. The most expensive is the initial listing at startup and on error/disconnection. Big namespace can increase the probability of errors during initial listing.
 
-## cache_builder: pod version
+## kubectl-fzf-server: pod version
 
 If the pod is deployed in your cluster, the autocompletion fetch the cache files from the pod using rsync.
 
@@ -165,7 +165,7 @@ If you want to avoid this, you can keep the `open_port_forward.sh` script runnin
 
 ### Advantages
 
-- No need to run a local `cache_builder`
+- No need to run a local `kubectl-fzf-server`
 - Bandwidth usage is limited to the rsync transfert which is low.
 
 ### Drawbacks
@@ -174,7 +174,7 @@ If you want to avoid this, you can keep the `open_port_forward.sh` script runnin
 
 ## kubectl_fzf
 
-Once `cache_builder` is running, you will be able to use `kubectl_fzf` by calling the kubectl completion
+Once `kubectl-fzf-server` is running, you will be able to use `kubectl_fzf` by calling the kubectl completion
 ```shell
 kubectl get pod <TAB>
 ```
@@ -227,9 +227,9 @@ Changing the zstyle to `zstyle ':completion:*' matcher-list 'r:|=*'` fixes the i
 
 ## Debug logs
 
-To launch cache_builder with debug logs
+To launch kubectl-fzf-server with debug logs
 ```shell
-cache_builder -logtostderr -v 14
+kubectl-fzf-server -logtostderr -v 14
 ```
 
 ## The normal autocompletion is used
