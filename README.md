@@ -38,7 +38,7 @@ Table of Contents
 
 # Requirements
 
-- go (minimum version 1.18)
+- go (minimum version 1.19)
 - [fzf](https://github.com/junegunn/fzf)
 
 # Installation
