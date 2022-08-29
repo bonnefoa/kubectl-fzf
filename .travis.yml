@@ -1,6 +1,0 @@
-os: linux
-dist: jammy
-language: go
-
-go:
-- 1.19
