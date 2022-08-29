@@ -39,6 +39,13 @@ archives:
     - shell/kubectl_fzf_completion.bash
   name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
+dockers:
+  - image_templates:
+    - "bonnefoa/kubectl-fzf:{{ .Tag }}"
+    - "bonnefoa/kubectl-fzf:v{{ .Major }}"
+    - "bonnefoa/kubectl-fzf:v{{ .Major }}.{{ .Minor }}"
+    - "bonnefoa/kubectl-fzf:latest"
+
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
   algorithm: sha256
