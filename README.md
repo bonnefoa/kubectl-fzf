@@ -8,14 +8,14 @@ Table of Contents
 =================
 
 * [Kubectl-fzf](#kubectl-fzf)
+* [Table of Contents](#table-of-contents)
 * [Features](#features)
 * [Requirements](#requirements)
 * [Installation](#installation)
-   * [kubectl-fzf-server](#kubectl-fzf-server)
-      * [Local installation](#local-installation)
-      * [As a kubernetes deployment](#as-a-kubernetes-deployment)
+   * [kubectl-fzf binaries](#kubectl-fzf-binaries)
    * [Shell autocompletion](#shell-autocompletion)
-      * [Using zplug](#using-zplug)
+      * [Zsh plugins: Antigen](#zsh-plugins-antigen)
+   * [Deploy kubectl-fzf-server as a pod](#deploy-kubectl-fzf-server-as-a-pod)
 * [Usage](#usage)
    * [kubectl-fzf-server: local version](#kubectl-fzf-server-local-version)
       * [Configuration](#configuration)
@@ -24,7 +24,8 @@ Table of Contents
    * [kubectl-fzf-server: pod version](#kubectl-fzf-server-pod-version)
       * [Advantages](#advantages-1)
       * [Drawbacks](#drawbacks-1)
-   * [kubectl_fzf](#kubectl_fzf)
+   * [Completion](#completion)
+      * [Configuration](#configuration-1)
 * [Troubleshooting](#troubleshooting)
    * [Debug Completion](#debug-completion)
    * [Debug Server](#debug-server)
@@ -43,58 +44,53 @@ Table of Contents
 
 # Installation
 
-## kubectl-fzf-server
+## kubectl-fzf binaries
 
-### Local installation
-
-Install `kubectl-fzf-server`:
 ```shell
-# Mac
-FILE="kubectl-fzf_darwin_amd64.tar.gz"
-# Linux
-FILE="kubectl-fzf_linux_amd64.tar.gz"
-
-cd /tmp
-wget "https://github.com/bonnefoa/kubectl-fzf/releases/latest/download/$FILE"
-tar -xf $FILE
-install kubectl-fzf-server ~/local/bin/kubectl-fzf-server
+# Completion binary called during autocompletion
+go install -u github.com/bonnefoa/kubectl-fzf/v3/cmd/kubectl-fzf-completion@main
+# If you want to run the kubectl-fzf server locally
+go install -u github.com/bonnefoa/kubectl-fzf/v3/cmd/kubectl-fzf-server@main
 ```
 
-### As a kubernetes deployment
+`kubectl-fzf-completion` needs to be in you $PATH so make sure that your $GOPATH bin is included:
+```
+PATH=$PATH:$GOPATH/bin
+```
+
+## Shell autocompletion
+
+Source the autocompletion functions:
+```
+# bash version
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.bash -O ~/.kubectl_fzf.bash
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+echo "source ~/.kubectl_fzf.bash" >> ~/.bashrc
+
+# zsh version
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.plugin.zsh -O ~/.kubectl_fzf.plugin.zsh
+echo "source <(kubectl completion zsh)" >> ~/.zshrc
+echo "source ~/.kubectl_fzf.plugin.zsh >> ~/.zshrc
+```
+
+### Zsh plugins: Antigen
+
+You can use [antigen](https://github.com/zsh-users/antigen) to load it as a zsh plugin
+```shell
+antigen bundle robbyrussell/oh-my-zsh plugins/docker
+antigen bundle bonnefoa/kubectl-fzf@main shell/
+```
+
+## Deploy kubectl-fzf-server as a pod
 
 You can deploy `kubectl-fzf-server` as a pod in your cluster.
 
+From the [k8s directory](https://github.com/bonnefoa/kubectl-fzf/tree/main/k8s):
 ```shell
 helm template --namespace myns --set image.kubectl_fzf_server.tag=v3 --set toleration=aToleration . | kubectl apply -f -
 ```
 
 You can check the latest image version [here](https://cloud.docker.com/repository/docker/bonnefoa/kubectl-fzf/general).
-
-## Shell autocompletion
-
-Source the autocompletion functions:
-```shell
-# kubectl_fzf.sh needs to be sourced after kubectl completion.
-
-# bash version
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.sh -O ~/.kubectl_fzf.sh
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf_completion.bash -O ~/.kubectl_fzf_completion.bash
-echo "source <(kubectl completion bash)" >> ~/.bashrc
-echo "source ~/.kubectl_fzf_completion.bash" >> ~/.bashrc
-
-# zsh version
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.sh -O ~/.kubectl_fzf.sh
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf_completion.zsh -O ~/.kubectl_fzf_completion.zsh
-echo "source <(kubectl completion zsh)" >> ~/.zshrc
-echo "source ~/.kubectl_fzf_completion.zsh" >> ~/.zshrc
-```
-
-### Antigen
-
-```shell
-antigen bundle robbyrussell/oh-my-zsh plugins/docker
-antigen bundle bonnefoa/kubectl-fzf@main shell/
-```
 
 # Usage
 
@@ -120,7 +116,7 @@ You can configure `kubectl-fzf-server` with the configuration file `$HOME/.kubec
 
 ```yaml
 # Role to hide from the role list in node completion
-ignored-node-role:
+ignored-node-roles:
   - common-node
 # Namespaces to exclude for configmap and pod listing
 # Regexps are accepted
@@ -136,31 +132,49 @@ excluded-namespaces:
 ### Advantages
 
 - Minimal setup needed.
+- Local cache is maintained up to date.
 
 ### Drawbacks
 
-- It can be CPU and memory intensive on big clusters
+- It can be CPU and memory intensive on big clusters.
 - It also can be bandwidth intensive. The most expensive is the initial listing at startup and on error/disconnection. Big namespace can increase the probability of errors during initial listing.
-- It can generate load on the kube-api servers if multiple user are running it
+- It can generate load on the kube-api servers if multiple user are running it.
 
 ## kubectl-fzf-server: pod version
 
-If the pod is deployed in your cluster, the autocompletion will be fetched with port forward.
+If the pod is deployed in your cluster, the autocompletion will be fetched automatically fetched using port forward.
 
 ### Advantages
 
 - No need to run a local `kubectl-fzf-server`
-- Only a single instance of `kubectl-fzf-server` per cluster is needed, making it more optimal on kube-api servers.
+- Only a single instance of `kubectl-fzf-server` per cluster is needed, lowering the load on the `kube-api` servers.
 
 ### Drawbacks
 
 - Resources need to be fetched remotely, this can increased the completion time. A local cache is maintained to lower this.
 
-## kubectl_fzf
+## Completion
 
 Once `kubectl-fzf-server` is running, you will be able to use `kubectl_fzf` by calling the kubectl completion
 ```shell
+# Get fzf completion on pods on all namespaces
 kubectl get pod <TAB>
+
+# Open fzf autocompletion on all available label
+kubectl get pod -l <TAB>
+
+# Open fzf autocompletion on all available field-selector. Usually much faster to list all pods running on an host compared to kubectl describe node.
+kubectl get pod --field-selector <TAB>
+
+# This will fallback to the normal kubectl completion (if sourced) 
+kubectl <TAB>
+```
+
+### Configuration
+
+By default, the local port used for the port-forward is 8080. You can override it through an environment variable:
+```
+KUBECTL_FZF_PORT_FORWARD_LOCAL_PORT=8081
 ```
 
 # Troubleshooting
