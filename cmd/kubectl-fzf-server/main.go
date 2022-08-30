@@ -20,27 +20,19 @@ import (
 )
 
 var (
-	Version   string
-	BuildDate string
-	GitCommit string
-	GitBranch string
-	GoVersion string
+	version   = "dev"
+	gitCommit = "none"
+	gitBranch = "unknown"
+	goVersion = "unknown"
+	buildDate = "unknown"
 )
 
 func versionFun(cmd *cobra.Command, args []string) {
-	fmt.Printf("Version: %s\n", Version)
-	if GitCommit != "" {
-		fmt.Printf("Git hash: %s\n", GitCommit)
-	}
-	if GitBranch != "" {
-		fmt.Printf("Git branch: %s\n", GitBranch)
-	}
-	if BuildDate != "" {
-		fmt.Printf("Build date: %s\n", BuildDate)
-	}
-	if GoVersion != "" {
-		fmt.Printf("Go Version: %s\n", GoVersion)
-	}
+	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Git hash: %s\n", gitCommit)
+	fmt.Printf("Git branch: %s\n", gitBranch)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Go Version: %s\n", goVersion)
 	os.Exit(0)
 }
 

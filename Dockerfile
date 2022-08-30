@@ -1,8 +1,13 @@
 # Build the kubectl_fzf_server binary
 FROM golang:latest as builder
 
+ARG GIT_COMMIT
+ARG GIT_BRANCH
+ARG GO_VERSION
+ARG VERSION
+ARG BUILD_DATE
+
 WORKDIR /workspace
-COPY .git .
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -19,12 +24,9 @@ RUN CGO_ENABLED=0 \
     GOOS=linux \
     GOARCH=amd64 \
     GO111MODULE=on \
-    GIT_COMMIT=$(git rev-parse --short HEAD) \
-    GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) \
-    VERSION=$(git describe --tags) \
-    GO_VERSION=$(go version) \
-    BUILD_DATE=$(date) \
-    go build -a -o kubectl-fzf-server -ldflags "-X main.GitCommit=$GIT_COMMIT -X main.GitBranch=$GitBranch -X main.GoVersion=$GoVersion -X main.BuildDate=$BUILD_DATE -X main.Version=$VERSION" cmd/kubectl-fzf-server/main.go
+    go build -a -o kubectl-fzf-server \
+        -ldflags "-X 'main.gitCommit=$GIT_COMMIT' -X 'main.gitBranch=$GIT_BRANCH' -X 'main.goVersion=$GO_VERSION' -X 'main.buildDate=$BUILD_DATE' -X 'main.version=$VERSION'" \
+        cmd/kubectl-fzf-server/main.go
 
 # Copy the kubectl_fzf_server into a thin image
 FROM alpine:latest

@@ -1,0 +1,5 @@
+FROM alpine:latest
+WORKDIR /
+COPY kubectl-fzf-server .
+
+ENTRYPOINT ["/kubectl-fzf-server"]

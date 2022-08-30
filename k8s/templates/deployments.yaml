@@ -49,7 +49,6 @@ spec:
         ports:
           - containerPort: {{ $.Values.port }}
         args:
-          - --cluster-name=$(K8S_CLUSTER_INFRA_DOMAIN)
           - --log-level=info
           - --listen-address=localhost:{{ $.Values.port }}
           - --http-debug
