@@ -1,4 +1,4 @@
-module kubectlfzf
+module github.com/bonnefoa/kubectl-fzf/v3
 
 go 1.19
 

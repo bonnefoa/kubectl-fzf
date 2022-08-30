@@ -5,16 +5,15 @@ import (
 	"os"
 	"runtime/pprof"
 
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/daemon"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/httpserver"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resourcewatcher"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/store"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/kubectlfzfserver"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"kubectlfzf/pkg/daemon"
-	"kubectlfzf/pkg/httpserver"
-	"kubectlfzf/pkg/k8s/resourcewatcher"
-	"kubectlfzf/pkg/k8s/store"
-	"kubectlfzf/pkg/kubectlfzfserver"
-	"kubectlfzf/pkg/util"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
