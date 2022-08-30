@@ -65,8 +65,7 @@ install kubectl-fzf-server ~/local/bin/kubectl-fzf-server
 You can deploy `kubectl-fzf-server` as a pod in your cluster.
 
 ```shell
-
-helm template --namespace myns --set image.kubectl_fzf_server.tag=1.0.11 --set toleration=aToleration . | kubectl apply -f -
+helm template --namespace myns --set image.kubectl_fzf_server.tag=v3 --set toleration=aToleration . | kubectl apply -f -
 ```
 
 You can check the latest image version [here](https://cloud.docker.com/repository/docker/bonnefoa/kubectl-fzf/general).
@@ -90,12 +89,11 @@ echo "source <(kubectl completion zsh)" >> ~/.zshrc
 echo "source ~/.kubectl_fzf_completion.zsh" >> ~/.zshrc
 ```
 
-### Using zplug
+### Antigen
 
-You can use zplug to install the autocompletion functions
 ```shell
-zplug "plugins/kubectl", from:oh-my-zsh, defer:2
-zplug "bonnefoa/kubectl-fzf", defer:3
+antigen bundle robbyrussell/oh-my-zsh plugins/docker
+antigen bundle bonnefoa/kubectl-fzf@main shell/
 ```
 
 # Usage
