@@ -46,20 +46,23 @@ func completeFun(cmd *cobra.Command, args []string) {
 	}
 
 	completionResults, err := completion.ProcessCommandArgs(cmd.Use, args, f)
-
-	err = f.SaveFetcherState()
-	if err != nil {
-		logrus.Warnf("Error saving fetcher state")
-		os.Exit(6)
-	}
 	if e, ok := err.(resources.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
 		os.Exit(6)
-	}
-	if e, ok := err.(parse.UnmanagedFlagError); ok {
+	} else if e, ok := err.(parse.UnmanagedFlagError); ok {
 		logrus.Warnf("Unmanaged flag: %s", e)
 		os.Exit(6)
+	} else if err != nil {
+		logrus.Warnf("Error during completion: %s", err)
+		os.Exit(6)
 	}
+
+	err = f.SaveFetcherState()
+	if err != nil {
+		logrus.Warnf("Error saving fetcher state: %s", err)
+		os.Exit(6)
+	}
+
 	if err != nil {
 		logrus.Fatalf("Completion error: %s", err)
 	}

@@ -64,6 +64,9 @@ func parseLastFlag(s string) FlagCompletion {
 
 func CheckFlagManaged(args []string) FlagCompletion {
 	logrus.Infof("Checking Managed Flag '%s'", args)
+	if len(args) == 0 {
+		return FlagNone
+	}
 	lastArg := args[len(args)-1]
 	if strings.HasPrefix(lastArg, "-") {
 		lastArg = strings.TrimLeft(lastArg, "-")
