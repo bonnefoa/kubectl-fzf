@@ -34,9 +34,8 @@ archives:
   files:
     - README.md
     - LICENSE
-    - shell/kubectl_fzf.sh
-    - shell/kubectl_fzf_completion.zsh
-    - shell/kubectl_fzf_completion.bash
+    - shell/kubectl_fzf.plugin.zsh
+    - shell/kubectl_fzf.bash
   name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
