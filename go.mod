@@ -2,10 +2,6 @@ module kubectlfzf
 
 go 1.19
 
-replace cmd/kubectl-fzf-server => ./kubectl-fzf-server
-
-replace cmd/kubectl-fzf-completion => ./kubectl-fzf-completion
-
 require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/pkg/errors v0.9.1
