@@ -19,6 +19,23 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	version   = "dev"
+	gitCommit = "none"
+	gitBranch = "unknown"
+	goVersion = "unknown"
+	buildDate = "unknown"
+)
+
+func versionFun(cmd *cobra.Command, args []string) {
+	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Git hash: %s\n", gitCommit)
+	fmt.Printf("Git branch: %s\n", gitBranch)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Go Version: %s\n", goVersion)
+	os.Exit(0)
+}
+
 func completeFun(cmd *cobra.Command, args []string) {
 	fetchConfigCli := fetcher.GetFetchConfigCli()
 	f := fetcher.NewFetcher(&fetchConfigCli)
@@ -118,6 +135,13 @@ func main() {
 	util.SetCommonCliFlags(rootFlags, "error")
 	err := viper.BindPFlags(rootFlags)
 	util.FatalIf(err)
+
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Run:   versionFun,
+		Short: "Print command version",
+	}
+	rootCmd.AddCommand(versionCmd)
 
 	addK8sCmd(rootCmd)
 	addStatsCmd(rootCmd)
