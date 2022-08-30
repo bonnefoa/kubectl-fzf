@@ -19,11 +19,7 @@ Table of Contents
 * [Usage](#usage)
    * [kubectl-fzf-server: local version](#kubectl-fzf-server-local-version)
       * [Configuration](#configuration)
-      * [Advantages](#advantages)
-      * [Drawbacks](#drawbacks)
    * [kubectl-fzf-server: pod version](#kubectl-fzf-server-pod-version)
-      * [Advantages](#advantages-1)
-      * [Drawbacks](#drawbacks-1)
    * [Completion](#completion)
       * [Configuration](#configuration-1)
 * [Troubleshooting](#troubleshooting)
@@ -99,6 +95,15 @@ You can check the latest image version [here](https://cloud.docker.com/repositor
 `kubectl-fzf-server` will watch cluster resources and keep the current state of the cluster in local files.
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
 
+Advantages:
+- Minimal setup needed.
+- Local cache is maintained up to date.
+
+Drawbacks:
+- It can be CPU and memory intensive on big clusters.
+- It also can be bandwidth intensive. The most expensive is the initial listing at startup and on error/disconnection. Big namespace can increase the probability of errors during initial listing.
+- It can generate load on the kube-api servers if multiple user are running it.
+
 To create cache files necessary for `kubectl_fzf`, just run in a tmux or a screen
 
 ```shell
@@ -129,28 +134,15 @@ excluded-namespaces:
   - dev-.*
 ```
 
-### Advantages
-
-- Minimal setup needed.
-- Local cache is maintained up to date.
-
-### Drawbacks
-
-- It can be CPU and memory intensive on big clusters.
-- It also can be bandwidth intensive. The most expensive is the initial listing at startup and on error/disconnection. Big namespace can increase the probability of errors during initial listing.
-- It can generate load on the kube-api servers if multiple user are running it.
-
 ## kubectl-fzf-server: pod version
 
 If the pod is deployed in your cluster, the autocompletion will be fetched automatically fetched using port forward.
 
-### Advantages
-
+Advantages:
 - No need to run a local `kubectl-fzf-server`
 - Only a single instance of `kubectl-fzf-server` per cluster is needed, lowering the load on the `kube-api` servers.
 
-### Drawbacks
-
+Drawbacks:
 - Resources need to be fetched remotely, this can increased the completion time. A local cache is maintained to lower this.
 
 ## Completion
