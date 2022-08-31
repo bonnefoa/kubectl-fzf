@@ -9,7 +9,7 @@ metadata:
     chart_version: {{ $.Chart.Version }}
 data:
   .kubectl_fzf.yaml: |
-    ignored-node-role:
+    ignored-node-roles:
       - compute
     excluded-namespaces:
       - consul-agent
