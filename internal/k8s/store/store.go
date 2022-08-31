@@ -96,7 +96,7 @@ func (k *Store) AddResourceList(lstRuntime []runtime.Object) {
 func (k *Store) AddResource(obj interface{}) {
 	key := resourceKey(obj)
 	newObj := k.resourceCtor(obj, k.ctorConfig)
-	logrus.Debugf("%s added: %s", k.resourceType, key)
+	logrus.Tracef("%s added: %s", k.resourceType, key)
 	k.dataMutex.Lock()
 	k.data[key] = newObj
 	k.dataMutex.Unlock()
@@ -116,7 +116,7 @@ func (k *Store) DeleteResource(obj interface{}) {
 		logrus.Debugf("Unknown object type %v", obj)
 		return
 	}
-	logrus.Debugf("%s deleted: %s", k.resourceType, key)
+	logrus.Tracef("%s deleted: %s", k.resourceType, key)
 	k.dataMutex.Lock()
 	delete(k.data, key)
 	k.dataMutex.Unlock()
@@ -129,7 +129,7 @@ func (k *Store) UpdateResource(oldObj, newObj interface{}) {
 	k8sObj := k.resourceCtor(newObj, k.ctorConfig)
 	k.dataMutex.Lock()
 	if k8sObj.HasChanged(k.data[key]) {
-		logrus.Debugf("%s changed: %s", k.resourceType, key)
+		logrus.Tracef("%s changed: %s", k.resourceType, key)
 		k.data[key] = k8sObj
 		k.dataMutex.Unlock()
 		k.dumpRequired = true
