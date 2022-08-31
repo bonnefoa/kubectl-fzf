@@ -22,7 +22,7 @@ __kubectl_fzf_query_from_word()
 
 __kubectl_fzf_get_completions()
 {
-    local cmdArgs completionOutput requestComp lastChar
+    local cmdArgs requestComp lastChar
     cmdArgs="$1"
     lastChar="$2"
     # TODO Handle query
@@ -35,6 +35,7 @@ __kubectl_fzf_get_completions()
         requestComp="${requestComp} \"\""
     fi
     __kubectl_fzf_debug "About to call: eval '${requestComp}'"
+    zle -R "Calling completion '${requestComp}'"
     completionOutput=$(eval "${requestComp}")
     exitCode=$?
     __kubectl_fzf_debug "completion output: ${completionOutput}, exit code ${exitCode}"
@@ -54,7 +55,6 @@ __kubectl_fzf_get_completions()
         echo "error when calling kubectl-fzf-completion: $requestComp. Output: $completionOutput"
         return
     fi
-    echo "$completionOutput"
 }
 
 __kubectl_fzf_kubectl() {
@@ -62,6 +62,7 @@ __kubectl_fzf_kubectl() {
     local cmdArgs
     local completionOutput
 
+    zle -R "Starting kubectl-fzf completion"
     __kubectl_fzf_debug "CURRENT: ${CURRENT}, words[*]: '${words[*]}', ${#words[@]}"
     words=("${=words[1,CURRENT]}")
     __kubectl_fzf_debug "Truncated words[*]: ${words[*]},"
@@ -77,7 +78,8 @@ __kubectl_fzf_kubectl() {
     fi
 
     cmdArgs="${words[2, -1]}"
-    completionOutput=$(__kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$currentWord")
+    __kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$currentWord"
+    zle -R "Processing completion output"
     if [[ "$completionOutput" == "" ]]; then
         return
     fi
