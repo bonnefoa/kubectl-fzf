@@ -171,14 +171,33 @@ KUBECTL_FZF_PORT_FORWARD_LOCAL_PORT=8081
 
 # Troubleshooting
 
-## Debug Completion
+## Debug kubectl-fzf-completion
 
 To directly call completion with debug logs, run: 
 ```
 KUBECTL_FZF_LOG_LEVEL=debug kubectl-fzf-completion k8s_completion get pods ""
 ```
 
-## Debug Server
+## Debug Tab Completion
+
+To debug Tab completion, you can activate debug logs:
+```
+export KUBECTL_FZF_COMP_DEBUG_FILE=/tmp/debug
+```
+
+Check that the completion function is correctly sourced:
+```
+type kubectl_fzf_completion
+kubectl_fzf_completion is a shell function from /home/bonnefoa/.antigen/bundles/kubectl-fzf-main/shell/kubectl_fzf.plugin.zsh
+```
+
+Use zsh completion debug:
+```
+kubectl get pods <C-X>?
+Trace output left in /tmp/zsh497886kubectl1 (up-history to view)
+```
+
+## Debug kubectl-fzf-server
 
 To launch kubectl-fzf-server with debug logs
 ```shell
