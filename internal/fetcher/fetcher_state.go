@@ -51,6 +51,7 @@ func (f *FetcherState) loadStateFromDisk() error {
 		return err
 	}
 	err = json.Unmarshal(b, &f)
+	logrus.Debugf("Fetcher state loaded: %s", f)
 	return err
 }
 
