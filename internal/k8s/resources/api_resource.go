@@ -36,10 +36,6 @@ func (r *APIResourceList) GetNamespace() string {
 	return ""
 }
 
-func (r *APIResourceList) GetCluster() string {
-	return ""
-}
-
 func (r *APIResourceList) GetLabels() map[string]string {
 	return nil
 }
