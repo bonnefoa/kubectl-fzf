@@ -9,9 +9,9 @@ metadata:
     chart_version: {{ $.Chart.Version }}
 data:
   .kubectl_fzf.yaml: |
-    ignored-node-roles:
+    ignore-node-roles:
       - compute
-    excluded-namespaces:
+    exclude-namespaces:
       - consul-agent
       - go-audit
       - local-volume-provisioner

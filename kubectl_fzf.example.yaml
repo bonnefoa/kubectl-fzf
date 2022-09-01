@@ -1,9 +1,9 @@
 # Role to hide from the role list in node completion
-ignored-node-role:
+ignore-node-role:
   - compute
 # Namespaces to exclude for configmap and pod
 # Regexps are accepted
-excluded-namespaces:
+exclude-namespaces:
   - consul-agent
   - datadog-agent
   - coredns

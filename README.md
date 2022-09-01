@@ -121,11 +121,11 @@ You can configure `kubectl-fzf-server` with the configuration file `$HOME/.kubec
 
 ```yaml
 # Role to hide from the role list in node completion
-ignored-node-roles:
+ignore-node-roles:
   - common-node
 # Namespaces to exclude for configmap and pod listing
 # Regexps are accepted
-excluded-namespaces:
+exclude-namespaces:
   - consul-agent
   - datadog-agent
   - coredns
