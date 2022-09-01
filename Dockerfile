@@ -17,7 +17,7 @@ RUN go mod download
 
 # Copy the go source
 COPY cmd/ cmd/
-COPY pkg/ pkg/
+COPY internal/ internal/
 
 # Build
 RUN CGO_ENABLED=0 \
