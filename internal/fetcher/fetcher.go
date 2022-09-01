@@ -24,7 +24,7 @@ type Fetcher struct {
 
 func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 	f := Fetcher{
-		ClusterConfig:        clusterconfig.NewClusterConfig(&fetchConfigCli.ClusterConfigCli),
+		ClusterConfig:        clusterconfig.NewClusterConfig(fetchConfigCli.ClusterConfigCli),
 		httpEndpoint:         fetchConfigCli.HttpEndpoint,
 		fzfNamespace:         fetchConfigCli.FzfNamespace,
 		fetcherCachePath:     fetchConfigCli.FetcherCachePath,

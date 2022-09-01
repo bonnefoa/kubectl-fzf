@@ -38,7 +38,7 @@ func parseNamespaceFlag(cmdArgs []string) (*string, error) {
 func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult string, currentNamespace string) (string, error) {
 	// If apiresource:
 	// 0 -> fullname, 1 -> shortname, 2 -> groupversion
-	// If namespace:
+	// If namespaceless resource:
 	// 0 -> name, 1 -> age
 	// Otherwise:
 	// 0 -> namespace, 1 -> value

@@ -11,7 +11,7 @@ import (
 
 func TestFileStoreExists(t *testing.T) {
 	c := &StoreConfigCli{
-		ClusterConfigCli: clusterconfig.ClusterConfigCli{
+		ClusterConfigCli: &clusterconfig.ClusterConfigCli{
 			ClusterName: "minikube",
 			CacheDir:    "./testdata", Kubeconfig: "",
 		}, TimeBetweenFullDump: 1 * time.Second}

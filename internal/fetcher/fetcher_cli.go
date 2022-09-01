@@ -10,7 +10,7 @@ import (
 )
 
 type FetcherCli struct {
-	clusterconfig.ClusterConfigCli
+	*clusterconfig.ClusterConfigCli
 	HttpEndpoint         string
 	FzfNamespace         string
 	FetcherCachePath     string

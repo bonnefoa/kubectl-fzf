@@ -24,10 +24,10 @@ func SetClusterConfigCli(fs *pflag.FlagSet) {
 	fs.String("cluster-name", "", "The cluster name. Needed for cross-cluster completion.")
 }
 
-func GetClusterConfigCli() ClusterConfigCli {
+func GetClusterConfigCli() *ClusterConfigCli {
 	c := ClusterConfigCli{}
 	c.ClusterName = viper.GetString("cluster-name")
 	c.Kubeconfig = viper.GetString("kubeconfig")
 	c.CacheDir = viper.GetString("cache-dir")
-	return c
+	return &c
 }

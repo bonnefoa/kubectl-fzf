@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func GetTestClusterConfigCli() clusterconfig.ClusterConfigCli {
-	return clusterconfig.ClusterConfigCli{ClusterName: "minikube", CacheDir: "./testdata", Kubeconfig: ""}
+func GetTestClusterConfigCli() *clusterconfig.ClusterConfigCli {
+	return &clusterconfig.ClusterConfigCli{ClusterName: "minikube", CacheDir: "./testdata", Kubeconfig: ""}
 }
 
 func GetTestStoreConfigCli() *store.StoreConfigCli {

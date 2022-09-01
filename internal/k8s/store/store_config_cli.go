@@ -9,7 +9,7 @@ import (
 )
 
 type StoreConfigCli struct {
-	clusterconfig.ClusterConfigCli
+	*clusterconfig.ClusterConfigCli
 	TimeBetweenFullDump time.Duration
 }
 

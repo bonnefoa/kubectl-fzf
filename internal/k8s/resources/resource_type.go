@@ -39,6 +39,10 @@ const (
 	ResourceTypeUnknown
 )
 
+func (r ResourceType) IsNamespaced() bool {
+	return true
+}
+
 func (r ResourceType) String() string {
 	switch r {
 	case ResourceTypeApiResource:
@@ -89,6 +93,8 @@ func ParseResourceType(s string) ResourceType {
 		fallthrough
 	case "apiresource":
 		return ResourceTypeApiResource
+	case "cm":
+		fallthrough
 	case "configmaps":
 		fallthrough
 	case "configmap":

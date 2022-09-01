@@ -12,7 +12,7 @@ func GetTestFetcher(t *testing.T, clusterName string, port int) (*fetcher.Fetche
 	tempDir := t.TempDir()
 	fetchCli := &fetcher.FetcherCli{
 		FetcherCachePath: tempDir,
-		ClusterConfigCli: clusterconfig.ClusterConfigCli{
+		ClusterConfigCli: &clusterconfig.ClusterConfigCli{
 			ClusterName: clusterName,
 			CacheDir:    "testdata",
 		},

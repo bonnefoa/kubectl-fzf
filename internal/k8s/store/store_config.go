@@ -15,7 +15,7 @@ type StoreConfig struct {
 
 func NewStoreConfig(storeConfigCli *StoreConfigCli) *StoreConfig {
 	s := StoreConfig{}
-	s.ClusterConfig = clusterconfig.NewClusterConfig(&storeConfigCli.ClusterConfigCli)
+	s.ClusterConfig = clusterconfig.NewClusterConfig(storeConfigCli.ClusterConfigCli)
 	s.timeBetweenFullDump = storeConfigCli.TimeBetweenFullDump
 	return &s
 }
