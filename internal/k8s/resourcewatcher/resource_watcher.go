@@ -266,12 +266,22 @@ func (r *ResourceWatcher) startWatch(cfg WatchConfig,
 
 func (r *ResourceWatcher) watchResource(ctx context.Context,
 	cfg WatchConfig, store *store.Store, namespaces []string) {
-	logrus.Infof("Start watch for %s on namespace %s", cfg.resourceType, namespaces)
 	stop := make(chan struct{})
-	for _, ns := range namespaces {
-		go r.startWatch(cfg, store, ns, stop)
+	resourceType := cfg.resourceType
+	isNamespaced := resourceType.IsNamespaced()
+	if !isNamespaced {
+		logrus.Infof("Resource %s is not Namespaced, will ignore namespace filters", resourceType)
+	}
+	if isNamespaced && len(namespaces) > 0 {
+		logrus.Infof("Start watch for %s on namespace %s", resourceType, namespaces)
+		for _, ns := range namespaces {
+			go r.startWatch(cfg, store, ns, stop)
+		}
+	} else {
+		logrus.Infof("Start watch for %s on all namespaces", resourceType)
+		go r.startWatch(cfg, store, "", stop)
 	}
 	<-ctx.Done()
-	logrus.Infof("Exiting watch of %s namespace %s", cfg.resourceType, namespaces)
+	logrus.Infof("Exiting watch of %s namespace %s", resourceType, namespaces)
 	close(stop)
 }
