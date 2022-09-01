@@ -21,6 +21,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const FallbackExitCode = 6
+
 var (
 	version   = "dev"
 	gitCommit = "none"
@@ -41,11 +43,11 @@ func versionFun(cmd *cobra.Command, args []string) {
 func completeFun(cmd *cobra.Command, args []string) {
 	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit"}
 	if len(args) < 1 {
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	}
 	firstWord := args[0]
 	if !util.IsStringIn(firstWord, verbs) {
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	}
 	args = args[1:]
 
@@ -54,25 +56,25 @@ func completeFun(cmd *cobra.Command, args []string) {
 	err := f.LoadFetcherState()
 	if err != nil {
 		logrus.Warnf("Error loading fetcher state")
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	}
 
 	completionResults, err := completion.ProcessCommandArgs(cmd.Use, args, f)
 	if e, ok := err.(resources.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	} else if e, ok := err.(parse.UnmanagedFlagError); ok {
 		logrus.Warnf("Unmanaged flag: %s", e)
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	} else if err != nil {
 		logrus.Warnf("Error during completion: %s", err)
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	}
 
 	err = f.SaveFetcherState()
 	if err != nil {
 		logrus.Warnf("Error saving fetcher state: %s", err)
-		os.Exit(6)
+		os.Exit(FallbackExitCode)
 	}
 
 	if err != nil {
