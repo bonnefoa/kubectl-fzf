@@ -9,6 +9,8 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/completion"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/fetcher"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/fzf"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/gencode"
+	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/clusterconfig"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resources"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/store"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/parse"
@@ -127,6 +129,22 @@ func addStatsCmd(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(statsCmd)
 }
 
+func genFun(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
+	err := gencode.GenerateResourceCode(ctx)
+	util.FatalIf(err)
+}
+
+func addGenCommand(rootCmd *cobra.Command) {
+	genCmd := &cobra.Command{
+		Use: "generate",
+		Run: genFun,
+	}
+	fs := genCmd.PersistentFlags()
+	clusterconfig.SetClusterConfigCli(fs)
+	rootCmd.AddCommand(genCmd)
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use: "kubectl_fzf_completion",
@@ -148,6 +166,7 @@ func main() {
 
 	addK8sCmd(rootCmd)
 	addStatsCmd(rootCmd)
+	addGenCommand(rootCmd)
 
 	util.ConfigureViper()
 	cobra.OnInitialize(util.CommonInitialization)
