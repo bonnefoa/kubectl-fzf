@@ -39,8 +39,6 @@ type ResourceWatcher struct {
 	namespacePollingPeriod time.Duration
 	nodePollingPeriod      time.Duration
 	ctorConfig             resources.CtorConfig
-
-	//stores []*store.Store
 }
 
 // WatchConfig provides the configuration to watch a specific kubernetes resource
@@ -173,7 +171,11 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 	}
 	namespaces, err := clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return err
+		for _, watchNamespace := range r.watchNamespaces {
+			r.namespaces = append(r.namespaces, watchNamespace.String())
+		}
+		logrus.Warnf("Failed to get the list of namespaces, will fallback to %s", r.namespaces)
+		return nil
 	}
 	for _, namespace := range namespaces.Items {
 		namespaceName := namespace.GetName()
