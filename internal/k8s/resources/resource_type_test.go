@@ -15,12 +15,13 @@ func TestParseResourceType(t *testing.T) {
 		{"", ResourceTypeUnknown},
 		{"pods", ResourceTypePod},
 		{"pod", ResourceTypePod},
-		{"statefulsets.apps", ResourceTypeStatefulSet},
+		{"statefulsets", ResourceTypeStatefulSet},
+		{"sts", ResourceTypeStatefulSet},
 	}
 
 	for _, v := range testDatas {
 		r := ParseResourceType(v.resourceName)
-		assert.Equal(t, v.resourceType, r)
+		require.Equal(t, v.resourceType, r, "Expected %s, got %s", v.resourceType, r)
 	}
 }
 

@@ -40,7 +40,45 @@ const (
 )
 
 func (r ResourceType) IsNamespaced() bool {
-	return true
+	switch r {
+	case ResourceTypeNode:
+		return false
+	case ResourceTypeService:
+		return true
+	case ResourceTypeEndpoints:
+		return true
+	case ResourceTypePersistentVolumeClaim:
+		return true
+	case ResourceTypeSecret:
+		return true
+	case ResourceTypeConfigMap:
+		return true
+	case ResourceTypeNamespace:
+		return false
+	case ResourceTypeServiceAccount:
+		return true
+	case ResourceTypePersistentVolume:
+		return false
+	case ResourceTypePod:
+		return true
+	case ResourceTypeDaemonSet:
+		return true
+	case ResourceTypeReplicaSet:
+		return true
+	case ResourceTypeStatefulSet:
+		return true
+	case ResourceTypeDeployment:
+		return true
+	case ResourceTypeHorizontalPodAutoscaler:
+		return true
+	case ResourceTypeJob:
+		return true
+	case ResourceTypeCronJob:
+		return true
+	case ResourceTypeApiResource:
+		return false
+	}
+	return false
 }
 
 func (r ResourceType) String() string {
@@ -89,102 +127,104 @@ func (r ResourceType) String() string {
 
 func ParseResourceType(s string) ResourceType {
 	switch s {
-	case "apiresources":
+	case "no":
 		fallthrough
-	case "apiresource":
-		return ResourceTypeApiResource
-	case "cm":
-		fallthrough
-	case "configmaps":
-		fallthrough
-	case "configmap":
-		return ResourceTypeConfigMap
-	case "cronjobs":
-		fallthrough
-	case "cronjob":
-		return ResourceTypeCronJob
-	case "daemonsets":
-		fallthrough
-	case "daemonset":
-		return ResourceTypeDaemonSet
-	case "deployments":
-		fallthrough
-	case "deployment":
-		return ResourceTypeDeployment
-	case "endpoints":
-		fallthrough
-	case "endpoint":
-		return ResourceTypeEndpoints
-	case "horizontalpodautoscalers":
-		fallthrough
-	case "horizontalpodautoscaler":
-		fallthrough
-	case "hpas":
-		fallthrough
-	case "hpa":
-		return ResourceTypeHorizontalPodAutoscaler
-	case "ingress":
-		return ResourceTypeIngress
-	case "job":
-		fallthrough
-	case "jobs":
-		return ResourceTypeJob
-	case "namespace":
-		fallthrough
-	case "namespaces":
-		fallthrough
-	case "ns":
-		return ResourceTypeNamespace
 	case "node":
 		fallthrough
 	case "nodes":
 		return ResourceTypeNode
-	case "po":
+	case "svc":
 		fallthrough
-	case "pods":
+	case "service":
 		fallthrough
-	case "pod":
+	case "services":
+		return ResourceTypeService
+	case "ep":
 		fallthrough
-	case "p":
-		return ResourceTypePod
-	case "persistentvolumes":
+	case "endpoint":
 		fallthrough
-	case "persistentvolume":
-		fallthrough
-	case "pv":
-		return ResourceTypePersistentVolume
-	case "persistentvolumeclaims":
+	case "endpoints":
+		return ResourceTypeEndpoints
+	case "pvc":
 		fallthrough
 	case "persistentvolumeclaim":
 		fallthrough
-	case "pvc":
+	case "persistentvolumeclaims":
 		return ResourceTypePersistentVolumeClaim
-	case "replicasets":
-		fallthrough
-	case "replicaset":
-		return ResourceTypeReplicaSet
-	case "secrets":
-		fallthrough
 	case "secret":
-		return ResourceTypeSecret
-	case "services":
 		fallthrough
-	case "service":
-		return ResourceTypeService
-	case "serviceaccounts":
+	case "secrets":
+		return ResourceTypeSecret
+	case "cm":
+		fallthrough
+	case "configmap":
+		fallthrough
+	case "configmaps":
+		return ResourceTypeConfigMap
+	case "ns":
+		fallthrough
+	case "namespace":
+		fallthrough
+	case "namespaces":
+		return ResourceTypeNamespace
+	case "sa":
 		fallthrough
 	case "serviceaccount":
 		fallthrough
-	case "sa":
+	case "serviceaccounts":
 		return ResourceTypeServiceAccount
-	case "statefulsets":
+	case "pv":
+		fallthrough
+	case "persistentvolume":
+		fallthrough
+	case "persistentvolumes":
+		return ResourceTypePersistentVolume
+	case "po":
+		fallthrough
+	case "pod":
+		fallthrough
+	case "pods":
+		return ResourceTypePod
+	case "ds":
+		fallthrough
+	case "daemonset":
+		fallthrough
+	case "daemonsets":
+		return ResourceTypeDaemonSet
+	case "rs":
+		fallthrough
+	case "replicaset":
+		fallthrough
+	case "replicasets":
+		return ResourceTypeReplicaSet
+	case "sts":
 		fallthrough
 	case "statefulset":
 		fallthrough
-	case "statefulsets.apps":
-		fallthrough
-	case "sts":
+	case "statefulsets":
 		return ResourceTypeStatefulSet
+	case "deploy":
+		fallthrough
+	case "deployment":
+		fallthrough
+	case "deployments":
+		return ResourceTypeDeployment
+	case "hpa":
+		fallthrough
+	case "horizontalpodautoscaler":
+		fallthrough
+	case "horizontalpodautoscalers":
+		return ResourceTypeHorizontalPodAutoscaler
+	case "job":
+		fallthrough
+	case "jobs":
+		return ResourceTypeJob
+	case "cj":
+		fallthrough
+	case "cronjob":
+		fallthrough
+	case "cronjobs":
+		return ResourceTypeCronJob
 	}
 	return ResourceTypeUnknown
 }
