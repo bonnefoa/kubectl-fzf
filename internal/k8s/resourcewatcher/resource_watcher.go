@@ -32,10 +32,10 @@ type ResourceWatcher struct {
 	cancelFuncs []context.CancelFunc
 	storeConfig *store.StoreConfig
 
-	watchedResourcesSet    map[resources.ResourceType]bool
-	excludedResourcesSet   map[resources.ResourceType]bool
-	excludedNamespaces     []*regexp.Regexp
-	watchedNamespaces      []*regexp.Regexp
+	watchResourcesSet      map[resources.ResourceType]bool
+	excludResourcesSet     map[resources.ResourceType]bool
+	excludNamespaces       []*regexp.Regexp
+	watchNamespaces        []*regexp.Regexp
 	namespacePollingPeriod time.Duration
 	nodePollingPeriod      time.Duration
 	ctorConfig             resources.CtorConfig
@@ -54,29 +54,29 @@ type WatchConfig struct {
 
 // NewResourceWatcher creates a new resource watcher on a given cluster
 func NewResourceWatcher(cluster string, resourceWatcherCli ResourceWatcherCli, storeConfig *store.StoreConfig) (*ResourceWatcher, error) {
-	excludedNamespaces, err := util.StringSliceToRegexps(resourceWatcherCli.excludedNamespaces)
+	excludedNamespaces, err := util.StringSliceToRegexps(resourceWatcherCli.excludNamespaces)
 	if err != nil {
 		return nil, err
 	}
-	watchedNamespaces, err := util.StringSliceToRegexps(resourceWatcherCli.watchedNamespaces)
+	watchedNamespaces, err := util.StringSliceToRegexps(resourceWatcherCli.watchNamespaces)
 	if err != nil {
 		return nil, err
 	}
-	ignoredNodeRoles := util.StringSliceToSet(resourceWatcherCli.ignoredNodeRoles)
-	excludedResources, err := resources.GetResourceSetFromSlice(resourceWatcherCli.excludedResources)
+	ignoredNodeRoles := util.StringSliceToSet(resourceWatcherCli.ignoreNodeRoles)
+	excludedResources, err := resources.GetResourceSetFromSlice(resourceWatcherCli.excludResources)
 	if err != nil {
 		return nil, err
 	}
-	watchedResources, err := resources.GetResourceSetFromSlice(resourceWatcherCli.watchedResources)
+	watchedResources, err := resources.GetResourceSetFromSlice(resourceWatcherCli.watchResources)
 	if err != nil {
 		return nil, err
 	}
 	resourceWatcher := ResourceWatcher{
 		storeConfig:            storeConfig,
-		excludedResourcesSet:   excludedResources,
-		watchedResourcesSet:    watchedResources,
-		excludedNamespaces:     excludedNamespaces,
-		watchedNamespaces:      watchedNamespaces,
+		excludResourcesSet:     excludedResources,
+		watchResourcesSet:      watchedResources,
+		excludNamespaces:       excludedNamespaces,
+		watchNamespaces:        watchedNamespaces,
 		nodePollingPeriod:      resourceWatcherCli.nodePollingPeriod,
 		namespacePollingPeriod: resourceWatcherCli.namespacePollingPeriod,
 		ctorConfig: resources.CtorConfig{
@@ -94,7 +94,7 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig) *sto
 	if cfg.pollingPeriod > 0 {
 		go r.pollResource(ctx, cfg, store)
 	} else {
-		go r.watchResource(ctx, cfg, store, []string{""})
+		go r.watchResource(ctx, cfg, store, r.namespaces)
 	}
 	return store
 }
@@ -140,11 +140,11 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	}
 	watchConfigs := []WatchConfig{}
 	for _, w := range allWatchConfigs {
-		if _, ok := r.excludedResourcesSet[w.resourceType]; ok {
+		if _, ok := r.excludResourcesSet[w.resourceType]; ok {
 			continue
 		}
-		_, ok := r.watchedResourcesSet[w.resourceType]
-		if len(r.watchedResourcesSet) > 0 && !ok {
+		_, ok := r.watchResourcesSet[w.resourceType]
+		if len(r.watchResourcesSet) > 0 && !ok {
 			continue
 		}
 		watchConfigs = append(watchConfigs, w)
@@ -177,11 +177,11 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 	}
 	for _, namespace := range namespaces.Items {
 		namespaceName := namespace.GetName()
-		if util.IsStringMatching(namespaceName, r.excludedNamespaces) {
+		if util.IsStringMatching(namespaceName, r.excludNamespaces) {
 			logrus.Infof("namespace %s is in excluded namespaces, excluding", namespaceName)
 			continue
 		}
-		if len(r.watchedNamespaces) > 0 && !util.IsStringMatching(namespaceName, r.watchedNamespaces) {
+		if len(r.watchNamespaces) > 0 && !util.IsStringMatching(namespaceName, r.watchNamespaces) {
 			logrus.Infof("namespace %s not in watched namespace, excluding", namespaceName)
 			continue
 		}

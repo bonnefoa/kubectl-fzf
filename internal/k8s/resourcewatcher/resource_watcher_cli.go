@@ -8,11 +8,11 @@ import (
 )
 
 type ResourceWatcherCli struct {
-	watchedResources       []string
-	excludedResources      []string
-	watchedNamespaces      []string
-	excludedNamespaces     []string
-	ignoredNodeRoles       []string
+	watchResources         []string
+	excludResources        []string
+	watchNamespaces        []string
+	excludNamespaces       []string
+	ignoreNodeRoles        []string
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
 }
@@ -29,11 +29,11 @@ func SetResourceWatcherCli(fs *pflag.FlagSet) {
 
 func GetResourceWatcherCli() ResourceWatcherCli {
 	r := ResourceWatcherCli{}
-	r.watchedResources = viper.GetStringSlice("watch-resources")
-	r.watchedNamespaces = viper.GetStringSlice("watch-namespaces")
-	r.excludedResources = viper.GetStringSlice("exclude-resources")
-	r.excludedNamespaces = viper.GetStringSlice("exclude-namespaces")
-	r.ignoredNodeRoles = viper.GetStringSlice("ignore-node-roles")
+	r.watchResources = viper.GetStringSlice("watch-resources")
+	r.watchNamespaces = viper.GetStringSlice("watch-namespaces")
+	r.excludResources = viper.GetStringSlice("exclude-resources")
+	r.excludNamespaces = viper.GetStringSlice("exclude-namespaces")
+	r.ignoreNodeRoles = viper.GetStringSlice("ignore-node-roles")
 	r.nodePollingPeriod = viper.GetDuration("node-polling-period")
 	r.namespacePollingPeriod = viper.GetDuration("namespace-polling-period")
 	return r
