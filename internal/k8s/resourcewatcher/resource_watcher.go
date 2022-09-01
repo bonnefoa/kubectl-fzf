@@ -45,12 +45,11 @@ type ResourceWatcher struct {
 
 // WatchConfig provides the configuration to watch a specific kubernetes resource
 type WatchConfig struct {
-	resourceType      resources.ResourceType
-	getter            cache.Getter
-	runtimeObject     runtime.Object
-	hasNamespace      bool
-	splitByNamespaces bool
-	pollingPeriod     time.Duration
+	resourceType  resources.ResourceType
+	getter        cache.Getter
+	runtimeObject runtime.Object
+	hasNamespace  bool
+	pollingPeriod time.Duration
 }
 
 // NewResourceWatcher creates a new resource watcher on a given cluster
@@ -94,9 +93,6 @@ func (r *ResourceWatcher) Start(parentCtx context.Context, cfg WatchConfig) *sto
 	store := store.NewStore(ctx, r.storeConfig, r.ctorConfig, cfg.resourceType)
 	if cfg.pollingPeriod > 0 {
 		go r.pollResource(ctx, cfg, store)
-	} else if cfg.splitByNamespaces {
-		logrus.Infof("Starting watcher for ns %v, resource %s", r.namespaces, cfg.resourceType)
-		go r.watchResource(ctx, cfg, store, r.namespaces)
 	} else {
 		go r.watchResource(ctx, cfg, store, []string{""})
 	}
@@ -123,24 +119,24 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	networkingGetter := clientset.NetworkingV1().RESTClient()
 	batchGetter := clientset.BatchV1().RESTClient()
 	allWatchConfigs := []WatchConfig{
-		{resources.ResourceTypePod, coreGetter, &corev1.Pod{}, true, false, 0},
-		{resources.ResourceTypeConfigMap, coreGetter, &corev1.ConfigMap{}, true, false, 0},
-		{resources.ResourceTypeService, coreGetter, &corev1.Service{}, true, false, 0},
-		{resources.ResourceTypeServiceAccount, coreGetter, &corev1.ServiceAccount{}, true, false, 0},
-		{resources.ResourceTypeReplicaSet, appsGetter, &appsv1.ReplicaSet{}, true, false, 0},
-		{resources.ResourceTypeDaemonSet, appsGetter, &appsv1.DaemonSet{}, true, false, 0},
-		{resources.ResourceTypeSecret, coreGetter, &corev1.Secret{}, true, false, 0},
-		{resources.ResourceTypeStatefulSet, appsGetter, &appsv1.StatefulSet{}, true, false, 0},
-		{resources.ResourceTypeDeployment, appsGetter, &appsv1.Deployment{}, true, false, 0},
-		{resources.ResourceTypeEndpoints, coreGetter, &corev1.Endpoints{}, true, false, 0},
-		{resources.ResourceTypeIngress, networkingGetter, &networkingv1.Ingress{}, true, false, 0},
-		{resources.ResourceTypeCronJob, batchGetter, &batchv1.CronJob{}, true, false, 0},
-		{resources.ResourceTypeJob, batchGetter, &batchv1.Job{}, true, false, 0},
-		{resources.ResourceTypeHorizontalPodAutoscaler, autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, false, 0},
-		{resources.ResourceTypePersistentVolume, coreGetter, &corev1.PersistentVolume{}, false, false, 0},
-		{resources.ResourceTypePersistentVolumeClaim, coreGetter, &corev1.PersistentVolumeClaim{}, true, false, 0},
-		{resources.ResourceTypeNode, coreGetter, &corev1.Node{}, false, false, r.nodePollingPeriod},
-		{resources.ResourceTypeNamespace, coreGetter, &corev1.Namespace{}, false, false, r.namespacePollingPeriod},
+		{resources.ResourceTypePod, coreGetter, &corev1.Pod{}, true, 0},
+		{resources.ResourceTypeConfigMap, coreGetter, &corev1.ConfigMap{}, true, 0},
+		{resources.ResourceTypeService, coreGetter, &corev1.Service{}, true, 0},
+		{resources.ResourceTypeServiceAccount, coreGetter, &corev1.ServiceAccount{}, true, 0},
+		{resources.ResourceTypeReplicaSet, appsGetter, &appsv1.ReplicaSet{}, true, 0},
+		{resources.ResourceTypeDaemonSet, appsGetter, &appsv1.DaemonSet{}, true, 0},
+		{resources.ResourceTypeSecret, coreGetter, &corev1.Secret{}, true, 0},
+		{resources.ResourceTypeStatefulSet, appsGetter, &appsv1.StatefulSet{}, true, 0},
+		{resources.ResourceTypeDeployment, appsGetter, &appsv1.Deployment{}, true, 0},
+		{resources.ResourceTypeEndpoints, coreGetter, &corev1.Endpoints{}, true, 0},
+		{resources.ResourceTypeIngress, networkingGetter, &networkingv1.Ingress{}, true, 0},
+		{resources.ResourceTypeCronJob, batchGetter, &batchv1.CronJob{}, true, 0},
+		{resources.ResourceTypeJob, batchGetter, &batchv1.Job{}, true, 0},
+		{resources.ResourceTypeHorizontalPodAutoscaler, autoscalingGetter, &autoscalingv1.HorizontalPodAutoscaler{}, true, 0},
+		{resources.ResourceTypePersistentVolume, coreGetter, &corev1.PersistentVolume{}, false, 0},
+		{resources.ResourceTypePersistentVolumeClaim, coreGetter, &corev1.PersistentVolumeClaim{}, true, 0},
+		{resources.ResourceTypeNode, coreGetter, &corev1.Node{}, false, r.nodePollingPeriod},
+		{resources.ResourceTypeNamespace, coreGetter, &corev1.Namespace{}, false, r.namespacePollingPeriod},
 	}
 	watchConfigs := []WatchConfig{}
 	for _, w := range allWatchConfigs {
