@@ -39,6 +39,16 @@ func versionFun(cmd *cobra.Command, args []string) {
 }
 
 func completeFun(cmd *cobra.Command, args []string) {
+	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit"}
+	if len(args) < 1 {
+		os.Exit(6)
+	}
+	firstWord := args[0]
+	if !util.IsStringIn(firstWord, verbs) {
+		os.Exit(6)
+	}
+	args = args[1:]
+
 	fetchConfigCli := fetcher.GetFetchConfigCli()
 	f := fetcher.NewFetcher(&fetchConfigCli)
 	err := f.LoadFetcherState()
@@ -98,23 +108,16 @@ func statsFun(cmd *cobra.Command, args []string) {
 
 func addK8sCmd(rootCmd *cobra.Command) {
 	var k8sCmd = &cobra.Command{
-		Use:     "k8s_completion",
-		Short:   "Subcommand grouping completion for kubectl cli verbs",
-		Example: "kubectl-fzf-completion k8s_completion get pods \"\"",
+		Use:                "k8s_completion",
+		Run:                completeFun,
+		Short:              "Subcommand grouping completion for kubectl cli verbs",
+		Example:            "kubectl-fzf-completion k8s_completion get pods \"\"",
+		DisableFlagParsing: true,
+		FParseErrWhitelist: cobra.FParseErrWhitelist{
+			UnknownFlags: true,
+		},
 	}
 	rootCmd.AddCommand(k8sCmd)
-	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit"}
-	for _, verb := range verbs {
-		cmd := &cobra.Command{
-			Use:                verb,
-			Run:                completeFun,
-			DisableFlagParsing: true,
-			FParseErrWhitelist: cobra.FParseErrWhitelist{
-				UnknownFlags: true,
-			},
-		}
-		k8sCmd.AddCommand(cmd)
-	}
 }
 
 func addStatsCmd(rootCmd *cobra.Command) {
@@ -172,6 +175,6 @@ func main() {
 	cobra.OnInitialize(util.CommonInitialization)
 	defer pprof.StopCPUProfile()
 	if err := rootCmd.Execute(); err != nil {
-		logrus.Fatalf("Root command failed: %v", err)
+		logrus.Errorf("Root command failed: %v", err)
 	}
 }
