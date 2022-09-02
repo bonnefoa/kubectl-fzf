@@ -6,18 +6,21 @@ import (
 )
 
 type HttpServerConfigCli struct {
-	ListenAddress string
-	Debug         bool
+	ListenAddress   string
+	HttpProfAddress string
+	Debug           bool
 }
 
 func SetHttpServerConfigFlags(fs *pflag.FlagSet) {
-	fs.String("listen-address", ":8080", "Listen address of the http server")
+	fs.String("listen-address", "localhost:8080", "Listen address of the http server")
+	fs.String("http-prof-address", "localhost:6060", "Listen address of the pprof endpoint")
 	fs.Bool("http-debug", false, "Activate debug mode of the http server")
 }
 
 func GetHttpServerConfigCli() HttpServerConfigCli {
 	h := HttpServerConfigCli{}
 	h.ListenAddress = viper.GetString("listen-address")
+	h.HttpProfAddress = viper.GetString("http-prof-address")
 	h.Debug = viper.GetBool("http-debug")
 	return h
 }

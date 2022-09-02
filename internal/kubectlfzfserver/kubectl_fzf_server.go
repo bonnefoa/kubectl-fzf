@@ -7,6 +7,9 @@ import (
 	"syscall"
 	"time"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/httpserver"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/store"
@@ -85,6 +88,10 @@ func StartKubectlFzfServer() {
 	if err != nil {
 		logrus.Fatalf("Error starting http server: %s", err)
 	}
+
+	go func() {
+		logrus.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	for {
 		select {
