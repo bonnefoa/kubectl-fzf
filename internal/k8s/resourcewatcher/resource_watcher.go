@@ -33,8 +33,8 @@ type ResourceWatcher struct {
 	storeConfig *store.StoreConfig
 
 	watchResourcesSet      map[resources.ResourceType]bool
-	excludResourcesSet     map[resources.ResourceType]bool
-	excludNamespaces       []*regexp.Regexp
+	excludeResourcesSet    map[resources.ResourceType]bool
+	excludeNamespaces      []*regexp.Regexp
 	watchNamespaces        []*regexp.Regexp
 	namespacePollingPeriod time.Duration
 	nodePollingPeriod      time.Duration
@@ -71,9 +71,9 @@ func NewResourceWatcher(cluster string, resourceWatcherCli ResourceWatcherCli, s
 	}
 	resourceWatcher := ResourceWatcher{
 		storeConfig:            storeConfig,
-		excludResourcesSet:     excludedResources,
+		excludeResourcesSet:    excludedResources,
 		watchResourcesSet:      watchedResources,
-		excludNamespaces:       excludedNamespaces,
+		excludeNamespaces:      excludedNamespaces,
 		watchNamespaces:        watchedNamespaces,
 		nodePollingPeriod:      resourceWatcherCli.nodePollingPeriod,
 		namespacePollingPeriod: resourceWatcherCli.namespacePollingPeriod,
@@ -138,7 +138,7 @@ func (r *ResourceWatcher) GetWatchConfigs() ([]WatchConfig, error) {
 	}
 	watchConfigs := []WatchConfig{}
 	for _, w := range allWatchConfigs {
-		if _, ok := r.excludResourcesSet[w.resourceType]; ok {
+		if _, ok := r.excludeResourcesSet[w.resourceType]; ok {
 			continue
 		}
 		_, ok := r.watchResourcesSet[w.resourceType]
@@ -164,7 +164,13 @@ func (r *ResourceWatcher) doPoll(cacheListWatch *cache.ListWatch, store *store.S
 
 // FetchNamespaces gets the list of namespace from the cluster and fill
 // the resource watcher with an initial list of namespaces
+// This is only useful when we need to filter namespaces
 func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
+	if len(r.watchNamespaces) == 0 || len(r.excludeNamespaces) == 0 {
+		// No need for namespace filtering
+		return nil
+	}
+
 	clientset, err := r.storeConfig.GetClientset()
 	if err != nil {
 		return err
@@ -179,7 +185,7 @@ func (r *ResourceWatcher) FetchNamespaces(ctx context.Context) error {
 	}
 	for _, namespace := range namespaces.Items {
 		namespaceName := namespace.GetName()
-		if util.IsStringMatching(namespaceName, r.excludNamespaces) {
+		if util.IsStringMatching(namespaceName, r.excludeNamespaces) {
 			logrus.Infof("namespace %s is in excluded namespaces, excluding", namespaceName)
 			continue
 		}
