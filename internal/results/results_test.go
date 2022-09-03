@@ -41,6 +41,8 @@ func TestResult(t *testing.T) {
 		{"kube-system coredns-64897985d-nrblm", "get", []string{"pods", "--context", "minikube", "--namespace", "kube-system", ""}, "default", "coredns-64897985d-nrblm"},
 		{"kube-system kube-controller-manager-minikube", "get", []string{"pods", " "}, "default", "kube-controller-manager-minikube -n kube-system"},
 		{"kube-system kube-controller-manager-minikube", "get", []string{"pods", "-nkube-system", " "}, "default", "kube-controller-manager-minikube"},
+
+		{"kfzf kubectl-fzf-788969b7cb-vf85b", "exec", []string{"-ti", ""}, "default", "kubectl-fzf-788969b7cb-vf85b -n kfzf"},
 		// Namespace
 		{"default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n="}, "default", "-n=default"},
 		{"default 30d kubernetes.io/metadata.name=default", "get", []string{"pods", "-n"}, "default", "-ndefault"},

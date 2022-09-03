@@ -91,7 +91,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Call fzf error: %s", err)
 	}
-	res, err := results.ProcessResult(cmd.Use, args, f, fzfResult)
+	res, err := results.ProcessResult(firstWord, args, f, fzfResult)
 	if err != nil {
 		logrus.Fatalf("Process result error: %s", err)
 	}

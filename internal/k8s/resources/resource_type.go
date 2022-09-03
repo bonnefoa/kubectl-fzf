@@ -242,7 +242,7 @@ func GetResourceSetFromSlice(resourceSlice []string) (map[ResourceType]bool, err
 }
 
 func GetResourceType(cmdUse string, args []string) ResourceType {
-	logrus.Debugf("Getting resource type from '%s', %d", args, len(args))
+	logrus.Debugf("Getting resource type from %s, '%s', %d", cmdUse, args, len(args))
 	resourceType := ResourceTypeApiResource
 	if cmdUse == "logs" {
 		return ResourceTypePod
