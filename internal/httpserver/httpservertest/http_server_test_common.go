@@ -12,7 +12,7 @@ import (
 )
 
 func GetTestClusterConfigCli() *clusterconfig.ClusterConfigCli {
-	return &clusterconfig.ClusterConfigCli{ClusterName: "minikube", CacheDir: "./testdata", Kubeconfig: ""}
+	return &clusterconfig.ClusterConfigCli{ClusterName: "minikube", CacheDir: "./testdata"}
 }
 
 func GetTestStoreConfigCli() *store.StoreConfigCli {

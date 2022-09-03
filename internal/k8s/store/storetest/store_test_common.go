@@ -45,7 +45,7 @@ func GetTestPodStore(t *testing.T) (string, *store.Store) {
 	assert.Nil(t, err)
 	storeConfigCli := &store.StoreConfigCli{
 		ClusterConfigCli: &clusterconfig.ClusterConfigCli{
-			ClusterName: "test", CacheDir: tempDir, Kubeconfig: ""},
+			ClusterName: "test", CacheDir: tempDir},
 		TimeBetweenFullDump: 500 * time.Millisecond}
 	storeConfig := store.NewStoreConfig(storeConfigCli)
 	err = storeConfig.CreateDestDir()

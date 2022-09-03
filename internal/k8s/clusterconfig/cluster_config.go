@@ -2,7 +2,6 @@ package clusterconfig
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -20,12 +19,12 @@ type ClusterConfig struct {
 	clusterName string
 	destDir     string
 	cacheDir    string
-	kubeconfig  string
+
+	apiConfig *clientcmdapi.Config
 }
 
 func NewClusterConfig(clusterConfigCli *ClusterConfigCli) ClusterConfig {
 	c := ClusterConfig{}
-	c.kubeconfig = clusterConfigCli.Kubeconfig
 	c.clusterName = clusterConfigCli.ClusterName
 	c.cacheDir = clusterConfigCli.CacheDir
 	c.destDir = path.Join(c.cacheDir, c.clusterName)
@@ -33,25 +32,24 @@ func NewClusterConfig(clusterConfigCli *ClusterConfigCli) ClusterConfig {
 	return c
 }
 
-func (c *ClusterConfig) SetClusterNameFromCurrentContext() error {
-	if util.FileExists(c.kubeconfig) {
-		rawConfig, err := c.getRawConfig()
-		if err != nil {
-			return err
-		}
-		c.clusterName = rawConfig.CurrentContext
-		c.destDir = path.Join(c.cacheDir, c.clusterName)
-		return nil
+func (c *ClusterConfig) LoadClusterConfig() (err error) {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	c.apiConfig, err = loadingRules.Load()
+	if err != nil {
+		return errors.Wrap(err, "error reading kubeconfig file")
 	}
-	logrus.Infof("kubeconfig file %s doesn't exists, assuming incluster", c.kubeconfig)
-	c.clusterName = "incluster"
+	c.clusterName = c.apiConfig.CurrentContext
+	if c.clusterName == "" {
+		logrus.Infof("Couldn't read kubeconfig file, assuming incluster")
+		c.clusterName = "incluster"
+	}
 	c.destDir = path.Join(c.cacheDir, c.clusterName)
 	return nil
 }
 
 func (c *ClusterConfig) CreateDestDir() error {
 	if c.clusterName == "" {
-		return errors.New("clustername is empty, call SetClusterNameFromCurrentContext before")
+		return errors.New("clustername is empty, call LoadClusterConfig before")
 	}
 	logrus.Infof("Creating destination dir '%s'", c.destDir)
 	err := os.MkdirAll(c.destDir, os.ModePerm)
@@ -76,30 +74,10 @@ func (c *ClusterConfig) GetClientset() (*kubernetes.Clientset, error) {
 	return clientset, err
 }
 
-func (c *ClusterConfig) getRawConfig() (*clientcmdapi.Config, error) {
-	configInBytes, err := ioutil.ReadFile(c.kubeconfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading kubeconfig file")
-	}
-	clientConfig, err := clientcmd.NewClientConfigFromBytes(configInBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating clientConfig from kubeconfig file")
-	}
-	rawConfig, err := clientConfig.RawConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting rawconfig from clientConfig")
-	}
-	return &rawConfig, nil
-}
-
 func (c *ClusterConfig) GetNamespace() (string, error) {
-	rawConfig, err := c.getRawConfig()
-	if err != nil {
-		return "", err
-	}
-	contextStruct, ok := rawConfig.Contexts[rawConfig.CurrentContext]
+	contextStruct, ok := c.apiConfig.Contexts[c.apiConfig.CurrentContext]
 	if !ok {
-		return "", fmt.Errorf("context %s not found in config", rawConfig.CurrentContext)
+		return "", fmt.Errorf("context %s not found in config", c.apiConfig.CurrentContext)
 	}
 	return contextStruct.Namespace, nil
 }
@@ -109,10 +87,11 @@ func (c *ClusterConfig) GetContext() string {
 }
 
 func (c *ClusterConfig) GetClientConfig() (*rest.Config, error) {
-	if util.FileExists(c.kubeconfig) {
-		logrus.Tracef("kubeconfig file '%s' exists, reading config", c.kubeconfig)
-		return clientcmd.BuildConfigFromFlags("", c.kubeconfig)
+	restConfig, err := rest.InClusterConfig()
+	if err == nil {
+		return restConfig, nil
 	}
-	logrus.Tracef("%s doesn't exists, assuming incluster setup", c.kubeconfig)
-	return rest.InClusterConfig()
+	cmdConfig := clientcmd.NewDefaultClientConfig(*c.apiConfig, nil)
+	restConfig, err = cmdConfig.ClientConfig()
+	return restConfig, err
 }

@@ -36,7 +36,7 @@ func NewFetcher(fetchConfigCli *FetcherCli) *Fetcher {
 }
 
 func (f *Fetcher) LoadFetcherState() error {
-	err := f.SetClusterNameFromCurrentContext()
+	err := f.LoadClusterConfig()
 	if err != nil {
 		return err
 	}

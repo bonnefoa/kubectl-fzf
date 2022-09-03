@@ -65,7 +65,7 @@ func StartKubectlFzfServer() {
 
 	storeConfigCli := store.GetStoreConfigCli()
 	storeConfig := store.NewStoreConfig(&storeConfigCli)
-	err := storeConfig.SetClusterNameFromCurrentContext()
+	err := storeConfig.LoadClusterConfig()
 	if err != nil {
 		logrus.Fatal("Couldn't get current context: ", err)
 	}
@@ -104,7 +104,7 @@ func StartKubectlFzfServer() {
 			if restConfig.Host != currentRestConfig.Host {
 				logrus.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
 				watcher.Stop()
-				storeConfig.SetClusterNameFromCurrentContext()
+				storeConfig.LoadClusterConfig()
 				// TODO: Handle stores change
 				watcher, _, err = startWatchOnCluster(ctx, resourceWatcherCli, storeConfig)
 				util.FatalIf(err)

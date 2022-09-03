@@ -13,7 +13,7 @@ func TestFileStoreExists(t *testing.T) {
 	c := &StoreConfigCli{
 		ClusterConfigCli: &clusterconfig.ClusterConfigCli{
 			ClusterName: "minikube",
-			CacheDir:    "./testdata", Kubeconfig: "",
+			CacheDir:    "./testdata",
 		}, TimeBetweenFullDump: 1 * time.Second}
 	s := NewStoreConfig(c)
 	assert.True(t, s.FileStoreExists(resources.ResourceTypePod))
