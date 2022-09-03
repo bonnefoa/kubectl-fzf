@@ -1,0 +1,14 @@
+[Unit]
+Description=kubectl-fzf server
+Documentation=https://github.com/bonnefoa/kubectl-fzf
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=INSTALL_PATH/kubectl-fzf-server
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
