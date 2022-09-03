@@ -20,8 +20,8 @@ func SetDaemonFlags(fs *pflag.FlagSet) {
   stop — fast shutdown`)
 	defaultName := path.Base(os.Args[0])
 	fs.String("daemon-name", defaultName, "Daemon name")
-	defaultPidPath := path.Join("/tmp/", defaultName+".pid")
-	defaultLogPath := path.Join("/tmp/", defaultName+".log")
+	defaultPidPath := path.Join("/tmp/kubectl-fzf-server", defaultName+".pid")
+	defaultLogPath := path.Join("/tmp/kubectl-fzf-server", defaultName+".log")
 	fs.String("daemon-pid-file", defaultPidPath, "Daemon's PID file path")
 	fs.String("daemon-log-file", defaultLogPath, "Daemon's log file path")
 }
@@ -36,6 +36,13 @@ func StartDaemon() {
 	daemonPidFilePath := viper.GetString("daemon-pid-file")
 	daemonLogFilePath := viper.GetString("daemon-log-file")
 	daemonName := viper.GetString("daemon-name")
+
+	pidDir := path.Dir(daemonPidFilePath)
+	logDir := path.Dir(daemonLogFilePath)
+	err := os.MkdirAll(pidDir, 0755)
+	util.FatalIf(err)
+	err = os.MkdirAll(logDir, 0755)
+	util.FatalIf(err)
 
 	daemon.AddCommand(daemon.StringFlag(&daemonCmd, "stop"), syscall.SIGTERM, termHandler)
 	cntxt := &daemon.Context{
