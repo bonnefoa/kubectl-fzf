@@ -51,7 +51,9 @@ spec:
         args:
           - --log-level=info
           - --listen-address=localhost:{{ $.Values.port }}
-          - --http-debug
+{{- if $.Values.http_debug }}
+          --http-debug
+{{- end }}
 
       volumes:
       - name: config
