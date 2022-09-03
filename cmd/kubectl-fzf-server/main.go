@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/bonnefoa/kubectl-fzf/v3/internal/daemon"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/httpserver"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resourcewatcher"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/store"
@@ -35,10 +34,6 @@ func versionFun(cmd *cobra.Command, args []string) {
 	os.Exit(0)
 }
 
-func startDaemonFun(cmd *cobra.Command, args []string) {
-	daemon.StartDaemon()
-}
-
 func kubectlFzfServerFun(cmd *cobra.Command, args []string) {
 	kubectlfzfserver.StartKubectlFzfServer()
 }
@@ -62,16 +57,6 @@ func main() {
 		Short: "Print command version",
 	}
 	rootCmd.AddCommand(versionCmd)
-
-	daemonCmd := &cobra.Command{
-		Use: "daemon",
-		Run: startDaemonFun,
-	}
-	daemonFlags := daemonCmd.Flags()
-	daemon.SetDaemonFlags(daemonFlags)
-	rootCmd.AddCommand(daemonCmd)
-	err = viper.BindPFlags(daemonFlags)
-	util.FatalIf(err)
 
 	util.ConfigureViper()
 	cobra.OnInitialize(util.CommonInitialization)
