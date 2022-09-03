@@ -7,8 +7,6 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/clusterconfig"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resources"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/util"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Fetcher defines configuration to fetch completion datas
@@ -54,19 +52,14 @@ func loadResourceFromFile(filePath string) (map[string]resources.K8sResource, er
 }
 
 func (f *Fetcher) GetResources(ctx context.Context, r resources.ResourceType) (map[string]resources.K8sResource, error) {
-	if f.FileStoreExists(r) {
-		resourceStorePath := f.GetResourceStorePath(r)
-		logrus.Infof("%s found, using resources from file", resourceStorePath)
-		resources, err := loadResourceFromFile(resourceStorePath)
+	resources, err := f.checkLocalFiles(r)
+	if resources != nil || err != nil {
 		return resources, err
 	}
 
 	// Check for recent cache
-	resources, err := f.checkRecentCache(r)
-	if err != nil {
-		return nil, err
-	}
-	if resources != nil {
+	resources, err = f.checkRecentCache(r)
+	if resources != nil || err != nil {
 		return resources, err
 	}
 
