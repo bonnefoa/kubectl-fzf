@@ -41,7 +41,7 @@ func versionFun(cmd *cobra.Command, args []string) {
 }
 
 func completeFun(cmd *cobra.Command, args []string) {
-	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit"}
+	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit", "scale"}
 	if len(args) < 1 {
 		os.Exit(FallbackExitCode)
 	}
@@ -59,7 +59,7 @@ func completeFun(cmd *cobra.Command, args []string) {
 		os.Exit(FallbackExitCode)
 	}
 
-	completionResults, err := completion.ProcessCommandArgs(cmd.Use, args, f)
+	completionResults, err := completion.ProcessCommandArgs(firstWord, args, f)
 	if e, ok := err.(resources.UnknownResourceError); ok {
 		logrus.Warnf("Unknown resource type: %s", e)
 		os.Exit(FallbackExitCode)
