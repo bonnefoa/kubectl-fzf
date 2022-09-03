@@ -15,16 +15,18 @@ Table of Contents
    * [kubectl-fzf binaries](#kubectl-fzf-binaries)
    * [Shell autocompletion](#shell-autocompletion)
       * [Zsh plugins: Antigen](#zsh-plugins-antigen)
-   * [Deploy kubectl-fzf-server as a pod](#deploy-kubectl-fzf-server-as-a-pod)
+   * [kubectl-fzf-server](#kubectl-fzf-server)
+      * [Install kubectl-fzf-server as a pod](#install-kubectl-fzf-server-as-a-pod)
+      * [Install kubectl-fzf-server as a systemd service](#install-kubectl-fzf-server-as-a-systemd-service)
 * [Usage](#usage)
    * [kubectl-fzf-server: local version](#kubectl-fzf-server-local-version)
-      * [Configuration](#configuration)
    * [kubectl-fzf-server: pod version](#kubectl-fzf-server-pod-version)
    * [Completion](#completion)
-      * [Configuration](#configuration-1)
+      * [Configuration](#configuration)
 * [Troubleshooting](#troubleshooting)
-   * [Debug Completion](#debug-completion)
-   * [Debug Server](#debug-server)
+   * [Debug kubectl-fzf-completion](#debug-kubectl-fzf-completion)
+   * [Debug Tab Completion](#debug-tab-completion)
+   * [Debug kubectl-fzf-server](#debug-kubectl-fzf-server)
 
 # Features
 
@@ -36,6 +38,7 @@ Table of Contents
 # Requirements
 
 - go (minimum version 1.19)
+- awk
 - [fzf](https://github.com/junegunn/fzf)
 
 # Installation
@@ -59,12 +62,12 @@ PATH=$PATH:$GOPATH/bin
 Source the autocompletion functions:
 ```
 # bash version
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.bash -O ~/.kubectl_fzf.bash
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/main/shell/kubectl_fzf.bash -O ~/.kubectl_fzf.bash
 echo "source <(kubectl completion bash)" >> ~/.bashrc
 echo "source ~/.kubectl_fzf.bash" >> ~/.bashrc
 
 # zsh version
-wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/master/shell/kubectl_fzf.plugin.zsh -O ~/.kubectl_fzf.plugin.zsh
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/main/shell/kubectl_fzf.plugin.zsh -O ~/.kubectl_fzf.plugin.zsh
 echo "source <(kubectl completion zsh)" >> ~/.zshrc
 echo "source ~/.kubectl_fzf.plugin.zsh >> ~/.zshrc
 ```
@@ -77,7 +80,9 @@ antigen bundle robbyrussell/oh-my-zsh plugins/docker
 antigen bundle bonnefoa/kubectl-fzf@main shell/
 ```
 
-## Deploy kubectl-fzf-server as a pod
+## kubectl-fzf-server
+
+### Install kubectl-fzf-server as a pod
 
 You can deploy `kubectl-fzf-server` as a pod in your cluster.
 
@@ -87,6 +92,30 @@ helm template --namespace myns --set image.kubectl_fzf_server.tag=v3 --set toler
 ```
 
 You can check the latest image version [here](https://cloud.docker.com/repository/docker/bonnefoa/kubectl-fzf/general).
+
+### Install kubectl-fzf-server as a systemd service
+
+You can install `kubectl-fzf-server` as a systemd unit server.
+
+```
+# Create user systemd config
+mkdir -p ~/.config/systemd/user
+wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/main/systemd/kubectl_fzf_server.service -O ~/.config/systemd/user/kubectl_fzf_server.service
+# Set fullpath of kubectl-fzf-server
+sed -i "s#INSTALL_PATH#$GOPATH/bin#" ~/.config/systemd/user/kubectl_fzf_server.service
+
+# Reload to pick up new service
+systemctl --user daemon-reload
+
+# Start the server
+systemctl --user start kubectl_fzf_server.service
+
+# Automatically enable it at startup
+systemctl --user enable kubectl_fzf_server.service
+
+# Get log
+journalctl --user-unit=kubectl_fzf_server.service
+```
 
 # Usage
 
@@ -114,25 +143,6 @@ It will watch the cluster in the current context. If you switch context, `kubect
 The initial resource listing can be long on big clusters and autocompletion might need 30s+.
 
 `connect: connection refused` or similar messages are expected if there's network issues/interruptions and `kubectl-fzf-server` will automatically reconnect.
-
-### Configuration
-
-You can configure `kubectl-fzf-server` with the configuration file `$HOME/.kubectl_fzf.yaml`
-
-```yaml
-# Role to hide from the role list in node completion
-ignore-node-roles:
-  - common-node
-# Namespaces to exclude for configmap and pod listing
-# Regexps are accepted
-exclude-namespaces:
-  - consul-agent
-  - datadog-agent
-  - coredns
-  - kube-system
-  - kube2iam
-  - dev-.*
-```
 
 ## kubectl-fzf-server: pod version
 
