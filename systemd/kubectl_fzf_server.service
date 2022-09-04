@@ -6,6 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+# You can configure KUBECONFIG here. PATH must be absolute
+# Environment="KUBECONFIG=/home/myuser/.kube/config"
 ExecStart=INSTALL_PATH/kubectl-fzf-server
 Restart=always
 RestartSec=10s
