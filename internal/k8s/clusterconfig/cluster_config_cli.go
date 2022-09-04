@@ -6,18 +6,16 @@ import (
 )
 
 type ClusterConfigCli struct {
-	ClusterName string
+	ClusterName string // Only for testing purpose
 	CacheDir    string
 }
 
 func SetClusterConfigCli(fs *pflag.FlagSet) {
 	fs.String("cache-dir", "/tmp/kubectl_fzf_cache/", "Cache dir location.")
-	fs.String("cluster-name", "", "The cluster name. Needed for cross-cluster completion.")
 }
 
 func GetClusterConfigCli() *ClusterConfigCli {
 	c := ClusterConfigCli{}
-	c.ClusterName = viper.GetString("cluster-name")
 	c.CacheDir = viper.GetString("cache-dir")
 	return &c
 }
