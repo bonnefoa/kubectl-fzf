@@ -121,6 +121,24 @@ journalctl --user-unit=kubectl_fzf_server.service
 
 ## kubectl-fzf-server: local version
 
+``` mermaid
+flowchart TB
+    subgraph TargetCluster
+        k8s[api-server]
+    end
+
+    subgraph Laptop
+        shell[Shell]
+        fileNode([/tmp/kubectl_fzf_cache/TargetCluster/pods])
+        comp[kubectl-fzf-completion]
+        server[kubectl-fzf-server]
+    end
+    shell -- kubectl get pods TAB --> comp -- Read content and feed it to fzf --> fileNode
+    server -- Write autocompletion informations --> fileNode
+
+    k8s <-- Watch --o server
+```
+
 `kubectl-fzf-server` will watch cluster resources and keep the current state of the cluster in local files.
 By default, files are written in `/tmp/kubectl_fzf_cache` (defined by `KUBECTL_FZF_CACHE`)
 
@@ -145,6 +163,25 @@ The initial resource listing can be long on big clusters and autocompletion migh
 `connect: connection refused` or similar messages are expected if there's network issues/interruptions and `kubectl-fzf-server` will automatically reconnect.
 
 ## kubectl-fzf-server: pod version
+
+``` mermaid
+flowchart TB
+    subgraph TargetCluster
+        k8s[api-server]
+        server[kubectl-fzf-server]
+    end
+
+    subgraph Laptop
+        shell[Shell]
+        comp[kubectl-fzf-completion]
+    end
+
+
+    shell -- kubectl get pods TAB --> comp 
+    comp -- Through port forward\nGET /k8s/resources/pods --> server
+
+    k8s <-- Watch --o server
+```
 
 If the pod is deployed in your cluster, the autocompletion will be fetched automatically fetched using port forward.
 
