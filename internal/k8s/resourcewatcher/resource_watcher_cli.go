@@ -15,6 +15,7 @@ type ResourceWatcherCli struct {
 	ignoreNodeRoles        []string
 	nodePollingPeriod      time.Duration
 	namespacePollingPeriod time.Duration
+	exitOnUnauthorized     bool
 }
 
 func SetResourceWatcherCli(fs *pflag.FlagSet) {
@@ -25,6 +26,7 @@ func SetResourceWatcherCli(fs *pflag.FlagSet) {
 	fs.StringSlice("ignore-node-roles", []string{}, "List of node role to ommit in the dump. It won't appaear in the completion. Useful to save space and remove cluster for 'common' node role. Separated by comma.")
 	fs.Duration("node-polling-period", 300*time.Second, "Polling period for nodes.")
 	fs.Duration("namespace-polling-period", 600*time.Second, "Polling period for namespaces.")
+	fs.Bool("exit-on-unauthorized", false, "Exit on unauthorized error.")
 }
 
 func GetResourceWatcherCli() ResourceWatcherCli {

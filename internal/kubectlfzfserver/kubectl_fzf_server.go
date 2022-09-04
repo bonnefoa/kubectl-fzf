@@ -96,6 +96,7 @@ func StartKubectlFzfServer() {
 	for {
 		select {
 		case <-ctx.Done():
+			logrus.Info("Context done, exiting")
 			return
 		case <-ticker.C:
 			restConfig, err := storeConfig.GetClientConfig()

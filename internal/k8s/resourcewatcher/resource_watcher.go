@@ -39,6 +39,7 @@ type ResourceWatcher struct {
 	namespacePollingPeriod time.Duration
 	nodePollingPeriod      time.Duration
 	ctorConfig             resources.CtorConfig
+	exitOnUnauthorized     bool
 }
 
 // WatchConfig provides the configuration to watch a specific kubernetes resource
@@ -80,6 +81,7 @@ func NewResourceWatcher(cluster string, resourceWatcherCli ResourceWatcherCli, s
 		ctorConfig: resources.CtorConfig{
 			IgnoredNodeRoles: ignoredNodeRoles,
 		},
+		exitOnUnauthorized: resourceWatcherCli.exitOnUnauthorized,
 	}
 	return &resourceWatcher, nil
 }
@@ -262,7 +264,11 @@ func (r *ResourceWatcher) startWatch(cfg WatchConfig,
 		time.Second*0,
 	)
 	controller.AddEventHandler(resourceHandlers)
-	watchErrorHandler := func(r *cache.Reflector, err error) {
+	watchErrorHandler := func(reflector *cache.Reflector, err error) {
+		if errors.IsUnauthorized(err) && r.exitOnUnauthorized {
+			logrus.Warnf("Resource %s is unauthorized, stopping watcher", cfg.resourceType)
+			r.Stop()
+		}
 		if errors.IsForbidden(err) {
 			logrus.Warnf("Resource %s is forbidden, stopping watcher. err: %s", cfg.resourceType, err)
 			close(stop)
