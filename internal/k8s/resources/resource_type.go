@@ -77,6 +77,8 @@ func (r ResourceType) IsNamespaced() bool {
 		return true
 	case ResourceTypeApiResource:
 		return false
+	case ResourceTypeIngress:
+		return true
 	}
 	return false
 }
@@ -155,6 +157,8 @@ func ParseResourceType(s string) ResourceType {
 		fallthrough
 	case "secrets":
 		return ResourceTypeSecret
+	case "ingresses":
+		return ResourceTypeIngress
 	case "cm":
 		fallthrough
 	case "configmap":
@@ -225,6 +229,12 @@ func ParseResourceType(s string) ResourceType {
 		fallthrough
 	case "cronjobs":
 		return ResourceTypeCronJob
+	case "ing":
+		fallthrough
+	case "ingresse":
+		fallthrough
+	case "ingresses":
+		return ResourceTypeIngress
 	}
 	return ResourceTypeUnknown
 }

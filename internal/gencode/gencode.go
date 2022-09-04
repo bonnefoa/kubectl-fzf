@@ -37,6 +37,10 @@ func outputNamespaced(apiResource resources.APIResource) {
 func GenerateResourceCode(ctx context.Context) error {
 	clusterConfigCli := clusterconfig.GetClusterConfigCli()
 	clusterConfig := clusterconfig.NewClusterConfig(clusterConfigCli)
+	err := clusterConfig.LoadClusterConfig()
+	if err != nil {
+		return err
+	}
 	clientSet, err := clusterConfig.GetClientset()
 	if err != nil {
 		return err
