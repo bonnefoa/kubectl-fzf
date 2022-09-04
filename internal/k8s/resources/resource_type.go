@@ -229,7 +229,7 @@ func ParseResourceType(s string) ResourceType {
 		return ResourceTypeCronJob
 	case "ing":
 		fallthrough
-	case "ingresse":
+	case "ingress":
 		fallthrough
 	case "ingresses":
 		return ResourceTypeIngress

@@ -19,7 +19,7 @@ func outputResourceType(apiResource resources.APIResource) {
 		fmt.Printf("\tcase \"%s\":\n", shortName)
 		fmt.Print("\t\tfallthrough\n")
 	}
-	fmt.Printf("\tcase \"%s\":\n", strings.TrimRight(apiResource.Name, "s"))
+	fmt.Printf("\tcase \"%s\":\n", strings.ToLower(apiResource.Kind))
 	fmt.Print("\t\tfallthrough\n")
 	fmt.Printf("\tcase \"%s\":\n", apiResource.Name)
 	fmt.Printf("\t\treturn ResourceType%s\n", apiResource.Kind)
