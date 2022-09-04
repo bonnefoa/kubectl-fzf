@@ -6,9 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,14 +15,16 @@ func setCompsInStdin(cmd *exec.Cmd, comps string) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(stdin, strings.NewReader(comps))
-	if err != nil {
-		return errors.Wrapf(err, "error copy stdin")
-	}
-	err = stdin.Close()
-	if err != nil {
-		return errors.Wrapf(err, "error closing stdin")
-	}
+	go func() {
+		_, err = io.Copy(stdin, strings.NewReader(comps))
+		if err != nil {
+			logrus.Error(err, "error copy stdin")
+		}
+		err = stdin.Close()
+		if err != nil {
+			logrus.Error(err, "error closing stdin")
+		}
+	}()
 	return nil
 }
 
@@ -44,22 +44,17 @@ func CallFzf(comps string, query string) (string, error) {
 	cmd.Stdout = &result
 	cmd.Stderr = os.Stderr
 
-	go func() {
-		logrus.Info("Start fzf command")
-		err := cmd.Start()
-		if err != nil {
-			logrus.Fatalf("Error when running fzf: %s", err)
-		}
-	}()
-
 	err := setCompsInStdin(cmd, comps)
 	if err != nil {
 		return "", err
 	}
 
-	for cmd.Process == nil {
-		time.Sleep(time.Millisecond * 10)
+	logrus.Info("Start fzf command")
+	err = cmd.Start()
+	if err != nil {
+		logrus.Fatalf("Error when running fzf: %s", err)
 	}
+
 	err = cmd.Wait()
 	if err != nil {
 		return "", err
