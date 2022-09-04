@@ -157,8 +157,6 @@ func ParseResourceType(s string) ResourceType {
 		fallthrough
 	case "secrets":
 		return ResourceTypeSecret
-	case "ingresses":
-		return ResourceTypeIngress
 	case "cm":
 		fallthrough
 	case "configmap":
