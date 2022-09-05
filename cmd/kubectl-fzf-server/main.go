@@ -61,6 +61,7 @@ func main() {
 	util.ConfigureViper()
 	cobra.OnInitialize(util.CommonInitialization)
 	defer pprof.StopCPUProfile()
+	defer util.DoMemoryProfile()
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatalf("Root command failed: %v", err)
 	}

@@ -14,6 +14,7 @@ import (
 func SetCommonCliFlags(fs *pflag.FlagSet, defaultLogLevel string) {
 	fs.String("log-level", defaultLogLevel, "Log level to use")
 	fs.String("cpu-profile", "", "Destination file for cpu profiling")
+	fs.String("mem-profile", "", "Destination file for memory profiling")
 }
 
 func CommonInitialization() {
@@ -26,7 +27,6 @@ func CommonInitialization() {
 		}
 		pprof.StartCPUProfile(f)
 	}
-
 }
 
 func ConfigureViper() {
