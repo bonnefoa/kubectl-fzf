@@ -1,0 +1,16 @@
+(A) Memory profile
+(A) bash plugins
+(A) fish support
+(B) test context switch
+(B) stats map concurrent update
+(B) Fix query
+(B) k scale
+x 2022-09-01 Cache missing port forward pod
+x 2022-09-01 Create fetcher cache struct
+x 2022-09-01 missing Namespace permission
+x 2022-09-02 Fix -f completion
+x 2022-09-03 Test permissions for watch - doesn't work yet
+x 2022-09-04 Warn if cache old
+x 2022-09-04 keti
+x 2022-09-04 Diagrams
+x 2022-09-04 pipe error
