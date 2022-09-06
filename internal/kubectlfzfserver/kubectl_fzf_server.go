@@ -79,10 +79,6 @@ func StartKubectlFzfServer() {
 	util.FatalIf(err)
 	ticker := time.NewTicker(time.Second * 5)
 
-	currentRestConfig, err := storeConfig.GetClientConfig()
-	if err != nil {
-		logrus.Fatalf("Error getting client config: %s", err)
-	}
 	httpServerConfCli := httpserver.GetHttpServerConfigCli()
 	_, err = httpserver.StartHttpServer(ctx, &httpServerConfCli, storeConfig, stores)
 	if err != nil {
@@ -93,23 +89,27 @@ func StartKubectlFzfServer() {
 		logrus.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
+	currentContext := storeConfig.GetContext()
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Context done, exiting")
 			return
 		case <-ticker.C:
-			restConfig, err := storeConfig.GetClientConfig()
+			err = storeConfig.LoadClusterConfig()
 			util.FatalIf(err)
-			logrus.Tracef("Checking config %s %s ", restConfig.Host, currentRestConfig.Host)
-			if restConfig.Host != currentRestConfig.Host {
-				logrus.Infof("Detected cluster change %s != %s", restConfig.Host, currentRestConfig.Host)
+			newContext := storeConfig.GetContext()
+			logrus.Debugf("Checking config %s %s ", currentContext, newContext)
+			if newContext != currentContext {
+				logrus.Infof("Detected context change %s != %s", newContext, currentContext)
 				watcher.Stop()
-				storeConfig.LoadClusterConfig()
-				// TODO: Handle stores change
+				err = storeConfig.CreateDestDir()
+				if err != nil {
+					logrus.Fatalf("error creating destination dir: %s", err)
+				}
 				watcher, _, err = startWatchOnCluster(ctx, resourceWatcherCli, storeConfig)
 				util.FatalIf(err)
-				currentRestConfig = restConfig
+				currentContext = newContext
 			}
 		}
 	}

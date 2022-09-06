@@ -43,7 +43,7 @@ func (c *ClusterConfig) LoadClusterConfig() (err error) {
 		c.clusterName = "incluster"
 	}
 	c.destDir = path.Join(c.cacheDir, c.clusterName)
-	logrus.Infof("Cluster config set to target '%s'", c.destDir)
+	logrus.Debugf("Cluster config set to target '%s'", c.destDir)
 	return nil
 }
 
