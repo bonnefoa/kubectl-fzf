@@ -73,6 +73,7 @@ func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult strin
 		if err != nil {
 			return "", errors.Wrapf(err, "Error parsing commands %s", cmdArgs)
 		}
+		logrus.Debugf("Namespace parsed: %s", *cmdNamespace)
 	}
 	lastWord := cmdArgs[len(cmdArgs)-1]
 	// add flag to the completion

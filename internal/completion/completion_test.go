@@ -90,10 +90,11 @@ func TestUnmanagedCompletion(t *testing.T) {
 		{"get", []string{"--field-selector"}},
 		{"get", []string{"--selector"}},
 		{"get", []string{"--all-namespaces"}},
+		{"get", []string{"pods", "aPod", ">", "/tmp"}},
 	}
 	for _, cmdArg := range cmdArgs {
 		_, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)
-		require.Error(t, err)
+		require.Errorf(t, err, "cmdArgs %s should have returned unmanaged", cmdArg)
 		require.IsType(t, parse.UnmanagedFlagError(""), err)
 	}
 }
@@ -105,13 +106,13 @@ func TestManagedCompletion(t *testing.T) {
 		{"get", []string{"pods", "--selector="}},
 		{"get", []string{"pods", "--field-selector", ""}},
 		{"get", []string{"pods", "--field-selector="}},
-		{"get", []string{"pods", "--all-namespaces", ""}},
 		{"get", []string{"pods", "-t", ""}},
 		{"get", []string{"pods", "-i", ""}},
 		{"get", []string{"pods", "-ti", ""}},
 		{"get", []string{"pods", "-it", ""}},
 		{"get", []string{"-n"}},
 		{"get", []string{"-n", ""}},
+		{"get", []string{"pods", "--all-namespaces", ""}},
 	}
 	for _, cmdArg := range cmdArgs {
 		completionResults, err := processCommandArgsWithFetchConfig(context.Background(), fetchConfig, cmdArg.verb, cmdArg.args)

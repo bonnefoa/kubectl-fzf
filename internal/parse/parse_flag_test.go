@@ -40,6 +40,6 @@ func TestManagedArgs(t *testing.T) {
 	}
 	for _, args := range cmdArgs {
 		r := CheckFlagManaged(args.flag)
-		require.Equal(t, args.result, r)
+		require.Equal(t, args.result.String(), r.String())
 	}
 }

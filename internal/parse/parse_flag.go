@@ -27,15 +27,15 @@ func (f FlagCompletion) String() string {
 func parsePreviousFlag(s string) FlagCompletion {
 	logrus.Debugf("Parsing previous flag '%s'", s)
 	switch s {
-	case "l":
+	case "-l":
 		return FlagLabel
-	case "selector":
+	case "--selector":
 		return FlagLabel
-	case "field-selector":
+	case "--field-selector":
 		return FlagFieldSelector
-	case "n":
+	case "-n":
 		fallthrough
-	case "namespace":
+	case "--namespace":
 		return FlagNamespace
 	}
 	return FlagNone
@@ -44,19 +44,19 @@ func parsePreviousFlag(s string) FlagCompletion {
 func parseLastFlag(s string) FlagCompletion {
 	logrus.Debugf("Parsing last flag '%s'", s)
 	switch s {
-	case "l":
+	case "-l":
 		fallthrough
-	case "l=":
+	case "-l=":
 		fallthrough
-	case "selector=":
+	case "--selector=":
 		return FlagLabel
-	case "n":
+	case "-n":
 		fallthrough
-	case "n=":
+	case "-n=":
 		fallthrough
-	case "namespace=":
+	case "--namespace=":
 		return FlagNamespace
-	case "field-selector=":
+	case "--field-selector=":
 		return FlagFieldSelector
 	}
 	return FlagUnmanaged
@@ -67,15 +67,18 @@ func CheckFlagManaged(args []string) FlagCompletion {
 	if len(args) == 0 {
 		return FlagNone
 	}
+	for _, arg := range args {
+		if arg == ">" {
+			return FlagUnmanaged
+		}
+	}
 	lastArg := args[len(args)-1]
 	if strings.HasPrefix(lastArg, "-") {
-		lastArg = strings.TrimLeft(lastArg, "-")
 		return parseLastFlag(lastArg)
 	}
 	if len(args) >= 2 {
 		penultimateArg := args[len(args)-2]
 		if strings.HasPrefix(penultimateArg, "-") {
-			penultimateArg = strings.TrimLeft(penultimateArg, "-")
 			return parsePreviousFlag(penultimateArg)
 		}
 	}
