@@ -20,10 +20,25 @@ type cmdArg struct {
 	args []string
 }
 
+func TestPrepareCmdArgs(t *testing.T) {
+	testDatas := []struct {
+		cmdArgs        []string
+		expectedResult []string
+	}{
+		{[]string{"get pods"}, []string{"get", "pods"}},
+		{[]string{"get pods "}, []string{"get", "pods", " "}},
+	}
+	for _, testData := range testDatas {
+		cmdArgs := PrepareCmdArgs(testData.cmdArgs)
+		require.Equal(t, testData.expectedResult, cmdArgs)
+	}
+
+}
+
 func TestProcessResourceName(t *testing.T) {
 	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
-		{"get", []string{"get", "pods", ""}},
+		{"get", []string{"pods", ""}},
 		{"get", []string{"po", ""}},
 		{"logs", []string{""}},
 		{"exec", []string{"-ti", ""}},

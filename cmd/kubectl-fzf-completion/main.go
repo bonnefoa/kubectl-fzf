@@ -40,12 +40,14 @@ func versionFun(cmd *cobra.Command, args []string) {
 	os.Exit(0)
 }
 
-func completeFun(cmd *cobra.Command, args []string) {
-	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit", "scale"}
-	if len(args) < 1 {
+func completeFun(cmd *cobra.Command, cmdArgs []string) {
+	args := completion.PrepareCmdArgs(cmdArgs)
+	if args == nil {
 		os.Exit(FallbackExitCode)
 	}
+
 	firstWord := args[0]
+	verbs := []string{"get", "exec", "logs", "label", "describe", "delete", "annotate", "edit", "scale"}
 	if !util.IsStringIn(firstWord, verbs) {
 		os.Exit(FallbackExitCode)
 	}

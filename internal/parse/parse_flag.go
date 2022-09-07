@@ -37,6 +37,15 @@ func parsePreviousFlag(s string) FlagCompletion {
 		fallthrough
 	case "--namespace":
 		return FlagNamespace
+
+	case "--filename":
+		fallthrough
+	case "-f":
+		return FlagUnmanaged
+	case "--output":
+		fallthrough
+	case "-o":
+		return FlagUnmanaged
 	}
 	return FlagNone
 }

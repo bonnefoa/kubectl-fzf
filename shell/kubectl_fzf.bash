@@ -22,18 +22,13 @@ __kubectl_fzf_query_from_word()
 
 __kubectl_fzf_get_completions()
 {
-    local cmdArgs completionOutput requestComp lastChar
+    local cmdArgs completionOutput requestComp
     cmdArgs="$1"
-    lastChar="$2"
     # TODO Handle query
-    currentWord="$3"
+    currentWord="$2"
 
-    __kubectl_fzf_debug "Get completions: cmdArgs: '$cmdArgs', lastChar: '$lastChar', currentWord: '$currentWord'"
+    __kubectl_fzf_debug "Get completions: cmdArgs: '$cmdArgs', currentWord: '$currentWord'"
     requestComp="$KUBECTL_FZF_COMPLETION_BIN k8s_completion $cmdArgs"
-    if [ "${lastChar}" = "" ]; then
-        __kubectl_fzf_debug "Adding extra empty parameter"
-        requestComp="${requestComp} \"\""
-    fi
     __kubectl_fzf_debug "About to call: eval '${requestComp}'"
     completionOutput=$(eval "${requestComp}")
     exitCode=$?
@@ -58,15 +53,14 @@ __kubectl_fzf_get_completions()
 }
 
 __kubectl_fzf_get_completion_results() {
-    local lastParam lastChar cmdArgs
+    local lastParam cmdArgs
 
     # Prepare the command to request completions for the program.
     # Calling ${words[0]} instead of directly kubectl allows to handle aliases
     cmdArgs="${words[*]:1}"
 
     lastParam=${words[$((${#words[@]}-1))]}
-    lastChar=${lastParam:$((${#lastParam}-1)):1}
-    __kubectl_fzf_debug "lastParam ${lastParam}, lastChar ${lastChar}"
+    __kubectl_fzf_debug "lastParam ${lastParam}"
 
     # When completing a flag with an = (e.g., kubectl -n=<TAB>)
     # bash focuses on the part after the =, so we need to remove
@@ -75,7 +69,7 @@ __kubectl_fzf_get_completion_results() {
         cur="${cur#*=}"
     fi
 
-    completionOutput=$(__kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$cur")
+    completionOutput=$(__kubectl_fzf_get_completions "$cmdArgs" "$cur")
     COMPREPLY=("$completionOutput")
 }
 

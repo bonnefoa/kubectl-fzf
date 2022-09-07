@@ -3,6 +3,7 @@ package completion
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/fetcher"
@@ -15,6 +16,19 @@ import (
 
 const labelHeader = "Namespace\tLabel\tOccurrences"
 const fieldSelectorHeader = "Namespace\tFieldSelector\tOccurrences"
+
+func PrepareCmdArgs(cmdArgs []string) []string {
+	if len(cmdArgs) != 1 {
+		return nil
+	}
+	argsStr := cmdArgs[0]
+
+	args := strings.Fields(argsStr)
+	if strings.HasSuffix(argsStr, " ") {
+		args = append(args, " ")
+	}
+	return args
+}
 
 func getResourceCompletion(ctx context.Context, r resources.ResourceType, namespace *string,
 	fetchConfig *fetcher.Fetcher) ([]string, error) {

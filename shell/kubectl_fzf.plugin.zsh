@@ -22,21 +22,16 @@ __kubectl_fzf_query_from_word()
 
 __kubectl_fzf_get_completions()
 {
-    local cmdArgs requestComp lastChar
+    local cmdArgs requestComp
     cmdArgs="$1"
-    lastChar="$2"
     # TODO Handle query
-    currentWord="$3"
+    currentWord="$2"
 
-    __kubectl_fzf_debug "Get completions: cmdArgs: '$cmdArgs', lastChar: '$lastChar', currentWord: '$currentWord'"
-    requestComp="$KUBECTL_FZF_COMPLETION_BIN k8s_completion $cmdArgs"
-    if [ "${lastChar}" = "" ]; then
-        __kubectl_fzf_debug "Adding extra empty parameter"
-        requestComp="${requestComp} \"\""
-    fi
+    __kubectl_fzf_debug "Get completions: cmdArgs: '$cmdArgs', currentWord: '$currentWord'"
+    requestComp="$KUBECTL_FZF_COMPLETION_BIN k8s_completion \"$cmdArgs\""
     __kubectl_fzf_debug "About to call: eval '${requestComp}'"
     zle -R "Calling completion '${requestComp}'"
-    completionOutput=$(eval "${requestComp}")
+    completionOutput=$(eval "$requestComp")
     exitCode=$?
     __kubectl_fzf_debug "completion output: ${completionOutput}, exit code ${exitCode}"
 
@@ -58,7 +53,7 @@ __kubectl_fzf_get_completions()
 }
 
 __kubectl_fzf_kubectl() {
-    local currentWord previousWord lastChar
+    local currentWord previousWord
     local cmdArgs
     local completionOutput
 
@@ -68,8 +63,7 @@ __kubectl_fzf_kubectl() {
     __kubectl_fzf_debug "Truncated words[*]: ${words[*]},"
     currentWord=${words[CURRENT]}
     previousWord=${words[CURRENT-1]}
-    lastChar=${words[-1][-1]}
-    __kubectl_fzf_debug "Current word: ${currentWord}, previous word: ${previousWord}, lastChar: '${lastChar}'"
+    __kubectl_fzf_debug "Current word: ${currentWord}, previous word: ${previousWord}"
 
     # We only have 'kubectl g#', fallback to default completion
     if [[ ${#words[@]} -le 2 ]]; then
@@ -78,7 +72,7 @@ __kubectl_fzf_kubectl() {
     fi
 
     cmdArgs="${words[2, -1]}"
-    __kubectl_fzf_get_completions "$cmdArgs" "$lastChar" "$currentWord"
+    __kubectl_fzf_get_completions "$cmdArgs" "$currentWord"
     zle -R "Processing completion output"
     if [[ "$completionOutput" == "" ]]; then
         return
