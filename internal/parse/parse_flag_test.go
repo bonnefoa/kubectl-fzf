@@ -35,7 +35,8 @@ func TestManagedArgs(t *testing.T) {
 		{[]string{"-ti", ""}, FlagNone},
 		{[]string{"-it", ""}, FlagNone},
 		{[]string{"-n"}, FlagNamespace},
-		{[]string{"-n", ""}, FlagNamespace},
+		{[]string{"-n="}, FlagNamespace},
+		{[]string{"-n", " "}, FlagNamespace},
 		{[]string{"--namespace", ""}, FlagNamespace},
 	}
 	for _, args := range cmdArgs {

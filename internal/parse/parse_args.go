@@ -21,6 +21,7 @@ func ParseFlagAndResources(cmdVerb string, cmdArgs []string) (resourceType resou
 		err = UnmanagedFlagError(strings.Join(cmdArgs, " "))
 		return
 	}
+	logrus.Infof("Flag parsed: %s", flagCompletion.String())
 
 	if flagCompletion == FlagNamespace {
 		resourceType = resources.ResourceTypeNamespace
@@ -37,7 +38,7 @@ func ParseFlagAndResources(cmdVerb string, cmdArgs []string) (resourceType resou
 
 func ParseNamespaceFromArgs(args []string) *string {
 	for k, arg := range args {
-		if (arg == "-n" || arg == "--namespace") && len(args) > k+1 {
+		if (arg == "-n" || arg == "--namespace") && len(args) > k+1 && args[k+1] != " " {
 			return &args[k+1]
 		}
 		if strings.HasPrefix(arg, "--namespace=") {

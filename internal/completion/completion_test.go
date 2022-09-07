@@ -2,6 +2,7 @@ package completion
 
 import (
 	"context"
+	"os"
 	"path"
 	"sort"
 	"testing"
@@ -10,10 +11,17 @@ import (
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/httpserver/httpservertest"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resources"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/parse"
+	"github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	logrus.SetLevel(logrus.DebugLevel)
+	code := m.Run()
+	os.Exit(code)
+}
 
 type cmdArg struct {
 	verb string
@@ -55,6 +63,7 @@ func TestProcessNamespace(t *testing.T) {
 	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
 	cmdArgs := []cmdArg{
 		{"get", []string{"pods", "-n"}},
+		{"get", []string{"pods", "-n", " "}},
 		{"get", []string{"po", "-n="}},
 		{"logs", []string{"--namespace", ""}},
 		{"logs", []string{"--namespace="}},
