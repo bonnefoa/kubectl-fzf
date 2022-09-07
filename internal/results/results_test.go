@@ -51,6 +51,8 @@ func TestResult(t *testing.T) {
 		{"kube-system tier=control-plane", "get", []string{"pods", "-l="}, "default", "-l=tier=control-plane -n kube-system"},
 		{"kube-system tier=control-plane", "get", []string{"pods", "-l", " "}, "default", "tier=control-plane -n kube-system"},
 		{"kube-system tier=control-plane", "get", []string{"pods", "-l"}, "default", "-ltier=control-plane -n kube-system"},
+		// Namespaceless label
+		{"beta.kubernetes.io/arch=amd64 1", "get", []string{"nodes", "-l"}, "default", "-lbeta.kubernetes.io/arch=amd64"},
 		// Field selector
 		{"kube-system spec.nodeName=minikube", "get", []string{"pods", "--field-selector="}, "default", "--field-selector=spec.nodeName=minikube -n kube-system"},
 		{"kube-system spec.nodeName=minikube", "get", []string{"pods", "--field-selector", " "}, "default", "spec.nodeName=minikube -n kube-system"},

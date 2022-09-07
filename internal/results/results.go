@@ -60,6 +60,10 @@ func processResultWithNamespace(cmdUse string, cmdArgs []string, fzfResult strin
 	// Generic resource
 	resultNamespace := resultFields[0]
 	resultValue := resultFields[1]
+	if !resourceType.IsNamespaced() {
+		resultValue = resultFields[0]
+		resultNamespace = ""
+	}
 
 	if resourceType == resources.ResourceTypeNamespace {
 		resultValue = resultFields[0]

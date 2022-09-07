@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/fetcher"
 	"github.com/bonnefoa/kubectl-fzf/v3/internal/k8s/resources"
@@ -41,9 +42,12 @@ func (p TagResourcePairList) Less(i, j int) bool {
 }
 func (p TagResourcePairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
-func (l *TagResourcePair) ToString() string {
-	return fmt.Sprintf("%s\t%s\t%d", l.Key.Namespace,
-		l.Key.Value, l.Occurrences)
+func (l *TagResourcePair) ToString(isNamespaced bool) string {
+	if isNamespaced {
+		return fmt.Sprintf("%s\t%s\t%d", l.Key.Namespace,
+			l.Key.Value, l.Occurrences)
+	}
+	return fmt.Sprintf("%s\t%d", l.Key.Value, l.Occurrences)
 }
 
 func getTagResourceOccurrences(ctx context.Context, r resources.ResourceType, namespace *string,
@@ -75,19 +79,32 @@ func getTagResourceOccurrences(ctx context.Context, r resources.ResourceType, na
 }
 
 func GetTagResourceCompletion(ctx context.Context, r resources.ResourceType, namespace *string,
-	fetchConfig *fetcher.Fetcher, tagType TagType) ([]string, error) {
+	fetchConfig *fetcher.Fetcher, tagType TagType) (string, []string, error) {
 	tagResourceOccurrencesMap, err := getTagResourceOccurrences(ctx, r, namespace, fetchConfig, tagType)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	tagResourcePairList := make(TagResourcePairList, 0)
 	for k, occurrence := range tagResourceOccurrencesMap {
 		tagResourcePairList = append(tagResourcePairList, TagResourcePair{k, occurrence})
 	}
 	sort.Sort(tagResourcePairList)
+
+	isNamespaced := r.IsNamespaced()
 	labelComps := make([]string, 0)
 	for _, labelPair := range tagResourcePairList {
-		labelComps = append(labelComps, labelPair.ToString())
+		labelComps = append(labelComps, labelPair.ToString(isNamespaced))
 	}
-	return labelComps, nil
+
+	labelHeaders := []string{"Occurrences"}
+	if tagType == TagTypeFieldSelector {
+		labelHeaders = append([]string{"FieldSelector"}, labelHeaders...)
+	} else {
+		labelHeaders = append([]string{"Label"}, labelHeaders...)
+	}
+	if isNamespaced {
+		labelHeaders = append([]string{"Namespace"}, labelHeaders...)
+	}
+	labelHeaderStr := strings.Join(labelHeaders, "\t")
+	return labelHeaderStr, labelComps, nil
 }

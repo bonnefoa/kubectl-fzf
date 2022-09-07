@@ -14,9 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const labelHeader = "Namespace\tLabel\tOccurrences"
-const fieldSelectorHeader = "Namespace\tFieldSelector\tOccurrences"
-
 func PrepareCmdArgs(cmdArgs []string) []string {
 	if len(cmdArgs) != 1 {
 		return nil
@@ -58,12 +55,10 @@ func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher
 	completionResult := &CompletionResult{Cluster: fetchConfig.GetContext()}
 	namespace := parse.ParseNamespaceFromArgs(args)
 	if flagCompletion == parse.FlagLabel {
-		completionResult.Completions, err = GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
-		completionResult.Header = labelHeader
+		completionResult.Header, completionResult.Completions, err = GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeLabel)
 		return completionResult, err
 	} else if flagCompletion == parse.FlagFieldSelector {
-		completionResult.Completions, err = GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
-		completionResult.Header = fieldSelectorHeader
+		completionResult.Header, completionResult.Completions, err = GetTagResourceCompletion(ctx, resourceType, namespace, fetchConfig, TagTypeFieldSelector)
 		return completionResult, err
 	}
 

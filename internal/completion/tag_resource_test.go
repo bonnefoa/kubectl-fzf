@@ -30,15 +30,28 @@ func TestLabelNamespaceFiltering(t *testing.T) {
 	assert.Len(t, labelMap, 0)
 }
 
-func TestLabelCompletion(t *testing.T) {
+func TestLabelCompletionPod(t *testing.T) {
 	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
-	labelComps, err := GetTagResourceCompletion(context.Background(), resources.ResourceTypePod, nil, fetchConfig, TagTypeLabel)
+	labelHeader, labelComps, err := GetTagResourceCompletion(context.Background(), resources.ResourceTypePod, nil, fetchConfig, TagTypeLabel)
 	assert.NoError(t, err)
 	assert.Len(t, labelComps, 12)
 
 	t.Log(labelComps)
+	assert.Equal(t, "Namespace\tLabel\tOccurrences", labelHeader)
 	assert.Equal(t, "kube-system\ttier=control-plane\t4", labelComps[0])
 	assert.Equal(t, "kube-system\taddonmanager.kubernetes.io/mode=Reconcile\t1", labelComps[1])
+}
+
+func TestLabelCompletionNode(t *testing.T) {
+	fetchConfig := fetchertest.GetTestFetcherWithDefaults(t)
+	labelHeader, labelComps, err := GetTagResourceCompletion(context.Background(), resources.ResourceTypeNode, nil, fetchConfig, TagTypeLabel)
+	assert.NoError(t, err)
+	assert.Len(t, labelComps, 12)
+
+	t.Log(labelComps)
+	assert.Equal(t, "Label\tOccurrences", labelHeader)
+	assert.Equal(t, "beta.kubernetes.io/arch=amd64\t1", labelComps[0])
+	assert.Equal(t, "beta.kubernetes.io/os=linux\t1", labelComps[1])
 }
 
 func TestGetFieldSelector(t *testing.T) {
