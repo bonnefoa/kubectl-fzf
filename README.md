@@ -220,14 +220,19 @@ KUBECTL_FZF_PORT_FORWARD_LOCAL_PORT=8081
 
 ## Debug kubectl-fzf-completion
 
-To directly call completion with debug logs, run: 
+Build and test a completion with debug logs:
 ```
-KUBECTL_FZF_LOG_LEVEL=debug kubectl-fzf-completion k8s_completion get pods ""
+go build ./cmd/kubectl-fzf-completion && KUBECTL_FZF_LOG_LEVEL=debug ./kubectl-fzf-completion k8s_completion 'get pods '  
+```
+
+Force Tab completion to use the completion binary in the current directory:
+```
+export KUBECTL_FZF_COMPLETION_BIN=./kubectl-fzf-completion
 ```
 
 ## Debug Tab Completion
 
-To debug Tab completion, you can activate debug logs:
+To debug Tab completion, you can activate the shell debug logs:
 ```
 export KUBECTL_FZF_COMP_DEBUG_FILE=/tmp/debug
 ```
