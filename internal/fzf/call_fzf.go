@@ -10,6 +10,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type InterruptedCommandError string
+
+func (u InterruptedCommandError) Error() string {
+	return string(u)
+}
+
 func setCompsInStdin(cmd *exec.Cmd, comps string) error {
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -57,6 +63,10 @@ func CallFzf(comps string, query string) (string, error) {
 
 	err = cmd.Wait()
 	if err != nil {
+		if cmd.ProcessState.ExitCode() == 130 {
+			// Interrupted with C-c or ESC
+			return "", InterruptedCommandError(err.Error())
+		}
 		return "", err
 	}
 	res := strings.TrimSpace(result.String())

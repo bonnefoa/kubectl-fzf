@@ -91,6 +91,10 @@ func completeFun(cmd *cobra.Command, cmdArgs []string) {
 	// TODO pass query
 	fzfResult, err := fzf.CallFzf(formattedComps, "")
 	if err != nil {
+		if e, ok := err.(fzf.InterruptedCommandError); ok {
+			logrus.Infof("Fzf was interrupted: %s", e)
+			os.Exit(FallbackExitCode)
+		}
 		logrus.Fatalf("Call fzf error: %s", err)
 	}
 	res, err := results.ProcessResult(firstWord, args, f, fzfResult)
