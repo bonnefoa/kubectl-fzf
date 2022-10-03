@@ -47,9 +47,9 @@ Table of Contents
 
 ```shell
 # Completion binary called during autocompletion
-go install -u github.com/bonnefoa/kubectl-fzf/v3/cmd/kubectl-fzf-completion@main
+go install github.com/bonnefoa/kubectl-fzf/v3/cmd/kubectl-fzf-completion@main
 # If you want to run the kubectl-fzf server locally
-go install -u github.com/bonnefoa/kubectl-fzf/v3/cmd/kubectl-fzf-server@main
+go install github.com/bonnefoa/kubectl-fzf/v3/cmd/kubectl-fzf-server@main
 ```
 
 `kubectl-fzf-completion` needs to be in you $PATH so make sure that your $GOPATH bin is included:
