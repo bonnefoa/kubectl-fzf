@@ -42,7 +42,7 @@ __kubectl_fzf_get_completions()
     fi
     if [[ $exitCode == 6 ]]; then
         # Unknow resource type, fallback to default completion
-        echo "fallback"
+        fallback="true"
         return
     fi
     if [[ $exitCode != 0 ]]; then
@@ -56,6 +56,7 @@ __kubectl_fzf_kubectl() {
     local currentWord previousWord
     local cmdArgs
     local completionOutput
+    local fallback
 
     zle -R "Starting kubectl-fzf completion"
     __kubectl_fzf_debug "CURRENT: ${CURRENT}, words[*]: '${words[*]}', ${#words[@]}"
@@ -77,7 +78,7 @@ __kubectl_fzf_kubectl() {
     if [[ "$completionOutput" == "" ]]; then
         return
     fi
-    if [[ "$completionOutput" == "fallback" ]]; then
+    if [[ -z "$fallback" ]]; then
         zle "${kubectl_fzf_default_completion:-expand-or-complete}"
         return
     fi
