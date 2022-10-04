@@ -1,7 +1,7 @@
+(A) Add timeout
 (A) Memory profile
 (A) bash plugins
 (A) fish support
-(B) test context switch
 (B) stats map concurrent update
 (B) Fix query
 (B) k scale
@@ -14,3 +14,6 @@ x 2022-09-04 Warn if cache old
 x 2022-09-04 keti
 x 2022-09-04 Diagrams
 x 2022-09-04 pipe error
+x 2022-09-07 k apply -f
+x 2022-09-19 test context switch
+x 2022-09-19 k get nodes -l
