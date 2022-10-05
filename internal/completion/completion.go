@@ -43,6 +43,17 @@ func getResourceCompletion(ctx context.Context, r resources.ResourceType, namesp
 	return comps, nil
 }
 
+func ExtractQueryFromArgs(cmdArgs []string) string {
+	if len(cmdArgs) == 0 {
+		return ""
+	}
+	latestArg := cmdArgs[len(cmdArgs)-1]
+	if latestArg == " " {
+		return ""
+	}
+	return latestArg
+}
+
 func processCommandArgsWithFetchConfig(ctx context.Context, fetchConfig *fetcher.Fetcher,
 	cmdVerb string, args []string) (*CompletionResult, error) {
 	var err error
