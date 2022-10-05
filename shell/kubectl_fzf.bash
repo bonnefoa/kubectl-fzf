@@ -8,18 +8,6 @@ __kubectl_fzf_debug()
     fi
 }
 
-__kubectl_fzf_query_from_word()
-{
-    local currentWord query
-    if [[ $currentWord != " " ]]; then
-        query="$currentWord"
-        query=${query#-l}
-        query=${query#--field-selector}
-        query=${query#=}
-    fi
-    echo "$query"
-}
-
 __kubectl_fzf_get_completions()
 {
     local cmdArgs completionOutput requestComp
