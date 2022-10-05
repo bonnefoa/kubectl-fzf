@@ -8,18 +8,6 @@ __kubectl_fzf_debug()
     fi
 }
 
-__kubectl_fzf_query_from_word()
-{
-    local currentWord query
-    if [[ $currentWord != " " ]]; then
-        query="$currentWord"
-        query=${query#-l}
-        query=${query#--field-selector}
-        query=${query#=}
-    fi
-    echo "$query"
-}
-
 __kubectl_fzf_get_completions()
 {
     local cmdArgs requestComp
@@ -36,20 +24,20 @@ __kubectl_fzf_get_completions()
     __kubectl_fzf_debug "completion output: ${completionOutput}, exit code ${exitCode}"
 
     if [[ $exitCode == 5 ]]; then
-        # No completion available
+        __kubectl_fzf_debug "No completion available"
         echo "error: No completion available: $requestComp"
         return
     fi
     if [[ $exitCode == 6 ]]; then
-        # Unknow resource type, fallback to default completion
+        __kubectl_fzf_debug "Unknow resource type, fallback to default completion"
         fallback="true"
         return
     fi
     if [[ $exitCode != 0 ]]; then
-        # Error on completion
-        echo "error when calling kubectl-fzf-completion: $requestComp. Output: $completionOutput"
+        __kubectl_fzf_debug "error on completion"
         return
     fi
+    __kubectl_fzf_debug "No error"
 }
 
 __kubectl_fzf_kubectl() {
@@ -76,13 +64,16 @@ __kubectl_fzf_kubectl() {
     __kubectl_fzf_get_completions "$cmdArgs" "$currentWord"
     zle -R "Processing completion output"
     if [[ "$completionOutput" == "" ]]; then
+        __kubectl_fzf_debug "Empty completion output"
         return
     fi
-    if [[ -z "$fallback" ]]; then
+    if [[ -n "$fallback" ]]; then
+        __kubectl_fzf_debug "Fallback detected: '$fallback'"
         zle "${kubectl_fzf_default_completion:-expand-or-complete}"
         return
     fi
     if [[ "$completionOutput" == error* ]]; then
+        __kubectl_fzf_debug "Output starts with error, fallingback: $completionOutput"
         zle "${kubectl_fzf_default_completion:-expand-or-complete}"
         return
     fi
