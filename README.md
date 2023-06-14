@@ -69,7 +69,7 @@ echo "source ~/.kubectl_fzf.bash" >> ~/.bashrc
 # zsh version
 wget https://raw.githubusercontent.com/bonnefoa/kubectl-fzf/main/shell/kubectl_fzf.plugin.zsh -O ~/.kubectl_fzf.plugin.zsh
 echo "source <(kubectl completion zsh)" >> ~/.zshrc
-echo "source ~/.kubectl_fzf.plugin.zsh >> ~/.zshrc
+echo "source ~/.kubectl_fzf.plugin.zsh" >> ~/.zshrc
 ```
 
 ### Zsh plugins: Antigen
