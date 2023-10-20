@@ -162,6 +162,41 @@ The initial resource listing can be long on big clusters and autocompletion migh
 
 `connect: connection refused` or similar messages are expected if there's network issues/interruptions and `kubectl-fzf-server` will automatically reconnect.
 
+### kubectl_fzf_server CLI flags and commands
+
+```bash
+Usage:
+  kubectl_fzf_server [flags]
+  kubectl_fzf_server [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  version     Print command version
+
+Flags:
+      --cache-dir string                    Cache dir location. (default "/tmp/kubectl_fzf_cache/")
+      --cpu-profile string                  Destination file for cpu profiling
+      --exclude-namespaces strings          Namespace Perl regexps to exclude, separated by comma.
+      --exclude-resources strings           Resources to exclude, separated by comma. To exclude everything: pods,configmaps,services,serviceaccounts,replicasets,daemonsets,secrets,statefulsets,deployments,endpoints,ingresses,cronjobs,jobs,horizontalpodautoscalers,persistentvolumes,persistentvolumeclaims,nodes,namespaces.
+      --exit-on-unauthorized                Exit on unauthorized error.
+  -h, --help                                help for kubectl_fzf_server
+      --http-debug                          Activate debug mode of the http server
+      --http-prof-address string            Listen address of the pprof endpoint (default "localhost:6060")
+      --ignore-node-roles strings           List of node role to ommit in the dump. It won't appaear in the completion. Useful to save space and remove cluster for 'common' node role. Separated by comma.
+      --listen-address string               Listen address of the http server (default "localhost:8080")
+      --log-level string                    Log level to use (default "info")
+      --mem-profile string                  Destination file for memory profiling
+      --namespace-polling-period duration   Polling period for namespaces. (default 10m0s)
+      --node-polling-period duration        Polling period for nodes. (default 5m0s)
+      --time-between-full-dump duration     Buffer changes and only do full dump every x secondes (default 10s)
+      --watch-namespaces strings            Namespace Perl regexps to watch, separated by comma.
+      --watch-resources strings             Resources to watch, separated by comma.
+
+Use "kubectl_fzf_server [command] --help" for more information about a command.
+```
+
+
 ## kubectl-fzf-server: pod version
 
 ``` mermaid
